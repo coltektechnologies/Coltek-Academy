@@ -1,0 +1,55 @@
+export interface Instructor {
+  name: string
+  bio: string
+  avatar: string
+}
+
+export interface CurriculumModule {
+  module: string
+  lessons: string[]
+}
+
+export interface Course {
+  id: string
+  title: string
+  slug: string
+  description: string
+  fullDescription: string
+  image: string
+  category: string
+  level: "Beginner" | "Intermediate" | "Advanced"
+  duration: string
+  price: number
+  instructor: Instructor
+  curriculum: CurriculumModule[]
+  whatYouLearn: string[]
+  prerequisites: string[]
+  enrolledStudents: number
+  rating: number
+  reviewCount: number
+  language: string
+  lastUpdated: string
+}
+
+export interface RegistrationFormData {
+  // Step 1: Personal Info
+  firstName: string
+  lastName: string
+  email: string
+  phone: string
+
+  // Step 2: Educational Background
+  highestEducation: string
+  fieldOfStudy: string
+  currentOccupation: string
+  yearsOfExperience: string
+
+  // Step 3: Course Selection
+  selectedCourseId: string
+  learningGoals: string
+  preferredSchedule: string
+
+  // Step 4: Payment (placeholder)
+  paymentMethod: string
+  agreeToTerms: boolean
+}
