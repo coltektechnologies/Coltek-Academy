@@ -2,6 +2,7 @@ import type React from "react"
 import type { Metadata, Viewport } from "next"
 import { Inter, Geist_Mono } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
+import { Suspense } from "react"
 import "./globals.css"
 import { Toaster } from "@/components/ui/toaster"
 import { RouteLoaderProvider } from "@/components/providers/route-loader"
@@ -36,7 +37,9 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="font-sans antialiased">
-        <RouteLoaderProvider minDurationMs={800} label="Loading..." />
+        <Suspense fallback={null}>
+          <RouteLoaderProvider minDurationMs={800} label="Loading..." />
+        </Suspense>
         {children}
         <Toaster />
         <Analytics />
