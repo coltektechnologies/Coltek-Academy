@@ -15,7 +15,7 @@ export function Navbar() {
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2">
             <BookOpen className="h-8 w-8 text-primary" />
-            <span className="text-xl font-bold text-foreground">EduLearn</span>
+            <span className="text-xl font-bold text-foreground">Coltek Academy</span>
           </Link>
 
           {/* Desktop Navigation */}
