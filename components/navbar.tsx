@@ -4,6 +4,7 @@ import { useState } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Menu, X, BookOpen } from "lucide-react"
+import Image from "next/image"
 
 export function Navbar() {
   const [isOpen, setIsOpen] = useState(false)
@@ -14,8 +15,7 @@ export function Navbar() {
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2">
-            <BookOpen className="h-8 w-8 text-primary" />
-            <span className="text-xl font-bold text-foreground">Coltek Academy</span>
+            <Image src="/Coltek Academy.png" alt="Coltek Academy logo" width={100} height={60} />
           </Link>
 
           {/* Desktop Navigation */}

@@ -4,26 +4,26 @@ const contactMethods = [
   {
     icon: Mail,
     title: "Email Us",
-    details: "support@edulearn.com",
+    details: "info@coltektechnologies.io",
     description: "We respond within 24 hours",
   },
   {
     icon: Phone,
     title: "Call Us",
-    details: "+1 (555) 123-4567",
-    description: "Mon-Fri, 9am-6pm EST",
+    details: "+233 549 361 771",
+    description: "Mon-Fri, 9am-6pm GMT",
   },
   {
     icon: MapPin,
     title: "Visit Us",
-    details: "123 Education Lane",
-    description: "San Francisco, CA 94102",
+    details: "https://www.coltektechnologies.io/",
+    description: "Accra Ghana",
   },
   {
     icon: Clock,
     title: "Office Hours",
     details: "Monday - Friday",
-    description: "9:00 AM - 6:00 PM EST",
+    description: "9:00 AM - 6:00 PM GMT",
   },
 ]
 

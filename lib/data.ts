@@ -226,11 +226,11 @@ export const courses: Course[] = [
   },
   {
     id: "6",
-    title: "Mobile App Development with React Native",
+    title: "Mobile App Development withFlutter",
     slug: "mobile-app-development-react-native",
-    description: "Build cross-platform mobile apps for iOS and Android with React Native.",
+    description: "Build cross-platform mobile apps for iOS and Android withFlutter.",
     fullDescription:
-      "Learn to build beautiful, high-performance mobile applications using React Native. This course covers everything from setting up your development environment to publishing apps on the App Store and Google Play. Build real projects including a social media app, e-commerce app, and more.",
+      "Learn to build beautiful, high-performance mobile applications usingFlutter. This course covers everything from setting up your development environment to publishing apps on the App Store and Google Play. Build real projects including a social media app, e-commerce app, and more.",
     image: "/mobile-app-development.png",
     category: "Mobile Development",
     level: "Intermediate",
@@ -238,7 +238,7 @@ export const courses: Course[] = [
     price: 449,
     instructor: {
       name: "Alex Kim",
-      bio: "Mobile Developer at Meta with expertise in React Native and cross-platform development.",
+      bio: "Mobile Developer at Meta with expertise inFlutter and cross-platform development.",
       avatar: "/young-professional-developer.jpg",
     },
     curriculum: [

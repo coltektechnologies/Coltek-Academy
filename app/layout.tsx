@@ -11,14 +11,21 @@ const _inter = Inter({ subsets: ["latin"] })
 const _geistMono = Geist_Mono({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "EduLearn - Transform Your Future with Expert-Led Courses",
+  title: "Coltek Academy - Transform Your Future with Expert-Led Courses",
   description:
     "Discover thousands of courses taught by industry experts. Start learning today and advance your career with in-demand skills.",
   keywords: ["online courses", "education", "learning", "professional development", "skills training"],
   openGraph: {
-    title: "EduLearn - Transform Your Future",
+    title: "Coltek Academy - Transform Your Future",
     description: "Expert-led courses to advance your career",
     type: "website",
+  },
+  icons: {
+    icon: [
+      { url: "/fav-32x32.png", sizes: "32x32", type: "image/png" },
+      { url: "/fav-16x16.png", sizes: "16x16", type: "image/png" },
+    ],
+    apple: "/apple-icon.png",
   },
     generator: 'v0.app'
 }
