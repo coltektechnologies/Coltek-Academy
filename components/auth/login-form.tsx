@@ -1,8 +1,7 @@
 "use client"
 
-import type React from "react"
-
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -10,9 +9,12 @@ import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
 import { useToast } from "@/hooks/use-toast"
 import { BookOpen, Loader2, Eye, EyeOff } from "lucide-react"
+import { signInWithEmailAndPassword } from "firebase/auth"
+import { auth } from "@/lib/firebase"
 
 export function LoginForm() {
   const { toast } = useToast()
+  const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [formData, setFormData] = useState({
@@ -23,18 +25,46 @@ export function LoginForm() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    
+    if (!formData.email || !formData.password) {
+      toast({
+        title: "Error",
+        description: "Please fill in all fields",
+        variant: "destructive",
+      })
+      return
+    }
+
     setIsLoading(true)
 
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1500))
-
-    toast({
-      title: "Login successful!",
-      description: "Welcome back to EduLearn.",
-    })
-
-    setIsLoading(false)
-    // In production, redirect to dashboard
+    try {
+      await signInWithEmailAndPassword(auth, formData.email, formData.password)
+      
+      toast({
+        title: "Login successful!",
+        description: "Welcome back to EduLearn.",
+      })
+      
+      // Redirect to home page or dashboard
+      router.push('/')
+    } catch (error: any) {
+      console.error('Error signing in:', error)
+      let errorMessage = "Failed to sign in. Please check your credentials."
+      
+      if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
+        errorMessage = "Invalid email or password."
+      } else if (error.code === 'auth/too-many-requests') {
+        errorMessage = "Too many failed attempts. Please try again later."
+      }
+      
+      toast({
+        title: "Error",
+        description: errorMessage,
+        variant: "destructive",
+      })
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
@@ -158,7 +188,7 @@ export function LoginForm() {
         {/* Sign Up Link */}
         <p className="text-center text-sm text-muted-foreground mt-6">
           Don&apos;t have an account?{" "}
-          <Link href="/register" className="text-primary font-medium hover:underline">
+          <Link href="/signup" className="text-primary font-medium hover:underline">
             Sign up for free
           </Link>
         </p>

@@ -9,12 +9,12 @@ export const courses: Course[] = [
     fullDescription:
       "This comprehensive bootcamp takes you from zero to hero in web development. You will learn everything from basic HTML and CSS to advanced JavaScript frameworks like React, backend development with Node.js, database management, and deployment strategies. By the end of this course, you will have built multiple real-world projects and be ready to land your first developer job.",
     image: "/web-development-coding-laptop.jpg",
-    category: "Web Development",
+    category: "Web",
     level: "Beginner",
-    duration: "12 weeks",
-    price: 499,
+    duration: "1 week",
+    price: 0,
     instructor: {
-      name: "Dr. Sarah Chen",
+      name: "Mr. Boansi Kyeremateng Collins",
       bio: "Senior Software Engineer at Google with 10+ years of experience teaching web development.",
       avatar: "/professional-woman-portrait.png",
     },
@@ -59,7 +59,7 @@ export const courses: Course[] = [
     category: "Data Science",
     level: "Intermediate",
     duration: "16 weeks",
-    price: 699,
+    price: 0,
     instructor: {
       name: "Prof. Michael Rodriguez",
       bio: "Former Data Scientist at Netflix, PhD in Machine Learning from Stanford.",
@@ -100,10 +100,10 @@ export const courses: Course[] = [
     fullDescription:
       "Transform your design skills with this comprehensive UX/UI masterclass. Learn the principles of user-centered design, master tools like Figma and Adobe XD, and build a portfolio that will impress employers. From user research to high-fidelity prototypes, this course covers the entire design process.",
     image: "/ux-ui-design-interface-mockup.jpg",
-    category: "Design",
+    category: "UI/UX",
     level: "Beginner",
     duration: "10 weeks",
-    price: 399,
+    price: 0,
     instructor: {
       name: "Emma Thompson",
       bio: "Lead Product Designer at Airbnb with expertise in user-centered design.",
@@ -138,6 +138,47 @@ export const courses: Course[] = [
   },
   {
     id: "4",
+    title: "Graphic Design Fundamentals",
+    slug: "graphic-design-fundamentals",
+    description: "Master Adobe Creative Suite, design principles, and create stunning visual content.",
+    fullDescription:
+      "Learn the fundamentals of graphic design and master industry-standard tools like Adobe Photoshop, Illustrator, and InDesign. This course covers design theory, typography, color theory, and practical projects including logos, posters, and branding materials. Perfect for aspiring designers and creative professionals.",
+    image: "/ux-ui-design-interface-mockup.jpg",
+    category: "Graphic Design",
+    level: "Beginner",
+    duration: "1 week",
+    price: 0,
+    instructor: {
+      name: "Maria Gonzalez",
+      bio: "Senior Graphic Designer at Adobe with 12 years of experience in branding and visual design.",
+      avatar: "/creative-latin-woman.png",
+    },
+    curriculum: [
+      {
+        module: "Design Fundamentals",
+        lessons: ["Design Principles", "Color Theory", "Typography", "Composition & Layout"],
+      },
+      { module: "Adobe Photoshop", lessons: ["Interface & Tools", "Photo Editing", "Digital Art", "Effects & Filters"] },
+      { module: "Adobe Illustrator", lessons: ["Vector Graphics", "Logo Design", "Illustrations", "Branding"] },
+      { module: "Adobe InDesign", lessons: ["Layout Design", "Print Production", "Digital Publishing", "Portfolio Creation"] },
+    ],
+    whatYouLearn: [
+      "Master Adobe Creative Suite tools",
+      "Apply design principles and theory",
+      "Create professional logos and branding",
+      "Design marketing materials and posters",
+      "Work with both print and digital media",
+      "Build a professional design portfolio",
+    ],
+    prerequisites: ["No design experience required", "Basic computer skills"],
+    enrolledStudents: 4200,
+    rating: 4.6,
+    reviewCount: 892,
+    language: "English",
+    lastUpdated: "2025-12-12",
+  },
+  {
+    id: "5",
     title: "Cloud Computing with AWS",
     slug: "cloud-computing-aws",
     description: "Become an AWS certified professional and master cloud architecture.",
@@ -147,7 +188,7 @@ export const courses: Course[] = [
     category: "Cloud Computing",
     level: "Intermediate",
     duration: "8 weeks",
-    price: 549,
+    price: 0,
     instructor: {
       name: "James Wilson",
       bio: "AWS Solutions Architect with 15 years of cloud infrastructure experience.",
@@ -175,7 +216,7 @@ export const courses: Course[] = [
     lastUpdated: "2025-12-10",
   },
   {
-    id: "5",
+    id: "6",
     title: "Digital Marketing Fundamentals",
     slug: "digital-marketing-fundamentals",
     description: "Learn SEO, social media marketing, content strategy, and analytics.",
@@ -185,7 +226,7 @@ export const courses: Course[] = [
     category: "Marketing",
     level: "Beginner",
     duration: "6 weeks",
-    price: 299,
+    price: 0,
     instructor: {
       name: "Lisa Park",
       bio: "CMO at a Fortune 500 company with 12 years of digital marketing experience.",
@@ -225,17 +266,17 @@ export const courses: Course[] = [
     lastUpdated: "2025-11-25",
   },
   {
-    id: "6",
+    id: "7",
     title: "Mobile App Development withFlutter",
     slug: "mobile-app-development-react-native",
     description: "Build cross-platform mobile apps for iOS and Android withFlutter.",
     fullDescription:
       "Learn to build beautiful, high-performance mobile applications usingFlutter. This course covers everything from setting up your development environment to publishing apps on the App Store and Google Play. Build real projects including a social media app, e-commerce app, and more.",
     image: "/mobile-app-development.png",
-    category: "Mobile Development",
+    category: "Mobile App",
     level: "Intermediate",
     duration: "10 weeks",
-    price: 449,
+    price: 0,
     instructor: {
       name: "Alex Kim",
       bio: "Mobile Developer at Meta with expertise inFlutter and cross-platform development.",
@@ -266,7 +307,7 @@ export const courses: Course[] = [
     lastUpdated: "2025-12-08",
   },
   {
-    id: "7",
+    id: "8",
     title: "Cybersecurity Essentials",
     slug: "cybersecurity-essentials",
     description: "Learn ethical hacking, network security, and security best practices.",
@@ -276,7 +317,7 @@ export const courses: Course[] = [
     category: "Cybersecurity",
     level: "Advanced",
     duration: "14 weeks",
-    price: 799,
+    price: 0,
     instructor: {
       name: "David Martinez",
       bio: "Former NSA Cybersecurity Analyst, CEH and CISSP certified instructor.",
@@ -307,7 +348,7 @@ export const courses: Course[] = [
     lastUpdated: "2025-12-05",
   },
   {
-    id: "8",
+    id: "9",
     title: "Project Management Professional",
     slug: "project-management-professional",
     description: "Master project management methodologies and prepare for PMP certification.",
@@ -317,7 +358,7 @@ export const courses: Course[] = [
     category: "Business",
     level: "Intermediate",
     duration: "8 weeks",
-    price: 599,
+    price: 0,
     instructor: {
       name: "Jennifer Adams",
       bio: "PMP certified Project Manager with 20 years of experience leading Fortune 500 projects.",
@@ -354,12 +395,13 @@ export const courses: Course[] = [
 
 export const categories = [
   "All Categories",
-  "Web Development",
+  "Web",
   "Data Science",
-  "Design",
+  "UI/UX",
+  "Graphic Design",
   "Cloud Computing",
   "Marketing",
-  "Mobile Development",
+  "Mobile App",
   "Cybersecurity",
   "Business",
 ]
