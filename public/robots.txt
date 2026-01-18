@@ -16,4 +16,4 @@ Allow: *.svg
 Allow: *.ico
 
 # Sitemap location
-Sitemap: https://coltek-academy.com/sitemap.xml
+Sitemap: https://coltekacademy.coltektechnologies.io/sitemap.xml
