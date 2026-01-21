@@ -68,39 +68,20 @@ export default function PaymentSuccessPage() {
         const courseId = localStorage.getItem('selectedCourseId')
         const courseTitle = localStorage.getItem('selectedCourseTitle')
         const storedFormData = localStorage.getItem('registrationFormData')
+        const formData = storedFormData ? JSON.parse(storedFormData) : {}
 
         if (!courseId) {
-          setError('Course information not found. Please restart the registration process.')
-          setIsProcessing(false)
-          return
+          throw new Error('Course ID not found in local storage')
         }
 
-        const selectedCourse = courses.find(c => c.id === courseId)
+        // Get course details
+        const selectedCourse = courses.find(course => course.id === courseId)
         if (!selectedCourse) {
-          setError('Course not found')
-          setIsProcessing(false)
-          return
+          throw new Error('Course not found')
         }
 
-        // Use stored formData or create minimal version
-        let formData
-        if (storedFormData) {
-          formData = JSON.parse(storedFormData)
-        } else {
-          // Fallback for incomplete data
-          formData = {
-            selectedCourseId: courseId,
-            firstName: 'Unknown',
-            lastName: 'Unknown',
-            email: user.email!,
-            phone: 'Unknown',
-            highestEducation: 'Unknown',
-            fieldOfStudy: 'Unknown',
-            currentOccupation: 'Unknown',
-            yearsOfExperience: 'Unknown',
-            learningGoals: 'Unknown',
-            preferredSchedule: 'Unknown'
-          }
+        if (!paymentRef) {
+          throw new Error('Payment reference not found')
         }
 
         // Save enrollment to Firebase
@@ -129,31 +110,6 @@ export default function PaymentSuccessPage() {
     handlePaymentSuccess()
   }, [user, searchParams])
 
-        // Save enrollment to Firebase
-        await saveUserEnrollment(
-          user.uid,
-          user.email!,
-          formData,
-          paymentRef!,
-          selectedCourse.price,
-          'paystack'
-        )
-
-        // Clear stored data
-        localStorage.removeItem('selectedCourseId')
-        localStorage.removeItem('selectedCourseTitle')
-        localStorage.removeItem('registrationFormData')
-
-        setIsProcessing(false)
-      } catch (err) {
-        console.error('Error saving enrollment:', err)
-        setError('Payment was successful but enrollment could not be saved. Please contact support.')
-        setIsProcessing(false)
-      }
-    }
-
-    handlePaymentSuccess()
-  }, [user, searchParams])
 
   if (isProcessing) {
     return (
@@ -200,7 +156,7 @@ export default function PaymentSuccessPage() {
             Payment Successful!
           </CardTitle>
           <CardDescription>
-            {isMockPayment 
+            {searchParams.get('reference')?.startsWith('MOCK-') || searchParams.get('trxref')?.startsWith('MOCK-')
               ? "This was a test payment. In production, you would be charged."
               : "You have been successfully enrolled in your course. You can now access your course materials."
             }
