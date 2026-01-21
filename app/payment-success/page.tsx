@@ -128,15 +128,6 @@ export default function PaymentSuccessPage() {
 
     handlePaymentSuccess()
   }, [user, searchParams])
-            phone: 'Unknown',
-            highestEducation: 'Unknown',
-            fieldOfStudy: 'Unknown',
-            currentOccupation: 'Unknown',
-            yearsOfExperience: 'Unknown',
-            learningGoals: 'Unknown',
-            preferredSchedule: 'Unknown'
-          }
-        }
 
         // Save enrollment to Firebase
         await saveUserEnrollment(
