@@ -4,15 +4,29 @@ service cloud.firestore {
     match /users/{userId} {
       // Allow users to read and write their own data
       allow read, update, delete: if request.auth != null && request.auth.uid == userId;
-      
+
       // Allow create with proper validation
-      allow create: if 
-        request.auth != null && 
+      allow create: if
+        request.auth != null &&
         request.auth.uid == userId &&
         request.resource.data.uid == userId &&
         request.resource.data.email == request.auth.token.email;
     }
-    
+
+    match /enrollments/{enrollmentId} {
+      // Allow authenticated users to create enrollment documents
+      allow create: if request.auth != null;
+
+      // Allow users to read their own enrollments
+      allow read: if request.auth != null && request.auth.uid == resource.data.userId;
+
+      // Allow users to update their own enrollments
+      allow update: if request.auth != null && request.auth.uid == resource.data.userId;
+
+      // Deny delete operations for enrollments
+      allow delete: if false;
+    }
+
     // Default deny all other access
     match /{document=**} {
       allow read, write: if false;
