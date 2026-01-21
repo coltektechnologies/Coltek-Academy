@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, Suspense } from "react"
-import { useSearchParams } from "next/navigation"
+import { useSearchParams, useRouter } from "next/navigation"
 import { Navbar } from "@/components/navbar"
 import { Footer } from "@/components/footer"
 import { ProgressSteps } from "@/components/register/progress-steps"
@@ -12,6 +12,8 @@ import { StepPayment } from "@/components/register/step-payment"
 import { RegistrationSuccess } from "@/components/register/registration-success"
 import { Button } from "@/components/ui/button"
 import { Loader2 } from "lucide-react"
+import { useToast } from "@/hooks/use-toast"
+import { useAuth } from "@/hooks/use-auth"
 import type { RegistrationFormData } from "@/lib/types"
 
 const steps = ["Personal Info", "Education", "Course", "Payment"]
@@ -34,6 +36,9 @@ const initialFormData: RegistrationFormData = {
 
 function RegisterPageContent() {
   const searchParams = useSearchParams()
+  const router = useRouter()
+  const { toast } = useToast()
+  const { user, loading } = useAuth()
   const preselectedCourseId = searchParams.get("course") || ""
 
   const [currentStep, setCurrentStep] = useState(1)
@@ -44,6 +49,19 @@ function RegisterPageContent() {
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isComplete, setIsComplete] = useState(false)
+
+  useEffect(() => {
+    if (!loading && !user) {
+      toast({
+        title: "Authentication Required",
+        description: "You must have an account to register for a course. Please log in or create an account.",
+        variant: "destructive",
+      })
+      const courseParam = preselectedCourseId ? `?course=${preselectedCourseId}` : ''
+      router.push(`/login?redirect=/register${courseParam}`)
+      return
+    }
+  }, [user, loading, toast, router, preselectedCourseId])
 
   useEffect(() => {
     if (preselectedCourseId) {
@@ -104,9 +122,14 @@ function RegisterPageContent() {
   const handleSubmit = async () => {
     if (!validateStep(4)) return
 
+    // For Paystack payments, payment is handled separately
+    if (formData.paymentMethod === "credit-card") {
+      return
+    }
+
     setIsSubmitting(true)
 
-    // Simulate API call
+    // Simulate API call for other payment methods
     await new Promise((resolve) => setTimeout(resolve, 2000))
 
     // In production, this would call the API endpoint:
@@ -136,10 +159,29 @@ function RegisterPageContent() {
           />
         )
       case 4:
-        return <StepPayment formData={formData} updateFormData={updateFormData} errors={errors} />
+        return <StepPayment formData={formData} updateFormData={updateFormData} errors={errors} onPaymentSuccess={() => setIsComplete(true)} />
       default:
         return null
     }
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex flex-col">
+        <Navbar />
+        <main className="flex-1 flex items-center justify-center">
+          <div className="text-center">
+            <Loader2 className="mx-auto h-8 w-8 animate-spin mb-4" />
+            <p className="text-muted-foreground">Checking authentication...</p>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    )
+  }
+
+  if (!user) {
+    return null // Will redirect in useEffect
   }
 
   if (isComplete) {
@@ -178,7 +220,7 @@ function RegisterPageContent() {
 
               {currentStep < 4 ? (
                 <Button onClick={handleNext}>Continue</Button>
-              ) : (
+              ) : formData.paymentMethod !== "credit-card" ? (
                 <Button onClick={handleSubmit} disabled={isSubmitting}>
                   {isSubmitting ? (
                     <>
@@ -189,7 +231,7 @@ function RegisterPageContent() {
                     "Complete Registration"
                   )}
                 </Button>
-              )}
+              ) : null}
             </div>
           </div>
         </div>

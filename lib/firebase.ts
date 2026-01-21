@@ -12,7 +12,8 @@ import {
   initializeFirestore,
   persistentLocalCache,
   persistentMultipleTabManager,
-  memoryLocalCache
+  memoryLocalCache,
+  Firestore
 } from "firebase/firestore";
 import { getAnalytics, isSupported, Analytics } from "firebase/analytics";
 

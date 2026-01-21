@@ -1,20 +1,116 @@
 "use client"
 
+import { useState, useEffect } from "react"
 import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Checkbox } from "@/components/ui/checkbox"
-import { CreditCard, Building, Wallet } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { CreditCard, Building, Wallet, Loader2 } from "lucide-react"
 import { courses } from "@/lib/data"
+import { useAuth } from "@/hooks/use-auth"
+import { useToast } from "@/hooks/use-toast"
+import { saveUserEnrollment } from "@/lib/enrollment"
 import type { RegistrationFormData } from "@/lib/types"
+
+// Paystack type declarations
+interface PaystackTransaction {
+  key: string
+  email: string
+  amount: number
+  currency: string
+  ref: string
+  metadata?: Record<string, any>
+  callback: (response: any) => void
+  onClose: () => void
+}
+
+// Paystack type declarations
+declare global {
+  interface Window {
+    PaystackPop?: any
+  }
+}
 
 interface StepPaymentProps {
   formData: RegistrationFormData
   updateFormData: (data: Partial<RegistrationFormData>) => void
   errors: Record<string, string>
+  onPaymentSuccess?: () => void
 }
 
-export function StepPayment({ formData, updateFormData, errors }: StepPaymentProps) {
+export function StepPayment({ formData, updateFormData, errors, onPaymentSuccess }: StepPaymentProps) {
+  const { user } = useAuth()
+  const { toast } = useToast()
+  const [isProcessing, setIsProcessing] = useState(false)
   const selectedCourse = courses.find((c) => c.id === formData.selectedCourseId)
+
+  const handlePaystackPayment = async () => {
+    if (!selectedCourse || !user) return
+
+    // Check if user has an email (required for Paystack)
+    if (!user.email) {
+      toast({
+        title: "Email Required",
+        description: "An email address is required to process payments. Please update your profile.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    setIsProcessing(true)
+
+    try {
+      // Store course info for callback handling
+      localStorage.setItem('selectedCourseId', selectedCourse.id)
+      localStorage.setItem('selectedCourseTitle', selectedCourse.title)
+      localStorage.setItem('registrationFormData', JSON.stringify(formData))
+
+      console.log('Initializing payment with Paystack...')
+
+      // Initialize transaction server-side
+      const response = await fetch('/api/paystack/initialize', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: user.email,
+          amount: selectedCourse.price,
+          courseId: selectedCourse.id,
+          courseTitle: selectedCourse.title,
+          userId: user.uid,
+          userEmail: user.email,
+        }),
+      })
+
+      const data = await response.json()
+      console.log('Paystack initialize API response:', { status: response.status, data })
+
+      if (!response.ok) {
+        const errorMessage = data.error || data.message || 'Failed to initialize payment'
+        console.error('Payment initialization failed:', { status: response.status, errorMessage, details: data })
+        throw new Error(`${errorMessage}${data.details ? ` (${JSON.stringify(data.details)})` : ''}`)
+      }
+
+      console.log('Paystack initialization successful:', data)
+
+      // Redirect to Paystack checkout
+      if (data.data?.authorization_url) {
+        window.location.href = data.data.authorization_url
+      } else {
+        throw new Error('No authorization URL received from Paystack')
+      }
+
+    } catch (error) {
+      console.error('Payment initialization error:', error)
+      setIsProcessing(false)
+      toast({
+        title: "Payment Error",
+        description: error instanceof Error ? error.message : "An error occurred while processing payment. Please try again.",
+        variant: "destructive",
+      })
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -54,7 +150,7 @@ export function StepPayment({ formData, updateFormData, errors }: StepPaymentPro
             <RadioGroupItem value="credit-card" id="credit-card" />
             <CreditCard className="h-5 w-5 text-muted-foreground" />
             <Label htmlFor="credit-card" className="font-normal cursor-pointer flex-1">
-              Credit / Debit Card
+              Paystack (Credit / Debit Card)
             </Label>
           </div>
           <div
@@ -78,6 +174,27 @@ export function StepPayment({ formData, updateFormData, errors }: StepPaymentPro
         </RadioGroup>
         {errors.paymentMethod && <p className="text-sm text-destructive">{errors.paymentMethod}</p>}
       </div>
+
+      {/* Paystack Payment Button */}
+      {formData.paymentMethod === "credit-card" && (
+        <div className="space-y-3">
+          <Button
+            onClick={handlePaystackPayment}
+            disabled={isProcessing || !formData.agreeToTerms}
+            className="w-full"
+            size="lg"
+          >
+            {isProcessing ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Processing Payment...
+              </>
+            ) : (
+              `Pay ₦${selectedCourse?.price} with Paystack`
+            )}
+          </Button>
+        </div>
+      )}
 
       {/* Terms Agreement */}
       <div className="space-y-2">
@@ -105,9 +222,28 @@ export function StepPayment({ formData, updateFormData, errors }: StepPaymentPro
 
       <div className="p-4 bg-primary/5 rounded-lg border border-primary/20">
         <p className="text-sm text-muted-foreground">
-          <strong className="text-foreground">Note:</strong> This is a demo registration form. No actual payment will be
-          processed. In production, this would integrate with a payment processor like Stripe.
+          <strong className="text-foreground">Note:</strong> Payment processing is handled securely through Paystack.
+          {process.env.NEXT_PUBLIC_MOCK_PAYSTACK === 'true' ? ' Currently in development mode with mock payments.' : ' Test payments will not charge your card. For production, use live keys.'}
         </p>
+        {process.env.NEXT_PUBLIC_MOCK_PAYSTACK === 'true' && (
+          <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded text-sm">
+            <strong className="text-blue-800">Development Mode:</strong>
+            <p className="text-blue-700 mt-1">
+              Mock payments enabled. Clicking "Pay Now" will simulate a successful payment without contacting Paystack.
+            </p>
+          </div>
+        )}
+        {process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY?.startsWith('pk_test') && !process.env.NEXT_PUBLIC_MOCK_PAYSTACK && (
+          <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded text-sm">
+            <strong className="text-yellow-800">Test Mode:</strong>
+            <p className="text-yellow-700 mt-1">
+              Use these test card details:
+              <br />• Card: 4084084084084081
+              <br />• Expiry: Any future date (MM/YY)
+              <br />• CVV: 408
+            </p>
+          </div>
+        )}
       </div>
     </div>
   )

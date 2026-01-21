@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -15,6 +15,8 @@ import { auth } from "@/lib/firebase"
 export function LoginForm() {
   const { toast } = useToast()
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const redirectTo = searchParams.get('redirect') || '/'
   const [isLoading, setIsLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [formData, setFormData] = useState({
@@ -45,8 +47,8 @@ export function LoginForm() {
         description: "Welcome back to EduLearn.",
       })
       
-      // Redirect to home page or dashboard
-      router.push('/')
+      // Redirect to the specified page or home
+      router.push(redirectTo)
     } catch (error: any) {
       console.error('Error signing in:', error)
       let errorMessage = "Failed to sign in. Please check your credentials."

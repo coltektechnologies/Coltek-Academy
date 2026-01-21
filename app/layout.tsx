@@ -6,6 +6,7 @@ import { Suspense } from "react"
 import "./globals.css"
 import { Toaster } from "@/components/ui/toaster"
 import { RouteLoaderProvider } from "@/components/providers/route-loader"
+import { AuthProvider } from "@/hooks/use-auth"
 
 const _inter = Inter({ subsets: ["latin"] })
 const _geistMono = Geist_Mono({ subsets: ["latin"] })
@@ -25,7 +26,7 @@ export const metadata: Metadata = {
       { url: "/fav-32x32.png", sizes: "32x32", type: "image/png" },
       { url: "/fav-16x16.png", sizes: "16x16", type: "image/png" },
     ],
-    apple: "/apple-icon.png",
+    apple: "/fav-32x32.png",
   },
     generator: 'v0.app'
 }
@@ -44,11 +45,13 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="font-sans antialiased">
-        <Suspense fallback={null}>
-          <RouteLoaderProvider minDurationMs={800} label="Loading..." />
-        </Suspense>
-        {children}
-        <Toaster />
+        <AuthProvider>
+          <Suspense fallback={null}>
+            <RouteLoaderProvider minDurationMs={800} label="Loading..." />
+          </Suspense>
+          {children}
+          <Toaster />
+        </AuthProvider>
         <Analytics />
       </body>
     </html>

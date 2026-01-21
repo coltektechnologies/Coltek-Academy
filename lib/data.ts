@@ -12,7 +12,7 @@ export const courses: Course[] = [
     category: "Web",
     level: "Beginner",
     duration: "1 week",
-    price: 0,
+    price: 1, 
     instructor: {
       name: "Mr. Boansi Kyeremateng Collins",
       bio: "Senior Software Engineer at Google with 10+ years of experience teaching web development.",
@@ -59,7 +59,7 @@ export const courses: Course[] = [
     category: "Data Science",
     level: "Intermediate",
     duration: "16 weeks",
-    price: 0,
+    price: 10, // 10 GHS = ~$0.80 USD (for testing)
     instructor: {
       name: "Prof. Michael Rodriguez",
       bio: "Former Data Scientist at Netflix, PhD in Machine Learning from Stanford.",
@@ -103,7 +103,7 @@ export const courses: Course[] = [
     category: "UI/UX",
     level: "Beginner",
     duration: "10 weeks",
-    price: 0,
+    price: 10, // 10 GHS = ~$0.80 USD (for testing)
     instructor: {
       name: "Emma Thompson",
       bio: "Lead Product Designer at Airbnb with expertise in user-centered design.",
@@ -147,7 +147,7 @@ export const courses: Course[] = [
     category: "Graphic Design",
     level: "Beginner",
     duration: "1 week",
-    price: 0,
+    price: 10, // 10 GHS = ~$0.80 USD (for testing)
     instructor: {
       name: "Maria Gonzalez",
       bio: "Senior Graphic Designer at Adobe with 12 years of experience in branding and visual design.",
@@ -188,7 +188,7 @@ export const courses: Course[] = [
     category: "Cloud Computing",
     level: "Intermediate",
     duration: "8 weeks",
-    price: 0,
+    price: 10, // 10 GHS = ~$0.80 USD (for testing)
     instructor: {
       name: "James Wilson",
       bio: "AWS Solutions Architect with 15 years of cloud infrastructure experience.",
@@ -226,7 +226,7 @@ export const courses: Course[] = [
     category: "Marketing",
     level: "Beginner",
     duration: "6 weeks",
-    price: 0,
+    price: 10, // 10 GHS = ~$0.80 USD (for testing)
     instructor: {
       name: "Lisa Park",
       bio: "CMO at a Fortune 500 company with 12 years of digital marketing experience.",
@@ -276,7 +276,7 @@ export const courses: Course[] = [
     category: "Mobile App",
     level: "Intermediate",
     duration: "10 weeks",
-    price: 0,
+    price: 10, // 10 GHS = ~$0.80 USD (for testing)
     instructor: {
       name: "Alex Kim",
       bio: "Mobile Developer at Meta with expertise inFlutter and cross-platform development.",
@@ -317,7 +317,7 @@ export const courses: Course[] = [
     category: "Cybersecurity",
     level: "Advanced",
     duration: "14 weeks",
-    price: 0,
+    price: 10, // 10 GHS = ~$0.80 USD (for testing)
     instructor: {
       name: "David Martinez",
       bio: "Former NSA Cybersecurity Analyst, CEH and CISSP certified instructor.",
@@ -358,7 +358,7 @@ export const courses: Course[] = [
     category: "Business",
     level: "Intermediate",
     duration: "8 weeks",
-    price: 0,
+    price: 10, // 10 GHS = ~$0.80 USD (for testing)
     instructor: {
       name: "Jennifer Adams",
       bio: "PMP certified Project Manager with 20 years of experience leading Fortune 500 projects.",

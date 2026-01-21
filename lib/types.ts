@@ -53,3 +53,32 @@ export interface RegistrationFormData {
   paymentMethod: string
   agreeToTerms: boolean
 }
+
+export interface UserEnrollment {
+  id: string
+  userId: string
+  userEmail: string
+  courseId: string
+  courseTitle: string
+  enrollmentDate: Date
+  paymentReference: string
+  paymentAmount: number
+  paymentMethod: string
+  status: 'active' | 'completed' | 'cancelled'
+  personalInfo: {
+    firstName: string
+    lastName: string
+    email: string
+    phone: string
+  }
+  education: {
+    highestEducation: string
+    fieldOfStudy: string
+    currentOccupation: string
+    yearsOfExperience: string
+  }
+  courseDetails: {
+    learningGoals: string
+    preferredSchedule: string
+  }
+}
