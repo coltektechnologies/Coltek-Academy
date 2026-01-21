@@ -18,12 +18,6 @@ export default function PaymentSuccessPage() {
 
   useEffect(() => {
     const handlePaymentSuccess = async () => {
-      if (!user) {
-        setError('User not authenticated')
-        setIsProcessing(false)
-        return
-      }
-
       const reference = searchParams.get('reference')
       const trxref = searchParams.get('trxref')
       const isMockPayment = reference?.startsWith('MOCK-') || trxref?.startsWith('MOCK-')
@@ -36,6 +30,39 @@ export default function PaymentSuccessPage() {
 
       const paymentRef = reference || trxref
 
+      // For mock payments, require authentication
+      if (isMockPayment) {
+        if (!user) {
+          setError('User not authenticated')
+          setIsProcessing(false)
+          return
+        }
+      } else {
+        // For real payments, verify with Paystack first
+        try {
+          const verifyResponse = await fetch(`/api/paystack/verify?reference=${paymentRef}`)
+          const verifyData = await verifyResponse.json()
+
+          if (!verifyResponse.ok || !verifyData.status || verifyData.data.status !== 'success') {
+            setError('Payment verification failed')
+            setIsProcessing(false)
+            return
+          }
+        } catch (verifyError) {
+          console.error('Payment verification error:', verifyError)
+          setError('Payment verification failed')
+          setIsProcessing(false)
+          return
+        }
+      }
+
+      // At this point, payment is verified (or it's a mock payment with authenticated user)
+      if (!user) {
+        setError('User not authenticated. Please log in to complete your enrollment.')
+        setIsProcessing(false)
+        return
+      }
+
       try {
         // Extract course info from localStorage
         const courseId = localStorage.getItem('selectedCourseId')
@@ -43,7 +70,7 @@ export default function PaymentSuccessPage() {
         const storedFormData = localStorage.getItem('registrationFormData')
 
         if (!courseId) {
-          setError('Course information not found')
+          setError('Course information not found. Please restart the registration process.')
           setIsProcessing(false)
           return
         }
@@ -60,12 +87,47 @@ export default function PaymentSuccessPage() {
         if (storedFormData) {
           formData = JSON.parse(storedFormData)
         } else {
-          // Fallback for old method
+          // Fallback for incomplete data
           formData = {
             selectedCourseId: courseId,
             firstName: 'Unknown',
             lastName: 'Unknown',
             email: user.email!,
+            phone: 'Unknown',
+            highestEducation: 'Unknown',
+            fieldOfStudy: 'Unknown',
+            currentOccupation: 'Unknown',
+            yearsOfExperience: 'Unknown',
+            learningGoals: 'Unknown',
+            preferredSchedule: 'Unknown'
+          }
+        }
+
+        // Save enrollment to Firebase
+        await saveUserEnrollment(
+          user.uid,
+          user.email!,
+          formData,
+          paymentRef,
+          selectedCourse.price,
+          'paystack'
+        )
+
+        // Clear stored data
+        localStorage.removeItem('selectedCourseId')
+        localStorage.removeItem('selectedCourseTitle')
+        localStorage.removeItem('registrationFormData')
+
+        setIsProcessing(false)
+      } catch (err) {
+        console.error('Error saving enrollment:', err)
+        setError('Payment was successful but enrollment could not be saved. Please contact support with reference: ' + paymentRef)
+        setIsProcessing(false)
+      }
+    }
+
+    handlePaymentSuccess()
+  }, [user, searchParams])
             phone: 'Unknown',
             highestEducation: 'Unknown',
             fieldOfStudy: 'Unknown',
