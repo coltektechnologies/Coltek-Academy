@@ -12,11 +12,16 @@ import { CheckCircle, Loader2 } from 'lucide-react'
 export default function PaymentSuccessPage() {
   const searchParams = useSearchParams()
   const router = useRouter()
-  const { user } = useAuth()
+  const { user, loading: authLoading } = useAuth()
   const [isProcessing, setIsProcessing] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [isRedirecting, setIsRedirecting] = useState(false)
 
+  // Handle authentication and payment processing
   useEffect(() => {
+    // Wait for auth state to be determined
+    if (authLoading) return
+
     const handlePaymentSuccess = async () => {
       const reference = searchParams.get('reference')
       const trxref = searchParams.get('trxref')
@@ -31,14 +36,16 @@ export default function PaymentSuccessPage() {
       const paymentRef = reference || trxref
 
       // For mock payments, require authentication
-      if (isMockPayment) {
-        if (!user) {
-          setError('User not authenticated')
-          setIsProcessing(false)
-          return
-        }
-      } else {
-        // For real payments, verify with Paystack first
+      if (isMockPayment && !user) {
+        // Redirect to login with redirect back to this page
+        localStorage.setItem('paymentReference', paymentRef || '')
+        localStorage.setItem('redirectAfterLogin', window.location.pathname + window.location.search)
+        router.push('/login')
+        return
+      }
+
+      // For real payments, verify with Paystack first
+      if (!isMockPayment) {
         try {
           const verifyResponse = await fetch(`/api/paystack/verify?reference=${paymentRef}`)
           const verifyData = await verifyResponse.json()
@@ -54,13 +61,6 @@ export default function PaymentSuccessPage() {
           setIsProcessing(false)
           return
         }
-      }
-
-      // At this point, payment is verified (or it's a mock payment with authenticated user)
-      if (!user) {
-        setError('User not authenticated. Please log in to complete your enrollment.')
-        setIsProcessing(false)
-        return
       }
 
       try {
@@ -84,10 +84,14 @@ export default function PaymentSuccessPage() {
           throw new Error('Payment reference not found')
         }
 
+        if (!user) {
+          throw new Error('User not authenticated. Please log in to complete your enrollment.')
+        }
+
         // Save enrollment to Firebase
         await saveUserEnrollment(
           user.uid,
-          user.email!,
+          user.email || '',
           formData,
           paymentRef,
           selectedCourse.price,
@@ -111,17 +115,20 @@ export default function PaymentSuccessPage() {
   }, [user, searchParams])
 
 
-  if (isProcessing) {
+  if (authLoading || isProcessing) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <Card className="w-full max-w-md">
           <CardHeader className="text-center">
             <CardTitle className="flex items-center justify-center gap-2">
               <Loader2 className="h-6 w-6 animate-spin" />
-              Processing Payment
+              {authLoading ? 'Checking authentication...' : 'Processing Payment...'}
             </CardTitle>
             <CardDescription>
-              Please wait while we confirm your payment and enroll you in the course.
+              {authLoading 
+                ? 'Please wait while we verify your session.'
+                : 'Please wait while we confirm your payment and enroll you in the course.'
+              }
             </CardDescription>
           </CardHeader>
         </Card>
@@ -134,11 +141,29 @@ export default function PaymentSuccessPage() {
       <div className="min-h-screen flex items-center justify-center bg-background">
         <Card className="w-full max-w-md">
           <CardHeader className="text-center">
-            <CardTitle className="text-red-600">Payment Error</CardTitle>
+            <CardTitle className="text-red-600">
+              {error.includes('authenticated') ? 'Authentication Required' : 'Payment Error'}
+            </CardTitle>
             <CardDescription>{error}</CardDescription>
           </CardHeader>
-          <CardContent className="text-center">
-            <Button onClick={() => router.push('/courses')}>
+          <CardContent className="text-center space-y-2">
+            {error.includes('authenticated') ? (
+              <Button 
+                onClick={() => {
+                  // Save current URL to redirect back after login
+                  localStorage.setItem('redirectAfterLogin', window.location.pathname + window.location.search);
+                  router.push('/login');
+                }}
+                className="w-full"
+              >
+                Log In
+              </Button>
+            ) : null}
+            <Button 
+              onClick={() => router.push('/courses')} 
+              variant={error.includes('authenticated') ? 'outline' : 'default'}
+              className="w-full"
+            >
               Return to Courses
             </Button>
           </CardContent>
