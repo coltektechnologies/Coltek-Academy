@@ -4,22 +4,22 @@ const values = [
   {
     icon: Target,
     title: "Excellence",
-    description: "We maintain the highest standards in course content, instruction, and student support.",
+    description: "We uphold high standards in our training delivery, curriculum design, mentorship, and learner support to ensure quality and relevance.",
   },
   {
     icon: Heart,
-    title: "Student-First",
+    title: "Learner-Focused",
     description: "Every decision we make is guided by what's best for our learners' success.",
   },
   {
     icon: Zap,
     title: "Innovation",
-    description: "We continuously evolve our platform and curriculum to stay ahead of industry trends.",
+    description: "We embrace continuous improvement by adapting our curriculum, tools, and teaching methods to match evolving technology and industry trends.",
   },
   {
     icon: Shield,
     title: "Integrity",
-    description: "We're transparent about outcomes and committed to honest, ethical practices.",
+    description: "We operate with transparency, accountability, and ethical practices, building trust with our learners, partners, and community.",
   },
 ]
 
@@ -30,7 +30,7 @@ export function ValuesSection() {
         <div className="text-center mb-12">
           <h2 className="text-3xl font-bold text-foreground mb-4">Our Core Values</h2>
           <p className="text-muted-foreground max-w-2xl mx-auto">
-            These principles guide everything we do at EduLearn.
+          These principles guide everything we do at COLTEK ACADEMY.
           </p>
         </div>
 

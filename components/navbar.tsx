@@ -48,6 +48,11 @@ export function Navbar() {
             <Link href="/courses" className="text-muted-foreground hover:text-foreground transition-colors">
               Courses
             </Link>
+            {user && (
+              <Link href="/certificates" className="text-muted-foreground hover:text-foreground transition-colors">
+                Certificates
+              </Link>
+            )}
             <Link href="/about" className="text-muted-foreground hover:text-foreground transition-colors">
               About
             </Link>
@@ -108,6 +113,15 @@ export function Navbar() {
               >
                 Courses
               </Link>
+              {user && (
+                <Link
+                  href="/certificates"
+                  className="px-4 py-2 text-muted-foreground hover:text-foreground hover:bg-secondary rounded-md transition-colors"
+                  onClick={() => setIsOpen(false)}
+                >
+                  Certificates
+                </Link>
+              )}
               <Link
                 href="/about"
                 className="px-4 py-2 text-muted-foreground hover:text-foreground hover:bg-secondary rounded-md transition-colors"

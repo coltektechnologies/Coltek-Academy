@@ -88,10 +88,10 @@ export function CourseFilters({
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Prices</SelectItem>
-            <SelectItem value="0-300">Under $300</SelectItem>
-            <SelectItem value="300-500">$300 - $500</SelectItem>
-            <SelectItem value="500-700">$500 - $700</SelectItem>
-            <SelectItem value="700+">$700+</SelectItem>
+            <SelectItem value="0-300">Under GH₵300</SelectItem>
+            <SelectItem value="300-500">GH300 - GH₵ 500</SelectItem>
+            <SelectItem value="500-700">GH₵ 500 - GH₵ 700</SelectItem>
+            <SelectItem value="700+">GH₵ 700+</SelectItem>
           </SelectContent>
         </Select>
       </div>

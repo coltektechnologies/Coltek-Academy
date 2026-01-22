@@ -1,40 +1,23 @@
 const milestones = [
-  { year: "2018", title: "Founded", description: "EduLearn was founded with a vision to transform online education." },
+  { year: "2025", title: "COLTEK ACADEMY Launched", description: "COLTEK ACADEMY was established as a training arm of Coltek Technologies with a focus on practical coding and technology skills." },
+
   {
-    year: "2019",
-    title: "10,000 Students",
-    description: "Reached our first major milestone of 10,000 enrolled students.",
-  },
-  {
-    year: "2020",
-    title: "100 Courses",
-    description: "Expanded our catalog to over 100 courses across multiple disciplines.",
+    year: "2025",
+    title: "First Training Programs Delivered",
+    description: "Successfully launched our initial coding programs, emphasizing hands-on learning and real-world projects.",
   },
   {
     year: "2021",
-    title: "Series A Funding",
-    description: "Raised $15M to accelerate platform development and expansion.",
-  },
-  {
-    year: "2022",
-    title: "Global Expansion",
-    description: "Launched in 50+ countries with localized content and support.",
-  },
-  {
-    year: "2023",
-    title: "50,000 Graduates",
-    description: "Celebrated 50,000 successful graduates entering the workforce.",
-  },
-  {
-    year: "2024",
-    title: "AI-Powered Learning",
-    description: "Introduced AI tutoring and personalized learning paths.",
+    title: "Curriculum Development & Refinement",
+    description: "Continuously improved our curriculum based on learner feedback and evolving industry needs.",
   },
   {
     year: "2025",
-    title: "Industry Partnerships",
-    description: "Partnered with Fortune 500 companies for direct hiring pipelines.",
+    title: "Platform & Infrastructure Setup",
+    description: "Developed our learning platform, tools, and processes to support scalable and effective online training.",
   },
+
+ 
 ]
 
 export function MilestonesSection() {
