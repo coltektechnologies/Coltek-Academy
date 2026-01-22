@@ -1,7 +1,6 @@
-import { doc, setDoc, collection, query, where, getDocs } from 'firebase/firestore'
+import { doc, setDoc, collection, query, where, getDocs, getDoc } from 'firebase/firestore'
 import { db } from './firebase'
-import { courses } from './data'
-import type { UserEnrollment, RegistrationFormData } from './types'
+import type { UserEnrollment, RegistrationFormData, Course } from './types'
 
 export async function saveUserEnrollment(
   userId: string,
@@ -14,14 +13,19 @@ export async function saveUserEnrollment(
   try {
     const enrollmentId = `enrollment_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
 
-    const selectedCourse = courses.find(c => c.id === formData.selectedCourseId)
+    // Get course details from Firestore
+    const courseDoc = await getDoc(doc(db, 'courses', formData.selectedCourseId));
+    if (!courseDoc.exists()) {
+      throw new Error('Selected course not found');
+    }
+    const selectedCourse = { id: courseDoc.id, ...courseDoc.data() } as Course;
     
     const enrollmentData: UserEnrollment = {
       id: enrollmentId,
       userId,
       userEmail,
       courseId: formData.selectedCourseId,
-      courseTitle: selectedCourse?.title || 'Unknown Course',
+      courseTitle: selectedCourse.title,
       enrollmentDate: new Date(),
       paymentReference,
       paymentAmount,

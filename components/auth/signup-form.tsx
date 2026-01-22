@@ -83,9 +83,9 @@ export function SignupForm() {
         email: formData.email,
         emailVerified: false,
         photoURL: "",
+        role: 'student', // Set default role as 'student'
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
-        // Add any additional required fields here
       }
 
       await setDoc(doc(db, 'users', userCredential.user.uid), userDoc, {

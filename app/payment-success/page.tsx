@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { useAuth } from '@/hooks/use-auth'
 import { saveUserEnrollment } from '@/lib/enrollment'
-import { courses } from '@/lib/data'
+import { getCourseById } from '@/lib/courses'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { CheckCircle, Loader2 } from 'lucide-react'
@@ -74,8 +74,8 @@ export default function PaymentSuccessPage() {
           throw new Error('Course ID not found in local storage')
         }
 
-        // Get course details
-        const selectedCourse = courses.find(course => course.id === courseId)
+        // Get course details from Firestore
+        const selectedCourse = await getCourseById(courseId)
         if (!selectedCourse) {
           throw new Error('Course not found')
         }

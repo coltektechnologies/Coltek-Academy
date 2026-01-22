@@ -4,8 +4,9 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import { courses } from "@/lib/data"
-import type { RegistrationFormData } from "@/lib/types"
+import { useEffect, useState } from 'react';
+import { getAllCourses } from "@/lib/courses"
+import type { RegistrationFormData, Course } from "@/lib/types"
 
 interface StepCourseSelectionProps {
   formData: RegistrationFormData
@@ -20,6 +21,32 @@ export function StepCourseSelection({
   errors,
   preselectedCourseId,
 }: StepCourseSelectionProps) {
+  const [courses, setCourses] = useState<Course[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const loadCourses = async () => {
+      try {
+        const coursesData = await getAllCourses();
+        setCourses(coursesData);
+      } catch (error) {
+        console.error('Error loading courses:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadCourses();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
   const selectedCourse = courses.find((c) => c.id === (formData.selectedCourseId || preselectedCourseId))
 
   return (

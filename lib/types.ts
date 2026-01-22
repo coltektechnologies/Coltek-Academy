@@ -82,3 +82,24 @@ export interface UserEnrollment {
     preferredSchedule: string
   }
 }
+
+export interface Certificate {
+  id: string
+  userId: string
+  userEmail: string
+  courseId: string
+  courseTitle: string
+  enrollmentId: string
+  certificateNumber: string
+  issueDate: Date
+  completionDate: Date
+  instructorName: string
+  certificateUrl: string // Firebase Storage URL for PDF
+  previewUrl?: string // Firebase Storage URL for preview image (optional)
+  status: 'issued' | 'revoked'
+  metadata: {
+    templateUsed: string
+    verificationCode: string
+    grade?: string
+  }
+}

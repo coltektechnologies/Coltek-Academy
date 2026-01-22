@@ -16,6 +16,7 @@ import {
   Firestore
 } from "firebase/firestore";
 import { getAnalytics, isSupported, Analytics } from "firebase/analytics";
+import { getStorage, FirebaseStorage } from "firebase/storage";
 
 const firebaseConfig = {
   apiKey: "AIzaSyBOH96JkHHrkxLciuFegf56QY3jHBzWuoU",
@@ -34,6 +35,14 @@ class Firebase {
   public auth: Auth;
   public db: Firestore;
   public analytics: Analytics | null = null;
+  public storage: FirebaseStorage;
+  
+  public static getInstance(): Firebase {
+    if (!Firebase.instance) {
+      Firebase.instance = new Firebase();
+    }
+    return Firebase.instance;
+  }
 
   private constructor() {
     // Initialize Firebase
@@ -49,7 +58,19 @@ class Firebase {
           tabManager: persistentMultipleTabManager()
         })
       });
-    } catch (error) {
+      
+      // Initialize Storage
+      this.storage = getStorage(this.app);
+      
+      // Initialize Analytics (browser only)
+      if (typeof window !== 'undefined') {
+        isSupported().then(supported => {
+          if (supported) {
+            this.analytics = getAnalytics(this.app);
+          }
+        });
+      }
+    } catch (error: any) {
       console.warn('Failed to initialize Firestore with persistent cache, falling back to memory cache:', error);
       try {
         this.db = initializeFirestore(this.app, {
@@ -124,17 +145,10 @@ class Firebase {
       });
     }
   }
-
-  public static getInstance(): Firebase {
-    if (!Firebase.instance) {
-      Firebase.instance = new Firebase();
-    }
-    return Firebase.instance;
-  }
 }
 
 // Create and export a single instance
 const firebase = Firebase.getInstance();
-const { app, auth, db, analytics } = firebase;
+const { app, auth, db, analytics, storage } = firebase;
 
-export { app, auth, db, analytics, firebase as default };
+export { app, auth, db, analytics, storage, firebase as default };
