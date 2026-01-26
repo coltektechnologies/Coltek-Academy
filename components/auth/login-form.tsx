@@ -44,7 +44,7 @@ export function LoginForm() {
       
       toast({
         title: "Login successful!",
-        description: "Welcome back to EduLearn.",
+        description: "Welcome back to Coltek Academy.",
       })
       
       // Redirect to the specified page or home
@@ -76,7 +76,7 @@ export function LoginForm() {
         <div className="text-center mb-8">
           <Link href="/" className="inline-flex items-center gap-2 mb-6">
             <BookOpen className="h-8 w-8 text-primary" />
-            <span className="text-xl font-bold text-foreground">EduLearn</span>
+            <span className="text-xl font-bold text-foreground">Coltek Academy</span>
           </Link>
           <h1 className="text-2xl font-bold text-foreground mb-2">Welcome Back</h1>
           <p className="text-muted-foreground text-sm">Sign in to continue your learning journey</p>

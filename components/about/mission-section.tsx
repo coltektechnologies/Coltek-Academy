@@ -20,7 +20,7 @@ Whether you are starting your tech journey, transitioning into a new career, or 
             </p>
             <p className="text-muted-foreground leading-relaxed">
               Whether you&apos;re looking to switch careers, advance in your current role, or simply expand your
-              knowledge, EduLearn provides the tools and support you need to succeed.
+              knowledge, Coltek Academy provides the tools and support you need to succeed.
             </p>
           </div>
           <div className="relative h-80 lg:h-96 rounded-2xl overflow-hidden">

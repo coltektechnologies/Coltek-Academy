@@ -9,7 +9,7 @@ export function TestimonialsSection() {
         <div className="text-center mb-16">
           <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">What Our Students Say</h2>
           <p className="text-muted-foreground max-w-2xl mx-auto">
-            Hear from our community of learners who have transformed their careers with EduLearn.
+            Hear from our community of learners who have transformed their careers with Coltek Academy.
           </p>
         </div>
 

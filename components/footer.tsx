@@ -1,5 +1,6 @@
 import Link from "next/link"
-import { BookOpen, Facebook, Twitter, Linkedin, Instagram, Mail } from "lucide-react"
+import { Facebook, Twitter, Linkedin, Instagram, Mail } from "lucide-react"
+import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 
@@ -11,8 +12,13 @@ export function Footer() {
           {/* Brand */}
           <div className="space-y-4">
             <Link href="/" className="flex items-center gap-2">
-              <BookOpen className="h-8 w-8" />
-              <span className="text-xl font-bold">EduLearn</span>
+              <Image 
+                src="/Coltek Academy.png" 
+                alt="Coltek Academy Logo" 
+                width={32} 
+                height={32} 
+                className="h-8 w-auto object-contain"
+              />
             </Link>
             <p className="text-primary-foreground/80 text-sm leading-relaxed">
               Empowering learners worldwide with expert-led courses and cutting-edge skills for the future.
@@ -174,19 +180,16 @@ export function Footer() {
 
         <div className="mt-12 pt-8 border-t border-primary-foreground/20">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-            <p className="text-primary-foreground/70 text-sm">© 2026 EduLearn. All rights reserved.</p>
-            <div className="flex gap-6">
-              <Link
-                href="/privacy"
-                className="text-primary-foreground/70 hover:text-primary-foreground text-sm transition-colors"
-              >
-                Privacy Policy
+            <p className="text-sm text-primary-foreground/60">
+              &copy; {new Date().getFullYear()} Coltek Academy. All rights reserved.
+            </p>
+            <div className="flex items-center gap-4 text-sm">
+              <Link href="/terms" className="text-primary-foreground/60 hover:underline hover:text-primary-foreground/90 transition-colors">
+                Terms & Conditions
               </Link>
-              <Link
-                href="/terms"
-                className="text-primary-foreground/70 hover:text-primary-foreground text-sm transition-colors"
-              >
-                Terms of Service
+              <span className="text-primary-foreground/40">•</span>
+              <Link href="/privacy" className="text-primary-foreground/60 hover:underline hover:text-primary-foreground/90 transition-colors">
+                Privacy Policy
               </Link>
             </div>
           </div>

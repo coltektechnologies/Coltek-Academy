@@ -59,7 +59,7 @@ export const courses: Course[] = [
     category: "Data Science",
     level: "Intermediate",
     duration: "16 weeks",
-    price: 10, // 10 GHS = ~$0.80 USD (for testing)
+    price: 0, // 10 GHS = ~$0.80 USD (for testing)
     instructor: {
       name: "Prof. Michael Rodriguez",
       bio: "Former Data Scientist at Netflix, PhD in Machine Learning from Stanford.",
@@ -415,7 +415,7 @@ export const testimonials = [
     role: "Software Engineer at Microsoft",
     avatar: "/professional-woman-smiling.png",
     content:
-      "EduLearn completely transformed my career. I went from knowing nothing about coding to landing my dream job in just 6 months. The instructors are world-class!",
+      "Coltek Academy completely transformed my career. I went from knowing nothing about coding to landing my dream job in just 6 months. The instructors are world-class!",
     course: "Complete Web Development Bootcamp",
   },
   {

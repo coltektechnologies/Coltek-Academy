@@ -54,7 +54,7 @@ export default function CertificatesPage() {
             issueDate: new Date('2024-01-15'),
             completionDate: new Date('2024-01-15'),
             instructorName: 'Coltek Academy',
-            certificateUrl: '/certificates/sample-certificate.pdf',
+            certificateUrl: '/uploads/certificates/sample-certificate.pdf',
             previewUrl: undefined,
             status: 'issued',
             metadata: {
@@ -73,7 +73,7 @@ export default function CertificatesPage() {
             issueDate: new Date('2024-02-20'),
             completionDate: new Date('2024-02-20'),
             instructorName: 'Coltek Academy',
-            certificateUrl: '/certificates/sample-certificate-2.pdf',
+            certificateUrl: '/uploads/certificates/sample-certificate-2.pdf',
             previewUrl: undefined,
             status: 'issued',
             metadata: {
@@ -92,14 +92,73 @@ export default function CertificatesPage() {
     fetchData()
   }, [user, authLoading, router])
 
-  const handleDownload = (certificate: Certificate) => {
-    // In real app, this would trigger actual download
-    const link = document.createElement('a')
-    link.href = certificate.certificateUrl
-    link.download = `${certificate.courseTitle.replace(/\s+/g, '_')}_Certificate.pdf`
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
+  const handleDownload = async (certificate: any) => {
+    try {
+      // Use fileUrl if available, otherwise fall back to certificateUrl
+      const fileUrl = (certificate as any).fileUrl || certificate.certificateUrl;
+      
+      if (!fileUrl) {
+        throw new Error('Certificate file not found. Please contact support.');
+      }
+      
+      // Convert relative URLs to absolute if needed
+      const downloadUrl = fileUrl.startsWith('http') ? fileUrl : `${window.location.origin}${fileUrl}`;
+
+      // Fetch the certificate file
+      const response = await fetch(downloadUrl, {
+        method: 'GET',
+        headers: {
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache'
+        },
+        credentials: 'include'
+      })
+      
+      if (!response.ok) {
+        throw new Error(`Failed to download certificate: ${response.statusText}`)
+      }
+      
+      // Get the file as a blob
+      const blob = await response.blob()
+      
+      // Create a download link
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      
+      // Set the download attribute with a proper filename
+      const courseName = certificate.courseTitle || 'certificate';
+      const userName = (certificate as any).userName || '';
+      const fileName = `Coltek-Academy-${courseName.replace(/\s+/g, '-').toLowerCase()}-${userName.replace(/\s+/g, '-') || certificate.id}.pdf`;
+      link.download = fileName;
+      
+      // Trigger the download
+      document.body.appendChild(link)
+      link.click()
+      
+      // Clean up
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(link)
+      
+    } catch (error) {
+      console.error('Error downloading certificate:', error);
+      
+      // More specific error messages
+      let errorMessage = 'Failed to download certificate. ';
+      
+      if (error instanceof Error) {
+        if (error.message.includes('Certificate file not found')) {
+          errorMessage += 'The certificate file could not be found.';
+        } else if (error.message.includes('network')) {
+          errorMessage += 'Network error. Please check your connection.';
+        } else {
+          errorMessage += error.message;
+        }
+      }
+      
+      errorMessage += ' Please contact support if the issue persists.';
+      alert(errorMessage);
+    }
   }
 
   const CertificatePreview = ({ certificate }: { certificate: Certificate }) => (

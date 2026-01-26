@@ -1,17 +1,36 @@
 "use client"
 
-import { useCallback, useEffect, useState } from 'react'
-import { useAuth } from '@/hooks/use-auth'
-import { useRouter } from 'next/navigation'
-import { AdminLayout } from '@/components/admin/AdminLayout'
-import { AdminHeader } from '@/components/admin/AdminHeader'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Users, BookOpen, FileText, BarChart2, Upload, Award } from 'lucide-react'
-import { auth, db } from '@/lib/firebase'
-import { doc, getDoc, collection, query, where, getCountFromServer, getDocs } from 'firebase/firestore';
+import { useCallback, useEffect, useState } from 'react';
+import { useAuth } from '@/hooks/use-auth';
+import { useRouter } from 'next/navigation';
+import { AdminLayout } from '@/components/admin/AdminLayout';
+import { AdminHeader } from '@/components/admin/AdminHeader';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Users, BookOpen, FileText, BarChart2, Upload, Award, Clock } from 'lucide-react';
+import { auth, db } from '@/lib/firebase';
+import { 
+  doc, 
+  getDoc, 
+  collection, 
+  query, 
+  where, 
+  getCountFromServer, 
+  getDocs, 
+  onSnapshot, 
+  DocumentData, 
+  DocumentSnapshot, 
+  QuerySnapshot,
+  QueryDocumentSnapshot,
+  Timestamp,
+  orderBy,
+  limit
+} from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
-import { IssueCertificate } from '@/components/admin/issue-certificate'
+import { IssueCertificate } from '@/components/admin/issue-certificate';
+import { Activity } from '@/types/activity';
+import { ActivityItem } from '@/components/activity/activity-item';
+import { subscribeToActivities, getRecentActivities } from '@/lib/activity-service';
 
 interface UserData {
   id: string;
@@ -34,25 +53,128 @@ interface Course {
   students?: number;
   duration?: string;
   level?: string;
+  enrolledStudents?: string[];
   issuedCertificates?: Certificate[];
 }
 
 export default function AdminPage() {
-  const { user, loading: authLoading } = useAuth()
-  const router = useRouter()
-  const { toast } = useToast()
-  const [isAdmin, setIsAdmin] = useState(false)
-  const [adminLoading, setAdminLoading] = useState(true)
+  const { toast } = useToast();
+  const router = useRouter();
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [adminLoading, setAdminLoading] = useState(true);
   const [stats, setStats] = useState({
     totalUsers: 0,
     totalCourses: 0,
     certificatesIssued: 0,
     activeStudents: 0,
-    activeUsers: 0 // Added to fix the calculation in the template
-  })
-  const [activeTab, setActiveTab] = useState('certificates')
+    activeUsers: 0
+  });
+  const [activeTab, setActiveTab] = useState('certificates');
   const [users, setUsers] = useState<UserData[]>([]);
-  const [courses, setCourses] = useState<Course[]>([]); // Added courses state
+  const [courses, setCourses] = useState<Course[]>([]);
+  const [activities, setActivities] = useState<Activity[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Get current user from auth context
+  const { user: currentUser, loading: authLoading } = useAuth();
+
+  // Check if current user is admin
+  useEffect(() => {
+    const checkAdminStatus = async () => {
+      if (!currentUser) {
+        if (!authLoading) {
+          // If not authenticated and auth is done loading, redirect to login
+          router.push('/auth/signin');
+        }
+        return;
+      }
+
+      try {
+        const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
+        if (userDoc.exists() && userDoc.data()?.role === 'admin') {
+          setIsAdmin(true);
+        } else {
+          setError('You do not have permission to access this page');
+          setIsLoading(false);
+        }
+      } catch (err) {
+        console.error('Error checking admin status:', err);
+        setError('Error verifying permissions. Please try again later.');
+        setIsLoading(false);
+      } finally {
+        setAdminLoading(false);
+      }
+    };
+
+    checkAdminStatus();
+  }, [currentUser, authLoading, router]);
+
+  // Fetch activities
+  useEffect(() => {
+    // Only fetch activities if user is admin
+    if (!isAdmin) {
+      return;
+    }
+
+    setIsLoading(true);
+
+    // Initial load of activities
+    const loadActivities = async () => {
+      try {
+        setError(null);
+        setIsLoading(true);
+        const recentActivities = await getRecentActivities(10);
+        setActivities(recentActivities);
+      } catch (error) {
+        console.error('Error loading activities:', error);
+        setError('Failed to load activities. Please check your connection and try again.');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadActivities();
+
+    // Set up real-time subscription
+    let unsubscribe: (() => void) | null = null;
+    try {
+      const q = query(
+        collection(db, 'activities'),
+        orderBy('timestamp', 'desc'),
+        limit(10)
+      );
+      
+      unsubscribe = onSnapshot(q, 
+        (snapshot) => {
+          const newActivities = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+          })) as Activity[];
+          setActivities(newActivities);
+          setError(null);
+        },
+        (error) => {
+          console.error('Error in real-time subscription:', error);
+          if (error.code === 'permission-denied') {
+            setError('You do not have permission to view activities. Please contact an administrator.');
+          } else {
+            setError('Real-time updates are not available. Page will refresh to show new activities.');
+          }
+        }
+      );
+    } catch (error) {
+      console.error('Error setting up real-time updates:', error);
+      setError('Failed to set up real-time updates. Page will refresh to show new activities.');
+    }
+
+      // Clean up subscription on unmount
+    return () => {
+      if (unsubscribe) {
+        unsubscribe();
+      }
+    };
+  }, [isAdmin]); // Only re-run if admin status changes
 
   // Fetch all users
   const fetchUsers = async () => {
@@ -90,15 +212,68 @@ export default function AdminPage() {
     }
   };
 
-  // Fetch courses
+  // Fetch courses with detailed debugging
   const fetchCourses = async () => {
     try {
-      const coursesSnapshot = await getDocs(collection(db, 'courses'));
-      const coursesData = coursesSnapshot.docs.map(docItem => ({
-        id: docItem.id,
-        ...docItem.data()
-      })) as Course[];
+      console.log('1. Starting to fetch courses...');
+      const coursesRef = collection(db, 'courses');
+      console.log('2. Collection reference created:', coursesRef);
+      
+      // First, try to get the documents directly
+      console.log('3. Attempting to get documents...');
+      const coursesSnapshot = await getDocs(coursesRef);
+      
+      // Log collection metadata
+      console.log('4. Collection metadata:', {
+        path: coursesRef.path,
+        id: coursesRef.id,
+        type: coursesRef.type
+      });
+      
+      // Log snapshot details
+      console.log('5. Snapshot details:', {
+        size: coursesSnapshot.size,
+        empty: coursesSnapshot.empty,
+        fromCache: coursesSnapshot.metadata.fromCache,
+        hasPendingWrites: coursesSnapshot.metadata.hasPendingWrites
+      });
+      
+      // Log each document in the collection
+      const coursesData: Course[] = [];
+      console.log('6. Documents in collection:');
+      coursesSnapshot.forEach((doc) => {
+        const data = doc.data();
+        console.log(`  - ${doc.id}:`, data);
+        coursesData.push({
+          id: doc.id,
+          title: data.title || 'Untitled Course',
+          description: data.description,
+          duration: data.duration,
+          level: data.level,
+          enrolledStudents: data.enrolledStudents || []
+        });
+      });
+      
+      console.log('7. Processed courses data:', coursesData);
       setCourses(coursesData);
+      
+      // Set up a real-time listener for changes
+      const unsubscribe = onSnapshot(coursesRef, 
+        (snapshot) => {
+          console.log('Live update - Courses changed. New count:', snapshot.size);
+          const updatedCourses = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+          })) as Course[];
+          setCourses(updatedCourses);
+        },
+        (error) => {
+          console.error('Error in courses listener:', error);
+        }
+      );
+      
+      // Return the unsubscribe function to clean up the listener
+      return () => unsubscribe();
       
       // Update stats
       setStats(prev => ({
@@ -119,45 +294,57 @@ export default function AdminPage() {
 
   // Check admin status on mount and when user/auth changes
   useEffect(() => {
-    if (isAdmin) {
-      fetchUsers();
-      fetchCourses();
-    }
-    const checkAdminStatus = async () => {
-      if (authLoading) return
+    const initializeAdminPage = async () => {
+      if (authLoading) return;
 
-      if (!user) {
-        router.push('/admin/login')
-        return
+      // Redirect to login if not authenticated
+      if (!currentUser) {
+        router.push('/admin/login');
+        return;
       }
 
       try {
-        // Check if user is an admin in Firestore
-        const adminDoc = await getDoc(doc(db, 'adminUsers', user.uid))
-        const isUserAdmin = adminDoc.exists() && adminDoc.data()?.role === 'admin'
+        // Check admin status in both users and adminUsers collections
+        const [userDoc, adminDoc] = await Promise.all([
+          getDoc(doc(db, 'users', currentUser.uid)),
+          getDoc(doc(db, 'adminUsers', currentUser.uid))
+        ]);
+
+        const isUserAdmin = adminDoc.exists() && adminDoc.data()?.role === 'admin';
+        setIsAdmin(isUserAdmin);
 
         if (!isUserAdmin) {
           toast({
-            title: "Access Denied",
-            description: "You don't have admin privileges",
-            variant: "destructive",
-          })
-          router.push('/admin/login')
-          return
+            title: 'Access Denied',
+            description: 'You do not have admin privileges',
+            variant: 'destructive',
+          });
+          router.push('/');
+          return;
         }
 
-        setIsAdmin(true)
+        // Fetch data if user is admin
+        await Promise.all([fetchUsers(), fetchCourses()]);
+        
+        // Update admin status in UI
+        setAdminLoading(false);
       } catch (error) {
-        console.error('Error checking admin status:', error)
-        router.push('/admin/login')
+        console.error('Error initializing admin page:', error);
+        toast({
+          title: 'Error',
+          description: 'Failed to initialize admin dashboard',
+          variant: 'destructive',
+        });
+        router.push('/admin/login');
       } finally {
-        setAdminLoading(false)
+        setAdminLoading(false);
       }
-    }
+    };
 
-    checkAdminStatus()
-  }, [user, authLoading, router, toast])
+    initializeAdminPage();
+  }, [currentUser, authLoading, router, toast]);
 
+  // Fetch statistics function
   const fetchStats = useCallback(async () => {
     if (!isAdmin || authLoading || adminLoading) return;
 
@@ -177,16 +364,22 @@ export default function AdminPage() {
       const certsSnapshot = await getCountFromServer(certsQuery);
       const totalCertificates = certsSnapshot.data().count;
 
-      // For now, we'll count all students as active
-      // In a production app, you should track and query lastActive timestamps
-      const activeStudents = totalStudents;
+      // Calculate active users (users who logged in the last 30 days)
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      const activeUsersQuery = query(
+        collection(db, 'users'),
+        where('lastLogin', '>=', thirtyDaysAgo)
+      );
+      const activeUsersSnapshot = await getCountFromServer(activeUsersQuery);
+      const activeUsers = activeUsersSnapshot.data().count;
 
       setStats({
         totalUsers: totalStudents,
         totalCourses: totalCourses,
         certificatesIssued: totalCertificates,
-        activeStudents: activeStudents,
-        activeUsers: activeStudents // Assuming active users are the same as active students for now
+        activeStudents: activeUsers,
+        activeUsers: activeUsers
       });
     } catch (error) {
       console.error('Error fetching stats:', error);
@@ -204,23 +397,33 @@ export default function AdminPage() {
 
   if (authLoading || adminLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center space-y-4">
-          <div className="animate-pulse">
-            <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
-              <svg className="h-6 w-6 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 11c0 3.517-1.009 6.799-2.753 9.571m-3.44-2.04l.054-.09A13.916 13.916 0 008 11a4 4 0 118 0c0 1.017-.07 2.019-.203 3m-2.118 6.844A21.88 21.88 0 0015.171 17m3.839 1.132c.645-2.266.99-4.659.99-7.132A8 8 0 008 4.07M3 15.364c.64-1.319 1-2.8 1-4.364 0-1.457.39-2.823 1.07-4" />
-              </svg>
-            </div>
-          </div>
-          <p className="text-gray-600">Loading admin dashboard...</p>
+      <AdminLayout>
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
         </div>
-      </div>
-    )
+      </AdminLayout>
+    );
   }
 
-  if (!user || !isAdmin) {
-    return null // Will redirect
+  if (error) {
+    return (
+      <AdminLayout>
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="text-center p-6 max-w-md">
+            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-red-100 mb-4">
+              <svg className="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+            </div>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">Access Denied</h3>
+            <p className="text-gray-600 mb-4">{error}</p>
+            <Button onClick={() => router.push('/')}>
+              Back to Home
+            </Button>
+          </div>
+        </div>
+      </AdminLayout>
+    );
   }
 
   return (
@@ -229,59 +432,46 @@ export default function AdminPage() {
         title="Dashboard Overview"
         description="Welcome back! Here's what's happening with your academy today."
       />
-      
-      <main className="p-6">
-        {/* Stats Grid */}
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mb-8">
+      <div className="p-6">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-8">
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Total Students</CardTitle>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Users</CardTitle>
               <Users className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.totalUsers.toLocaleString()}</div>
-              <p className="text-xs text-muted-foreground">
-                +{Math.floor(stats.totalUsers * 0.12).toLocaleString()} from last month
-              </p>
+              <div className="text-2xl font-bold">{stats.totalUsers}</div>
+              <p className="text-xs text-muted-foreground">+{Math.floor(Math.random() * 30) + 5}% from last month</p>
             </CardContent>
           </Card>
-          
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Active Courses</CardTitle>
-              <BookOpen className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.totalCourses}</div>
-              <p className="text-xs text-muted-foreground">
-                +{Math.floor(stats.totalCourses * 0.25)} from last quarter
-              </p>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Certificates Issued</CardTitle>
-              <FileText className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.certificatesIssued.toLocaleString()}</div>
-              <p className="text-xs text-muted-foreground">
-                +{Math.floor(stats.certificatesIssued * 0.18).toLocaleString()} this month
-              </p>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Active Students</CardTitle>
-              <BarChart2 className="h-4 w-4 text-muted-foreground" />
+              <Users className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{stats.activeStudents}</div>
-              <p className="text-xs text-muted-foreground">
-                {Math.floor((stats.activeStudents / stats.totalUsers) * 100)}% of total users
-              </p>
+              <p className="text-xs text-muted-foreground">+{Math.floor(Math.random() * 30) + 5}% from last month</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Courses</CardTitle>
+              <BookOpen className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{courses.length}</div>
+              <p className="text-xs text-muted-foreground">+{Math.floor(Math.random() * 5)} from last month</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Certificates Issued</CardTitle>
+              <Award className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats.certificatesIssued}</div>
+              <p className="text-xs text-muted-foreground">+{Math.floor(Math.random() * 10) + 1} from last month</p>
             </CardContent>
           </Card>
         </div>
@@ -315,35 +505,49 @@ export default function AdminPage() {
               <CardDescription>Latest actions in the system</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex items-center justify-between space-y-2">
-                <h2 className="text-3xl font-bold tracking-tight">Dashboard</h2>
-                <div className="flex items-center space-x-2">
-                <IssueCertificate users={users} courses={courses}>
-                  <Button>
-                    <Award className="mr-2 h-4 w-4" />
-                    Issue Certificate
-                  </Button>
-                </IssueCertificate>
-                <Button variant="outline">
-                  View
-                </Button>
-              </div>
-              </div>
-              {[1, 2, 3].map((item) => (
-                <div key={item} className="flex items-center justify-between">
-                  <div className="space-y-1">
-                    <p className="text-sm font-medium">
-                      New certificate issued to John Doe
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      Web Development Bootcamp - {item} hour{item !== 1 ? 's' : ''} ago
-                    </p>
-                  </div>
-                  <Button variant="outline" size="sm">
-                    View
-                  </Button>
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-xl font-bold tracking-tight">Recent Activity</h2>
+                  <p className="text-sm text-muted-foreground">
+                    Latest actions in the system
+                  </p>
                 </div>
-              ))}
+                <div className="flex items-center space-x-2">
+                  <IssueCertificate users={users} courses={courses}>
+                    <Button size="sm">
+                      <Award className="mr-2 h-4 w-4" />
+                      Issue Certificate
+                    </Button>
+                  </IssueCertificate>
+                </div>
+              </div>
+              
+              {error && (
+                <div className="bg-red-50 p-4 rounded-md">
+                  <div className="flex">
+                    <div className="flex-shrink-0">
+                      <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                      </svg>
+                    </div>
+                    <div className="ml-3">
+                      <p className="text-sm text-red-700">{error}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+              
+              <div className="space-y-4">
+                {activities.length > 0 ? (
+                  activities.map((activity) => (
+                    <ActivityItem key={activity.id} activity={activity} />
+                  ))
+                ) : !isLoading ? (
+                  <div className="text-center py-8 text-gray-500">
+                    <p>No activities found</p>
+                  </div>
+                ) : null}
+              </div>
             </CardContent>
           </Card>
         </div>
@@ -384,7 +588,7 @@ export default function AdminPage() {
             </div>
           </CardContent>
         </Card>
-      </main>
+      </div>
     </AdminLayout>
-  )
+  );
 }

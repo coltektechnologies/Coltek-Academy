@@ -44,8 +44,47 @@ export function StepPayment({ formData, updateFormData, errors, onPaymentSuccess
   const [isProcessing, setIsProcessing] = useState(false)
   const selectedCourse = courses.find((c) => c.id === formData.selectedCourseId)
 
+  const handleFreeEnrollment = async () => {
+    if (!selectedCourse || !user) return
+    
+    setIsProcessing(true)
+    
+    try {
+      const paymentReference = `FREE-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+      
+      // Save to Firebase using the existing saveUserEnrollment function
+      await saveUserEnrollment(
+        user.uid,
+        user.email || '',
+        formData,
+        paymentReference,
+        0, // paymentAmount
+        'free' // paymentMethod
+      )
+      
+      // Call success callback
+      if (onPaymentSuccess) {
+        onPaymentSuccess()
+      }
+      
+    } catch (error) {
+      console.error('Free enrollment error:', error)
+      toast({
+        title: "Enrollment Error",
+        description: error instanceof Error ? error.message : "An error occurred during enrollment. Please try again.",
+        variant: "destructive",
+      })
+      setIsProcessing(false)
+    }
+  }
+
   const handlePaystackPayment = async () => {
     if (!selectedCourse || !user) return
+    
+    // Handle free courses
+    if (selectedCourse.price <= 0) {
+      return handleFreeEnrollment()
+    }
 
     // Check if user has an email (required for Paystack)
     if (!user.email) {
@@ -179,18 +218,19 @@ export function StepPayment({ formData, updateFormData, errors, onPaymentSuccess
       {formData.paymentMethod === "credit-card" && (
         <div className="space-y-3">
           <Button
-            onClick={handlePaystackPayment}
-            disabled={isProcessing || !formData.agreeToTerms}
             className="w-full"
-            size="lg"
+            onClick={handlePaystackPayment}
+            disabled={isProcessing || !formData.agreeToTerms || !selectedCourse}
           >
             {isProcessing ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Processing Payment...
+                {selectedCourse && selectedCourse.price > 0 ? 'Processing Payment...' : 'Completing Enrollment...'}
               </>
             ) : (
-              `Pay ₦${selectedCourse?.price} with Paystack`
+              selectedCourse && (selectedCourse.price > 0 
+                ? `Pay ₦${selectedCourse.price} with Paystack` 
+                : 'Enroll for Free')
             )}
           </Button>
         </div>

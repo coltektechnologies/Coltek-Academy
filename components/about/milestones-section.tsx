@@ -1,23 +1,24 @@
 const milestones = [
-  { year: "2025", title: "COLTEK ACADEMY Launched", description: "COLTEK ACADEMY was established as a training arm of Coltek Technologies with a focus on practical coding and technology skills." },
-
   {
     year: "2025",
-    title: "First Training Programs Delivered",
-    description: "Successfully launched our initial coding programs, emphasizing hands-on learning and real-world projects.",
-  },
-  {
-    year: "2021",
-    title: "Curriculum Development & Refinement",
-    description: "Continuously improved our curriculum based on learner feedback and evolving industry needs.",
+    title: "Q1: COLTEK ACADEMY Founded",
+    description: "Established COLTEK ACADEMY as the training arm of Coltek Technologies, focusing on practical coding and technology skills.",
   },
   {
     year: "2025",
-    title: "Platform & Infrastructure Setup",
-    description: "Developed our learning platform, tools, and processes to support scalable and effective online training.",
+    title: "Q2: Platform Development",
+    description: "Built our learning platform and infrastructure to support scalable and effective online training programs.",
   },
-
- 
+  {
+    year: "2025",
+    title: "Q3: Curriculum Finalized",
+    description: "Completed development of our comprehensive curriculum based on industry needs and learner feedback.",
+  },
+  {
+    year: "2025",
+    title: "Q4: First Programs Launched",
+    description: "Successfully launched our initial coding programs, bringing hands-on learning to our first cohort of students."
+  }
 ]
 
 export function MilestonesSection() {
@@ -38,7 +39,7 @@ export function MilestonesSection() {
           <div className="space-y-8">
             {milestones.map((milestone, index) => (
               <div
-                key={milestone.year}
+                key={`${milestone.year}-${index}`}
                 className={`relative flex items-center gap-8 ${
                   index % 2 === 0 ? "md:flex-row" : "md:flex-row-reverse"
                 }`}

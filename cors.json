@@ -1,0 +1,21 @@
+[
+  {
+    "origin": ["*"],
+    "method": ["GET", "PUT", "POST", "DELETE", "HEAD", "OPTIONS"],
+    "maxAgeSeconds": 3600,
+    "responseHeader": ["Content-Type", "Authorization", "Content-Length", "X-Requested-With"],
+    "responseHeader": ["Content-Type"],
+    "responseHeader": ["x-goog-meta-foo"],
+    "responseHeader": ["x-firebase-storage-*"],
+    "responseHeader": ["*"],
+    "responseHeader": ["x-goog-*"],
+    "responseHeader": ["x-*"],
+    "responseHeader": ["*"],
+    "responseHeader": ["x-goog-meta-foo"],
+    "responseHeader": ["x-firebase-storage-*"],
+    "responseHeader": ["*"],
+    "responseHeader": ["x-goog-*"],
+    "responseHeader": ["x-*"],
+    "responseHeader": ["*"]
+  }
+]

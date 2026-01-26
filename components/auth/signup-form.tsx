@@ -152,7 +152,7 @@ export function SignupForm() {
         <div className="text-center mb-8">
           <Link href="/" className="inline-flex items-center gap-2 mb-6">
             <BookOpen className="h-8 w-8 text-primary" />
-            <span className="text-xl font-bold text-foreground">EduLearn</span>
+            <span className="text-xl font-bold text-foreground">Coltek Academy</span>
           </Link>
           <h1 className="text-2xl font-bold text-foreground mb-2">Create an Account</h1>
           <p className="text-muted-foreground text-sm">Join us to start your learning journey</p>

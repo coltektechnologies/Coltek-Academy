@@ -22,12 +22,15 @@ export class CertificateService {
       )
 
       const querySnapshot = await getDocs(q)
-      return querySnapshot.docs.map(doc => ({
-        ...doc.data(),
-        id: doc.id,
-        issueDate: doc.data().issueDate.toDate(),
-        completionDate: doc.data().completionDate.toDate(),
-      })) as Certificate[]
+      return querySnapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          ...data,
+          id: doc.id,
+          issueDate: data.issueDate?.toDate ? data.issueDate.toDate() : new Date(data.issueDate || Date.now()),
+          completionDate: data.completionDate?.toDate ? data.completionDate.toDate() : new Date(data.completionDate || Date.now()),
+        } as Certificate;
+      })
     } catch (error) {
       console.error('Error fetching user certificates:', error)
       throw new Error('Failed to fetch certificates')
@@ -47,8 +50,8 @@ export class CertificateService {
         return {
           ...data,
           id: docSnap.docs[0].id,
-          issueDate: data.issueDate.toDate(),
-          completionDate: data.completionDate.toDate(),
+          issueDate: data.issueDate?.toDate ? data.issueDate.toDate() : new Date(data.issueDate || Date.now()),
+          completionDate: data.completionDate?.toDate ? data.completionDate.toDate() : new Date(data.completionDate || Date.now()),
         } as Certificate
       }
       return null

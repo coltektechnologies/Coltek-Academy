@@ -39,12 +39,35 @@ service cloud.firestore {
       allow list: if isAdmin();
     }
 
+    // Activities collection rules
+    match /activities/{activityId} {
+      // Allow any authenticated user to read activities
+      allow read: if request.auth != null;
+      
+      // Allow listing activities (required for queries)
+      allow list: if request.auth != null;
+      
+      // Only allow admins to create activities
+      allow create: if isAdmin();
+      
+      // Allow users to read their own activities
+      allow get: if request.auth != null;
+    }
+    
+    // This is needed for collection group queries
+    match /{path=**}/activities/{activityId} {
+      allow read: if request.auth != null;
+    }
+
     match /enrollments/{enrollmentId} {
       // Allow authenticated users to create enrollment documents
       allow create: if request.auth != null;
 
-      // Allow users to read their own enrollments
-      allow read: if request.auth != null && request.auth.uid == resource.data.userId;
+      // Allow users to read their own enrollments and admins to read all enrollments
+      allow read: if request.auth != null && (
+        request.auth.uid == resource.data.userId ||
+        isAdmin()
+      );
 
       // Allow users to update their own enrollments
       allow update: if request.auth != null && request.auth.uid == resource.data.userId;

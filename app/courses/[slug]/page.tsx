@@ -24,7 +24,7 @@ export async function generateMetadata({ params }: CoursePageProps): Promise<Met
   }
 
   return {
-    title: `${course.title} | EduLearn`,
+    title: `${course.title} | Coltek Academy`,
     description: course.description,
     openGraph: {
       title: course.title,
