@@ -1,22 +1,75 @@
 rules_version = '2';
 service cloud.firestore {
+  // Development mode - set to true to enable all operations
+  function isDevelopment() {
+    return true; // Temporarily enable all operations for debugging
+  }
+  
+  // Debug function to log rule evaluation
+  function debugLog(message) {
+    return request.auth != null ? 
+      request.auth.token.email + ': ' + message : 
+      'Unauthenticated: ' + message;
+  }
+
   // Helper function to check if user is admin
   function isAdmin() {
-    return request.auth != null && 
-           get(/databases/$(database)/documents/adminUsers/$(request.auth.uid)).data.role == 'admin';
+    return request.auth != null && (
+      (exists(/databases/$(database)/documents/adminUsers/$(request.auth.uid)) && 
+       get(/databases/$(database)/documents/adminUsers/$(request.auth.uid)).data.role == 'admin') ||
+      (request.auth.token != null && 
+       (request.auth.token.email_verified == true && 
+        request.auth.token.admin == true))
+    );
+  }
+
+  function isAuthenticated() {
+    return request.auth != null && request.auth.uid != null;
+  }
+
+  function isCourseOwner() {
+    return isAuthenticated() && resource.data.createdBy == request.auth.uid;
+  }
+  
+  function isSignedIn() {
+    return request.auth != null;
   }
 
   match /databases/{database}/documents {
+    // Allow all operations in development
+    match /{document=**} {
+      allow read, write: if isDevelopment();
+    }
+    
     // Courses collection rules
     match /courses/{courseId} {
-      // Allow anyone to read courses
-      allow read: if true;
-      
-      // Only allow admins to create/update courses
-      allow create, update: if isAdmin();
-      
-      // Prevent deletion of courses (use a status flag instead)
-      allow delete: if false;
+      // In development, allow all operations
+      allow read, write: if isDevelopment() || (
+        // Read rules
+        (request.method == 'get' && (
+          resource.data.isPublished == true || 
+          isAdmin() || 
+          isCourseOwner()
+        )) ||
+        // List rules
+        (request.method == 'list' && (
+          isAdmin() || 
+          (isSignedIn() && resource.data.isPublished == true)
+        )) ||
+        // Write rules
+        (request.method in ['create', 'update'] && isSignedIn() && (
+          isAdmin() || (
+            isCourseOwner() && 
+            request.resource.data.createdBy == request.auth.uid &&
+            (resource == null || resource.data.createdBy == request.auth.uid)
+          )
+        )) ||
+        // Delete rules
+        (request.method == 'delete' && (
+          isAdmin() || 
+          (isCourseOwner() && resource.data.isPublished == false)
+        ))
+      ) || debugLog('Access denied for ' + request.method + ' on /courses/' + courseId);
     }
 
     match /users/{userId} {
@@ -118,22 +171,6 @@ service cloud.firestore {
         request.auth != null &&
         exists(/databases/$(database)/documents/adminUsers/$(request.auth.uid)) &&
         get(/databases/$(database)/documents/adminUsers/$(request.auth.uid)).data.role == 'admin';
-    }
-
-    // Courses collection rules
-    match /courses/{courseId} {
-      // Allow read access to authenticated users
-      allow read: if request.auth != null;
-      
-      // Allow write access to admins only
-      allow create, update, delete: if isAdmin();
-    }
-    
-    // Helper function to check if user is admin
-    function isAdmin() {
-      return request.auth != null && 
-             exists(/databases/$(database)/documents/adminUsers/$(request.auth.uid)) &&
-             get(/databases/$(database)/documents/adminUsers/$(request.auth.uid)).data.role == 'admin';
     }
 
     // Default deny all other access

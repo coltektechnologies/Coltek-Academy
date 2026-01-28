@@ -1,4 +1,4 @@
-import { BookOpen, Home, LogOut, Settings, Upload, Users } from 'lucide-react';
+import { BookOpen, Home, LogOut, Settings, FileText, Users } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -10,7 +10,7 @@ export function Sidebar() {
 
   const navItems = [
     { name: 'Dashboard', href: '/admin', icon: Home },
-    { name: 'Certificates', href: '/admin/certificates', icon: Upload },
+    { name: 'Certificates', href: '/admin/certificates', icon: FileText },
     { name: 'Users', href: '/admin/users', icon: Users },
     { name: 'Courses', href: '/admin/courses', icon: BookOpen },
     { name: 'Settings', href: '/admin/settings', icon: Settings },

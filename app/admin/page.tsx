@@ -71,10 +71,13 @@ export default function AdminPage() {
   });
   const [activeTab, setActiveTab] = useState('certificates');
   const [users, setUsers] = useState<UserData[]>([]);
+  const [filteredUsers, setFilteredUsers] = useState<UserData[]>([]);
   const [courses, setCourses] = useState<Course[]>([]);
+  const [filteredCourses, setFilteredCourses] = useState<Course[]>([]);
   const [activities, setActivities] = useState<Activity[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Get current user from auth context
   const { user: currentUser, loading: authLoading } = useAuth();
@@ -176,6 +179,37 @@ export default function AdminPage() {
     };
   }, [isAdmin]); // Only re-run if admin status changes
 
+  const filterUsers = useCallback((query: string, usersList: UserData[]) => {
+    if (!query.trim()) return usersList;
+    const lowerQuery = query.toLowerCase();
+    return usersList.filter(user => 
+      user.displayName?.toLowerCase().includes(lowerQuery) ||
+      user.email?.toLowerCase().includes(lowerQuery) ||
+      user.role?.toLowerCase().includes(lowerQuery)
+    );
+  }, []);
+
+  const filterCourses = useCallback((query: string, coursesList: Course[]) => {
+    if (!query.trim()) return coursesList;
+    const lowerQuery = query.toLowerCase();
+    return coursesList.filter(course => 
+      course.title?.toLowerCase().includes(lowerQuery) ||
+      course.description?.toLowerCase().includes(lowerQuery) ||
+      course.level?.toLowerCase().includes(lowerQuery)
+    );
+  }, []);
+
+  const handleSearchChange = (query: string) => {
+    setSearchQuery(query);
+    setFilteredUsers(filterUsers(query, users));
+    setFilteredCourses(filterCourses(query, courses));
+  };
+
+  const handleSearchSubmit = (query: string) => {
+    // We're already filtering on change, but you could add additional logic here
+    console.log('Search submitted:', query);
+  };
+
   // Fetch all users
   const fetchUsers = async () => {
     try {
@@ -191,10 +225,11 @@ export default function AdminPage() {
         enrolledCourses: docItem.data().enrolledCourses || []
       })) as UserData[];
       
+      setUsers(usersData);
+      setFilteredUsers(usersData); // Initialize filtered users with all users
+      
       // Filter for students (role is 'student' or not set)
       const students = usersData.filter(user => !user.role || user.role === 'student');
-      
-      setUsers(usersData);
       
       // Update stats
       setStats(prev => ({
@@ -256,6 +291,7 @@ export default function AdminPage() {
       
       console.log('7. Processed courses data:', coursesData);
       setCourses(coursesData);
+      setFilteredCourses(coursesData); // Initialize filtered courses with all courses
       
       // Set up a real-time listener for changes
       const unsubscribe = onSnapshot(coursesRef, 
@@ -266,6 +302,7 @@ export default function AdminPage() {
             ...doc.data()
           })) as Course[];
           setCourses(updatedCourses);
+          setFilteredCourses(updatedCourses);
         },
         (error) => {
           console.error('Error in courses listener:', error);
@@ -412,7 +449,7 @@ export default function AdminPage() {
           <div className="text-center p-6 max-w-md">
             <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-red-100 mb-4">
               <svg className="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" clipRule="evenodd" />
               </svg>
             </div>
             <h3 className="text-lg font-medium text-gray-900 mb-2">Access Denied</h3>
@@ -429,11 +466,15 @@ export default function AdminPage() {
   return (
     <AdminLayout>
       <AdminHeader 
-        title="Dashboard Overview"
-        description="Welcome back! Here's what's happening with your academy today."
+        title="Admin Dashboard" 
+        description="Welcome to the admin dashboard"
+        searchQuery={searchQuery}
+        onSearchChange={handleSearchChange}
+        onSearchSubmit={handleSearchSubmit}
+        placeholder="Search users, courses, and more..."
       />
       <div className="p-6">
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-8">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mb-8">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total Users</CardTitle>
@@ -441,16 +482,6 @@ export default function AdminPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{stats.totalUsers}</div>
-              <p className="text-xs text-muted-foreground">+{Math.floor(Math.random() * 30) + 5}% from last month</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Active Students</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.activeStudents}</div>
               <p className="text-xs text-muted-foreground">+{Math.floor(Math.random() * 30) + 5}% from last month</p>
             </CardContent>
           </Card>

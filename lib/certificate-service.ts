@@ -2,7 +2,7 @@ import { collection, doc, getDocs, query, where, addDoc, updateDoc, deleteDoc, o
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage'
 import { getStorage } from 'firebase/storage'
 import { db } from './firebase'
-import type { Certificate } from './types'
+import type { Certificate } from '@/types/certificate'
 
 const storage = getStorage()
 
