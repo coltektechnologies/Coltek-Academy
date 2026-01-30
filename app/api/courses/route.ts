@@ -91,9 +91,22 @@ export async function GET() {
     
     // Convert Firestore timestamps to ISO strings and ensure all fields are present
     const courses = publishedCourses.map(course => ({
-      ...course,
-      createdAt: course.createdAt?.toDate?.()?.toISOString() || new Date().toISOString(),
-      updatedAt: course.updatedAt?.toDate?.()?.toISOString() || new Date().toISOString()
+      id: course.id,
+      title: course.title,
+      description: course.description || '',
+      shortDescription: course.shortDescription || course.description?.substring(0, 100) || '',
+      category: course.category || 'Uncategorized',
+      level: course.level || 'Beginner',
+      price: typeof course.price === 'number' ? course.price : 0,
+      image: course.image || '/placeholder-course.jpg',
+      instructor: course.instructor || { name: 'Instructor' },
+      rating: typeof course.rating === 'number' ? course.rating : 0,
+      totalRatings: typeof course.totalRatings === 'number' ? course.totalRatings : 0,
+      enrolledStudents: typeof course.enrolledStudents === 'number' ? course.enrolledStudents : 0,
+      duration: course.duration || 0,
+      slug: course.slug || course.id,
+      isPublished: course.isPublished !== false,
+      lastUpdated: course.updatedAt?.toDate?.()?.toISOString() || new Date().toISOString()
     }));
 
     return NextResponse.json(courses);

@@ -58,11 +58,23 @@ export default function CoursesPage() {
   const [allCourses, setAllCourses] = useState<Course[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const searchParams = useSearchParams()
+  const categoryParam = searchParams.get("category")
 
+  const [searchQuery, setSearchQuery] = useState("")
+  const [selectedCategory, setSelectedCategory] = useState(categoryParam || "All Categories")
+  const [selectedLevel, setSelectedLevel] = useState("All Levels")
+  const [sortBy, setSortBy] = useState("price-low")
+  const [priceRange, setPriceRange] = useState("all")
+
+  // Fetch courses
   useEffect(() => {
     const fetchCourses = async () => {
       try {
         console.log('Fetching courses...');
+        setIsLoading(true);
+        setError(null);
+        
         const response = await fetch('/api/courses', {
           cache: 'no-store',
           headers: {
@@ -71,7 +83,8 @@ export default function CoursesPage() {
         });
         
         if (!response.ok) {
-          throw new Error(`Failed to fetch courses: ${response.status} ${response.statusText}`);
+          const errorText = await response.text();
+          throw new Error(`Failed to fetch courses: ${response.status} ${response.statusText} - ${errorText}`);
         }
         
         const data = await response.json();
@@ -79,24 +92,29 @@ export default function CoursesPage() {
         
         // Ensure we have valid course data
         if (!Array.isArray(data)) {
-          throw new Error('Invalid courses data format');
+          throw new Error(`Invalid courses data format: ${typeof data}`);
         }
         
         // Transform and validate course data
         const validCourses = data
           .filter(course => {
-            const isValid = course && 
-                          course.id && 
-                          course.title && 
-                          course.category &&
-                          course.level &&
-                          typeof course.price === 'number';
-            
-            if (!isValid) {
-              console.warn('Invalid course data:', course);
+            try {
+              const isValid = course && 
+                            course.id && 
+                            course.title && 
+                            course.category &&
+                            course.level &&
+                            typeof course.price === 'number';
+              
+              if (!isValid) {
+                console.warn('Invalid course data:', course);
+                return false;
+              }
+              return true;
+            } catch (err) {
+              console.error('Error validating course:', course, err);
               return false;
             }
-            return true;
           })
           .map(course => ({
             ...course,
@@ -107,13 +125,21 @@ export default function CoursesPage() {
             lastUpdated: course.lastUpdated || new Date().toISOString(),
             isPublished: course.isPublished !== false,
             image: course.image || '/placeholder-course.jpg',
+            // Ensure all required fields are present
+            category: course.category || 'Uncategorized',
+            level: course.level || 'Beginner',
+            price: typeof course.price === 'number' ? course.price : 0,
+            instructor: course.instructor || { name: 'Instructor' }
           }));
         
-        console.log('Processed valid courses:', validCourses);
-        setAllCourses(validCourses);
+        console.log(`Processed ${validCourses.length} valid courses out of ${data.length}`);
         
         if (validCourses.length === 0) {
           console.warn('No valid courses found in the response');
+          setError('No courses found. Please try again later.');
+        } else {
+          console.log('Setting allCourses state with:', validCourses);
+          setAllCourses(validCourses);
         }
       } catch (err) {
         console.error('Error fetching courses:', err);
@@ -126,15 +152,6 @@ export default function CoursesPage() {
     fetchCourses();
   }, []);
 
-  const searchParams = useSearchParams()
-  const categoryParam = searchParams.get("category")
-
-  const [searchQuery, setSearchQuery] = useState("")
-  const [selectedCategory, setSelectedCategory] = useState(categoryParam || "All Categories")
-  const [selectedLevel, setSelectedLevel] = useState("All Levels")
-  const [sortBy, setSortBy] = useState("popular")
-  const [priceRange, setPriceRange] = useState("all")
-
   // Update category when URL param changes
   useEffect(() => {
     if (categoryParam) {
@@ -142,8 +159,16 @@ export default function CoursesPage() {
     }
   }, [categoryParam])
 
+  // **FIX: Added allCourses to dependency array**
   const filteredCourses = useMemo(() => {
-    console.log('Filtering courses...', { allCourses });
+    console.log('Filtering courses with state:', { 
+      allCoursesCount: allCourses?.length,
+      searchQuery,
+      selectedCategory,
+      selectedLevel,
+      sortBy,
+      priceRange
+    });
     
     // If no courses or not an array, return empty array
     if (!Array.isArray(allCourses) || allCourses.length === 0) {
@@ -153,6 +178,7 @@ export default function CoursesPage() {
     
     // Create a new array to avoid mutating the original
     let filtered = [...allCourses];
+    console.log(`Starting with ${filtered.length} courses`);
 
     // Apply filters only if they have values
     const hasSearchQuery = searchQuery.trim() !== '';
@@ -162,6 +188,7 @@ export default function CoursesPage() {
     // Apply search filter if there's a search query
     if (hasSearchQuery) {
       const query = searchQuery.toLowerCase().trim();
+      const beforeSearch = filtered.length;
       filtered = filtered.filter(
         (course) =>
           (course.title?.toLowerCase().includes(query) ||
@@ -169,24 +196,32 @@ export default function CoursesPage() {
           course.category?.toLowerCase().includes(query) ||
           (course.instructor?.name && course.instructor.name.toLowerCase().includes(query)))
       );
+      console.log(`Search filter (${query}): ${beforeSearch} -> ${filtered.length} courses`);
     }
 
     // Apply category filter if selected
     if (hasCategoryFilter) {
+      const beforeCategory = filtered.length;
+      const categoryLower = selectedCategory.toLowerCase();
       filtered = filtered.filter(
-        (course) => course.category?.toLowerCase() === selectedCategory.toLowerCase()
+        (course) => course.category?.toLowerCase() === categoryLower
       );
+      console.log(`Category filter (${selectedCategory}): ${beforeCategory} -> ${filtered.length} courses`);
     }
 
     // Apply level filter if selected
     if (hasLevelFilter) {
+      const beforeLevel = filtered.length;
+      const levelLower = selectedLevel.toLowerCase();
       filtered = filtered.filter(
-        (course) => course.level?.toLowerCase() === selectedLevel.toLowerCase()
+        (course) => course.level?.toLowerCase() === levelLower
       );
+      console.log(`Level filter (${selectedLevel}): ${beforeLevel} -> ${filtered.length} courses`);
     }
 
-      // Apply price range filter if selected
+    // Apply price range filter if selected
     if (priceRange && priceRange !== "all") {
+      const beforePrice = filtered.length;
       switch (priceRange) {
         case "0-300":
           filtered = filtered.filter((course) => course.price < 300);
@@ -200,10 +235,8 @@ export default function CoursesPage() {
         case "700+":
           filtered = filtered.filter((course) => course.price >= 700);
           break;
-        default:
-          // No price filter applied
-          break;
       }
+      console.log(`Price filter (${priceRange}): ${beforePrice} -> ${filtered.length} courses`);
     }
 
     // Sort
@@ -225,10 +258,11 @@ export default function CoursesPage() {
         break
     }
 
+    console.log(`Final filtered courses: ${filtered.length}`);
     return filtered
-  }, [searchQuery, selectedCategory, selectedLevel, sortBy, priceRange])
+  }, [allCourses, searchQuery, selectedCategory, selectedLevel, sortBy, priceRange]) // **ADDED allCourses**
 
-    // Get unique categories and levels for filters
+  // Get unique categories and levels for filters
   const categories = useMemo(() => {
     const cats = new Set<string>(["All Categories"])
     allCourses?.forEach((course) => {
