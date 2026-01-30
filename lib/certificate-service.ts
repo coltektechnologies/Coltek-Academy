@@ -14,23 +14,55 @@ export class CertificateService {
    */
   static async getUserCertificates(userId: string): Promise<Certificate[]> {
     try {
+      console.log('Fetching certificates for user:', userId);
+      
+      // Query certificates directly by userId
       const q = query(
         collection(db, this.COLLECTION),
         where('userId', '==', userId),
         where('status', '==', 'issued'),
         orderBy('issueDate', 'desc')
-      )
+      );
 
-      const querySnapshot = await getDocs(q)
-      return querySnapshot.docs.map(doc => {
+      const querySnapshot = await getDocs(q);
+      console.log(`Found ${querySnapshot.size} certificates for user ${userId}`);
+      
+      // Process certificate data
+      const certificates = querySnapshot.docs.map((doc) => {
         const data = doc.data();
+        console.log('Processing certificate data:', { id: doc.id, data });
+        
+        const issueDate = data.issueDate?.toDate ? data.issueDate.toDate() : new Date(data.issueDate);
+        const completionDate = data.completionDate?.toDate ? data.completionDate.toDate() : new Date(data.issueDate);
+        
         return {
-          ...data,
           id: doc.id,
-          issueDate: data.issueDate?.toDate ? data.issueDate.toDate() : new Date(data.issueDate || Date.now()),
-          completionDate: data.completionDate?.toDate ? data.completionDate.toDate() : new Date(data.completionDate || Date.now()),
+          userId: data.userId || '',
+          courseId: data.courseId || '',
+          courseTitle: data.courseTitle || 'Unnamed Course',
+          courseName: data.courseTitle || 'Unnamed Course',
+          recipientName: data.userName || data.userEmail?.split('@')[0] || 'Certificate Holder',
+          recipientEmail: data.userEmail || '',
+          userEmail: data.userEmail || '',
+          enrollmentId: data.enrollmentId || '',
+          issueDate,
+          completionDate,
+          certificateNumber: data.certificateNumber || `CERT-${doc.id.substring(0, 8).toUpperCase()}`,
+          status: data.status || 'issued',
+          instructorName: data.instructorName || 'Coltek Academy',
+          certificateUrl: data.fileUrl || data.certificateUrl || '',
+          previewUrl: data.previewUrl || data.fileUrl || '',
+          metadata: {
+            templateUsed: data.templateUsed || 'default',
+            verificationCode: data.verificationCode || '',
+            remarks: data.remarks || '',
+            ...(data.metadata || {})
+          }
         } as Certificate;
-      })
+      });
+      
+      console.log(`Found ${certificates.length} certificates for user ${userId}`);
+      return certificates;
     } catch (error) {
       console.error('Error fetching user certificates:', error)
       throw new Error('Failed to fetch certificates')
