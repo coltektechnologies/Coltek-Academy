@@ -29,6 +29,9 @@ export interface Course {
   reviewCount: number
   language: string
   lastUpdated: string
+  relatedCourses?: Course[]
+  // Add any other fields that might be in your database
+  [key: string]: any
 }
 
 export interface RegistrationFormData {

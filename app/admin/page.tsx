@@ -1,13 +1,127 @@
 "use client"
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, Suspense } from 'react';
 import { useAuth } from '@/hooks/use-auth';
 import { useRouter } from 'next/navigation';
-import { AdminLayout } from '@/components/admin/AdminLayout';
-import { AdminHeader } from '@/components/admin/AdminHeader';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Users, BookOpen, FileText, BarChart2, Upload, Award, Clock } from 'lucide-react';
+import dynamic from 'next/dynamic';
+import { Loader2 } from 'lucide-react';
+
+// Lazy load components
+const AdminLayout = dynamic<{ children: React.ReactNode }>(
+  () => import('@/components/admin/AdminLayout').then(mod => mod.AdminLayout), 
+  { 
+    ssr: false,
+    loading: () => <LoadingFallback />
+  }
+);
+
+const AdminHeader = dynamic<{
+  title: string;
+  description?: string;
+  searchQuery?: string;
+  onSearchChange?: (query: string) => void;
+  onSearchSubmit?: (query: string) => void;
+  placeholder?: string;
+  className?: string;
+}>(() => import('@/components/admin/AdminHeader').then(mod => mod.AdminHeader), { 
+  ssr: false,
+  loading: () => <LoadingFallback />
+});
+
+const IssueCertificate = dynamic<{
+  users: Array<{
+    id: string;
+    email: string;
+    displayName: string;  // Made displayName required to match the User interface
+    role?: string;
+    photoURL?: string;
+    enrolledCourses?: string[];
+  }>;
+  courses: Array<{
+    id: string;
+    title: string;
+    description?: string;
+    duration?: string;
+    level?: string;
+    enrolledStudents?: string[];
+  }>;
+  children?: React.ReactNode;
+}>(() => import('@/components/admin/issue-certificate').then(mod => mod.IssueCertificate), { 
+  ssr: false,
+  loading: () => <LoadingFallback />
+});
+
+const ActivityItem = dynamic<{ activity: Activity }>(() => import('@/components/activity/activity-item').then(mod => mod.ActivityItem), { 
+  ssr: false,
+  loading: () => <LoadingFallback />
+});
+
+// Lazy load UI components
+const Card = dynamic<React.ComponentProps<typeof import('@/components/ui/card').Card>>(
+  () => import('@/components/ui/card').then(mod => mod.Card), 
+  { ssr: false }
+);
+
+const CardContent = dynamic<React.ComponentProps<typeof import('@/components/ui/card').CardContent>>(
+  () => import('@/components/ui/card').then(mod => mod.CardContent), 
+  { ssr: false }
+);
+
+const CardDescription = dynamic<React.ComponentProps<typeof import('@/components/ui/card').CardDescription>>(
+  () => import('@/components/ui/card').then(mod => mod.CardDescription), 
+  { ssr: false }
+);
+
+const CardHeader = dynamic<React.ComponentProps<typeof import('@/components/ui/card').CardHeader>>(
+  () => import('@/components/ui/card').then(mod => mod.CardHeader), 
+  { ssr: false }
+);
+
+const CardTitle = dynamic<React.ComponentProps<typeof import('@/components/ui/card').CardTitle>>(
+  () => import('@/components/ui/card').then(mod => mod.CardTitle), 
+  { ssr: false }
+);
+
+const Button = dynamic<React.ComponentProps<typeof import('@/components/ui/button').Button>>(
+  () => import('@/components/ui/button').then(mod => mod.Button), 
+  { ssr: false }
+);
+
+// Lazy load icons
+const Users = dynamic(
+  () => import('lucide-react').then(mod => mod.Users), 
+  { ssr: false, loading: () => <span className="w-6 h-6" /> }
+);
+
+const BookOpen = dynamic(
+  () => import('lucide-react').then(mod => mod.BookOpen), 
+  { ssr: false, loading: () => <span className="w-6 h-6" /> }
+);
+
+const FileText = dynamic(
+  () => import('lucide-react').then(mod => mod.FileText), 
+  { ssr: false, loading: () => <span className="w-6 h-6" /> }
+);
+const BarChart2 = dynamic(
+  () => import('lucide-react').then(mod => mod.BarChart2), 
+  { ssr: false, loading: () => <span className="w-6 h-6" /> }
+);
+
+const Upload = dynamic(
+  () => import('lucide-react').then(mod => mod.Upload), 
+  { ssr: false, loading: () => <span className="w-6 h-6" /> }
+);
+
+const Award = dynamic(
+  () => import('lucide-react').then(mod => mod.Award), 
+  { ssr: false, loading: () => <span className="w-6 h-6" /> }
+);
+
+const Clock = dynamic(
+  () => import('lucide-react').then(mod => mod.Clock), 
+  { ssr: false, loading: () => <span className="w-6 h-6" /> }
+);
+
 import { auth, db } from '@/lib/firebase';
 import { 
   doc, 
@@ -27,10 +141,14 @@ import {
   limit
 } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
-import { IssueCertificate } from '@/components/admin/issue-certificate';
 import { Activity } from '@/types/activity';
-import { ActivityItem } from '@/components/activity/activity-item';
 import { subscribeToActivities, getRecentActivities } from '@/lib/activity-service';
+
+const LoadingFallback = () => (
+  <div className="flex items-center justify-center min-h-[200px]">
+    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+  </div>
+);
 
 interface UserData {
   id: string;

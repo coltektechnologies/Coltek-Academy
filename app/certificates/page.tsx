@@ -1,437 +1,399 @@
-"use client"
+'use client';
 
-import { useEffect, useState } from 'react'
-import { useAuth } from '@/hooks/use-auth'
-import { useRouter } from 'next/navigation'
-import { Navbar } from '@/components/navbar'
-import { Footer } from '@/components/footer'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
-import { Download, Award, Lock, CheckCircle, Eye, FileText, Clock, BookOpen } from 'lucide-react'
-import { CertificateService } from '@/lib/certificate-service'
-import { getUserEnrollments } from '@/lib/enrollment'
-import type { Certificate, UserEnrollment } from '@/lib/types'
+import { Suspense, useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { Loader2, Award, Eye, Download, BookOpen, Clock, FileText } from 'lucide-react';
+import { useAuth } from '@/hooks/use-auth';
+import { CertificateService } from '@/lib/certificate-service';
+import { getUserEnrollments } from '@/lib/enrollment';
+import type { UserEnrollment } from '@/lib/types';
+import { Certificate } from '@/types/certificate';
 
-export default function CertificatesPage() {
-  const { user, loading: authLoading } = useAuth()
-  const router = useRouter()
-  const [certificates, setCertificates] = useState<Certificate[]>([])
-  const [enrollments, setEnrollments] = useState<UserEnrollment[]>([])
-  const [loading, setLoading] = useState(true)
-  const [previewCertificate, setPreviewCertificate] = useState<Certificate | null>(null)
+// UI Components
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
-  useEffect(() => {
-    if (authLoading) return
+// Extend the Certificate type with additional properties needed for the UI
+interface UICertificate extends Certificate {
+  courseTitle: string;
+  instructorName: string;
+  userEmail: string;
+  downloadUrl?: string;
+}
 
-    if (!user) {
-      router.push('/login?redirect=/certificates')
-      return
-    }
+// Loading fallback component
+const LoadingFallback = () => (
+  <div className="flex items-center justify-center min-h-[200px]">
+    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+  </div>
+);
 
-    // Fetch real certificates and enrollments from Firebase
-    const fetchData = async () => {
-      try {
-        const [userCertificates, userEnrollments] = await Promise.all([
-          CertificateService.getUserCertificates(user.uid),
-          getUserEnrollments(user.uid)
-        ])
-        setCertificates(userCertificates)
-        setEnrollments(userEnrollments)
-      } catch (error) {
-        console.error('Error fetching data:', error)
-        // For now, keep the mock data as fallback
-        const mockCertificates: Certificate[] = [
-          {
-            id: '1',
-            userId: user.uid,
-            userEmail: user.email || '',
-            courseId: 'web-dev-advanced',
-            courseTitle: 'Advanced Web Development',
-            enrollmentId: 'enrollment-1',
-            certificateNumber: 'CERT-001',
-            issueDate: new Date('2024-01-15'),
-            completionDate: new Date('2024-01-15'),
-            instructorName: 'Coltek Academy',
-            certificateUrl: '/uploads/certificates/sample-certificate.pdf',
-            previewUrl: undefined,
-            status: 'issued',
-            metadata: {
-              templateUsed: 'default',
-              verificationCode: 'ABC123'
-            }
-          },
-          {
-            id: '2',
-            userId: user.uid,
-            userEmail: user.email || '',
-            courseId: 'data-science-fundamentals',
-            courseTitle: 'Data Science Fundamentals',
-            enrollmentId: 'enrollment-2',
-            certificateNumber: 'CERT-002',
-            issueDate: new Date('2024-02-20'),
-            completionDate: new Date('2024-02-20'),
-            instructorName: 'Coltek Academy',
-            certificateUrl: '/uploads/certificates/sample-certificate-2.pdf',
-            previewUrl: undefined,
-            status: 'issued',
-            metadata: {
-              templateUsed: 'default',
-              verificationCode: 'DEF456'
-            }
-          }
-        ]
-        setCertificates(mockCertificates)
-        setEnrollments([])
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchData()
-  }, [user, authLoading, router])
-
-  const handleDownload = async (certificate: any) => {
-    try {
-      // Use fileUrl if available, otherwise fall back to certificateUrl
-      const fileUrl = (certificate as any).fileUrl || certificate.certificateUrl;
+// Certificate Preview Component
+const CertificatePreview = ({ certificate }: { certificate: UICertificate }) => (
+  <div className="relative max-w-4xl mx-auto bg-white p-8 rounded-lg shadow-2xl border-4 border-primary/20">
+    <div className="text-center">
+      <h2 className="text-3xl font-bold text-foreground mb-2">Certificate of Completion</h2>
+      <p className="text-muted-foreground mb-8">This certificate is proudly presented to</p>
       
-      if (!fileUrl) {
-        throw new Error('Certificate file not found. Please contact support.');
-      }
-      
-      // Convert relative URLs to absolute if needed
-      const downloadUrl = fileUrl.startsWith('http') ? fileUrl : `${window.location.origin}${fileUrl}`;
-
-      // Fetch the certificate file
-      const response = await fetch(downloadUrl, {
-        method: 'GET',
-        headers: {
-          'Cache-Control': 'no-cache',
-          'Pragma': 'no-cache'
-        },
-        credentials: 'include'
-      })
-      
-      if (!response.ok) {
-        throw new Error(`Failed to download certificate: ${response.statusText}`)
-      }
-      
-      // Get the file as a blob
-      const blob = await response.blob()
-      
-      // Create a download link
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      
-      // Set the download attribute with a proper filename
-      const courseName = certificate.courseTitle || 'certificate';
-      const userName = (certificate as any).userName || '';
-      const fileName = `Coltek-Academy-${courseName.replace(/\s+/g, '-').toLowerCase()}-${userName.replace(/\s+/g, '-') || certificate.id}.pdf`;
-      link.download = fileName;
-      
-      // Trigger the download
-      document.body.appendChild(link)
-      link.click()
-      
-      // Clean up
-      window.URL.revokeObjectURL(url)
-      document.body.removeChild(link)
-      
-    } catch (error) {
-      console.error('Error downloading certificate:', error);
-      
-      // More specific error messages
-      let errorMessage = 'Failed to download certificate. ';
-      
-      if (error instanceof Error) {
-        if (error.message.includes('Certificate file not found')) {
-          errorMessage += 'The certificate file could not be found.';
-        } else if (error.message.includes('network')) {
-          errorMessage += 'Network error. Please check your connection.';
-        } else {
-          errorMessage += error.message;
-        }
-      }
-      
-      errorMessage += ' Please contact support if the issue persists.';
-      alert(errorMessage);
-    }
-  }
-
-  const CertificatePreview = ({ certificate }: { certificate: Certificate }) => (
-    <div className="max-w-4xl mx-auto bg-white p-8 rounded-lg shadow-2xl border-4 border-primary/20">
-      {/* Certificate Header */}
-      <div className="text-center mb-8">
-        <div className="flex justify-center mb-4">
-          <Award className="h-16 w-16 text-primary" />
-        </div>
-        <h1 className="text-4xl font-bold text-primary mb-2">Certificate of Completion</h1>
-        <div className="w-32 h-1 bg-primary mx-auto rounded-full"></div>
-      </div>
-
-      {/* Certificate Body */}
-      <div className="text-center space-y-6">
-        <p className="text-lg text-muted-foreground">This is to certify that</p>
-        <h2 className="text-3xl font-bold text-foreground">{user?.displayName || certificate.userEmail.split('@')[0] || 'Student'}</h2>
-        <p className="text-lg text-muted-foreground">has successfully completed the course</p>
-        <h3 className="text-2xl font-semibold text-primary">{certificate.courseTitle}</h3>
-        <p className="text-lg text-muted-foreground">on</p>
-        <p className="text-xl font-medium">
-          {certificate.completionDate.toLocaleDateString('en-US', {
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric'
-          })}
+      <div className="mb-8">
+        <h3 className="text-4xl font-bold text-primary mb-2">{certificate.userEmail}</h3>
+        <div className="h-px bg-gradient-to-r from-transparent via-foreground/30 to-transparent my-4"></div>
+        <p className="text-muted-foreground">
+          For successfully completing the course
         </p>
+        <p className="text-xl font-semibold">{certificate.courseTitle}</p>
       </div>
-
-      {/* Certificate Details */}
-      <div className="mt-8 grid grid-cols-2 gap-6 text-sm">
-        <div className="text-center">
-          <p className="text-muted-foreground">Certificate Number</p>
-          <p className="font-mono font-medium">{certificate.certificateNumber}</p>
+      
+      <div className="grid grid-cols-2 gap-8 mt-12 mb-8">
+        <div>
+          <p className="text-sm text-muted-foreground">Issued on</p>
+          <p className="font-medium">
+            {new Date(certificate.issueDate).toLocaleDateString('en-US', {
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric'
+            })}
+          </p>
         </div>
-        <div className="text-center">
-          <p className="text-muted-foreground">Issue Date</p>
-          <p className="font-medium">{certificate.issueDate.toLocaleDateString()}</p>
-        </div>
-      </div>
-
-      {/* Certificate Footer */}
-      <div className="mt-12 flex justify-between items-end">
-        <div className="text-center">
-          <div className="w-32 h-1 bg-primary/50 mb-2"></div>
+        <div>
           <p className="text-sm text-muted-foreground">Instructor</p>
-          <p className="font-medium">{certificate.instructorName}</p>
-        </div>
-        <div className="text-center">
-          <div className="w-32 h-1 bg-primary/50 mb-2"></div>
-          <p className="text-sm text-muted-foreground">Director</p>
-          <p className="font-medium">Coltek Technologies</p>
+          <p className="font-medium">{certificate.instructorName || 'Coltek Academy'}</p>
         </div>
       </div>
-
-      {/* Certificate Seal */}
-      <div className="absolute top-8 right-8 opacity-20">
-        <Award className="h-24 w-24 text-primary" />
+      
+      <div className="mt-8 pt-8 border-t border-foreground/10">
+        <div className="flex justify-between items-center">
+          <div>
+            <p className="text-sm text-muted-foreground">Certificate ID</p>
+            <p className="font-mono text-sm">{certificate.certificateNumber || 'N/A'}</p>
+          </div>
+          <div className="text-right">
+            <p className="text-sm text-muted-foreground">Status</p>
+            <Badge variant={certificate.status === 'issued' ? 'default' : 'secondary'}>
+              {certificate.status === 'issued' ? 'Verified' : 'Pending'}
+            </Badge>
+          </div>
+        </div>
       </div>
     </div>
-  )
 
-  if (authLoading || loading) {
+    <div className="absolute top-8 right-8 opacity-20">
+      <Award className="h-24 w-24 text-primary" />
+    </div>
+  </div>
+);
+
+// Certificate Card Component
+const CertificateCard = ({
+  certificate,
+  onPreview,
+  onDownload
+}: {
+  certificate: UICertificate;
+  onPreview: (cert: UICertificate) => void;
+  onDownload: (cert: UICertificate) => Promise<void>;
+}) => {
+  return (
+    <div className="group hover:shadow-lg transition-shadow border rounded-lg overflow-hidden">
+      <div className="p-6">
+        <div className="flex items-center justify-between">
+          <div className="p-3 rounded-lg bg-primary/10 w-fit mb-4">
+            <Award className="h-6 w-6 text-primary" />
+          </div>
+          <Badge variant="outline" className="ml-auto">
+            {certificate.status === 'issued' ? 'Verified' : 'Pending'}
+          </Badge>
+        </div>
+        <h3 className="text-xl">{certificate.courseTitle}</h3>
+        <p className="text-muted-foreground">
+          Issued on {new Date(certificate.issueDate).toLocaleDateString()}
+        </p>
+      </div>
+      <div className="p-6 border-t border-foreground/10">
+        <div className="flex justify-between items-center">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => onPreview(certificate)}
+            className="flex items-center"
+          >
+            <Eye className="h-4 w-4 mr-2" />
+            Preview
+          </Button>
+          <Button 
+            size="sm"
+            onClick={() => onDownload(certificate)}
+            className="flex items-center"
+          >
+            <Download className="h-4 w-4 mr-2" />
+            Download
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Enrollment Card Component
+const EnrollmentCard = ({ 
+  enrollment,
+  onViewCourse 
+}: { 
+  enrollment: UserEnrollment & { enrollmentDate: Date }; 
+  onViewCourse: () => void;
+}) => {
+  return (
+    <div className="opacity-75 hover:opacity-100 transition-opacity border rounded-lg overflow-hidden">
+      <div className="p-6">
+        <div className="p-3 rounded-lg bg-muted/50 w-fit mb-4">
+          <BookOpen className="h-6 w-6 text-muted-foreground" />
+        </div>
+        <h3 className="text-lg font-semibold">{enrollment.courseTitle}</h3>
+        <p className="text-sm text-muted-foreground">
+          Enrolled on {new Date(enrollment.enrollmentDate).toLocaleDateString()}
+        </p>
+      </div>
+      <div className="p-6 border-t border-foreground/10">
+        <Badge variant="secondary" className="mb-4">
+          <Clock className="h-3 w-3 mr-1" />
+          In Progress
+        </Badge>
+        <p className="text-sm text-muted-foreground mb-4">
+          Complete the course to earn your certificate
+        </p>
+        <Button 
+          variant="outline" 
+          size="sm" 
+          onClick={onViewCourse}
+          className="mt-4 flex items-center"
+        >
+          <BookOpen className="h-4 w-4 mr-2" />
+          Continue Learning
+        </Button>
+      </div>
+    </div>
+  );
+};
+
+export default function CertificatesPage() {
+  const router = useRouter();
+  const { user, loading: authLoading } = useAuth();
+  
+  // State for certificates and loading
+  const [certificates, setCertificates] = useState<UICertificate[]>([]);
+  const [enrollments, setEnrollments] = useState<Array<UserEnrollment & { enrollmentDate: Date }>>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [previewCertificate, setPreviewCertificate] = useState<UICertificate | null>(null);
+  
+  // Handle authentication and redirection
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.push('/login');
+    }
+  }, [user, authLoading, router]);
+
+  // Load data when user is authenticated
+  useEffect(() => {
+    const loadData = async () => {
+      if (!user) return;
+      
+      try {
+        const [certs, enrolls] = await Promise.all([
+          CertificateService.getUserCertificates(user.uid),
+          getUserEnrollments(user.uid)
+        ]);
+        
+        // Map the certificates to include required UI properties
+        const mappedCertificates: UICertificate[] = certs.map(cert => ({
+          ...cert,
+          courseTitle: cert.courseName || 'Unnamed Course',
+          instructorName: 'Coltek Academy',
+          userEmail: cert.recipientEmail || user.email || '',
+          downloadUrl: cert.certificateUrl
+        }));
+        
+        setCertificates(mappedCertificates);
+        setEnrollments(enrolls);
+      } catch (error) {
+        console.error('Error loading data:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    if (!authLoading && user) {
+      loadData();
+    } else if (!authLoading && !user) {
+      setIsLoading(false);
+    }
+  }, [user, authLoading]);
+
+  // Handle certificate download
+  const handleDownloadCertificate = async (certificate: UICertificate) => {
+    try {
+      if (certificate.downloadUrl) {
+        window.open(certificate.downloadUrl, '_blank');
+        return;
+      }
+      
+      const response = await fetch(`/api/certificates/${certificate.id}/download`);
+      if (!response.ok) throw new Error('Failed to download certificate');
+      
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `certificate-${certificate.certificateNumber || certificate.id}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (error) {
+      console.error('Download error:', error);
+      alert('Failed to download certificate. Please try again.');
+    }
+  };
+
+  // Filter out enrollments that already have certificates
+  const enrollmentsWithoutCertificates = enrollments.filter((enrollment: UserEnrollment & { enrollmentDate: Date }) => 
+    !certificates.some(cert => cert.courseId === enrollment.courseId)
+  );
+
+  // Loading states
+  if (authLoading || isLoading) {
     return (
       <div className="min-h-screen flex flex-col">
-        <Navbar />
-        <main className="flex-1 flex items-center justify-center">
+        <div className="flex-1 flex items-center justify-center">
           <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-            <p className="text-muted-foreground">Loading your certificates...</p>
+            <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto mb-4" />
+            <p className="text-muted-foreground">
+              {authLoading ? 'Checking authentication...' : 'Loading your certificates...'}
+            </p>
           </div>
-        </main>
-        <Footer />
+        </div>
       </div>
-    )
-  }
-
-  if (!user) {
-    return null // Will redirect
+    );
   }
 
   return (
     <div className="min-h-screen flex flex-col">
-      <Navbar />
-      <main className="flex-1">
-        {/* Hero Section */}
-        <section className="relative overflow-hidden bg-gradient-to-br from-primary/5 via-background to-accent/5">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 lg:py-32">
-            <div className="text-center space-y-8">
-              <div className="inline-flex items-center gap-2 px-4 py-2 bg-accent/10 rounded-full">
-                <Award className="h-4 w-4 text-accent" />
-                <span className="text-sm font-medium text-accent">Your Achievements</span>
+      <Suspense fallback={<LoadingFallback />}>
+        <main className="flex-1">
+          {/* Hero Section */}
+          <section className="relative overflow-hidden bg-gradient-to-br from-primary/5 via-background to-accent/5">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 lg:py-32">
+              <div className="text-center space-y-8">
+                <div className="inline-flex items-center gap-2 px-4 py-2 bg-accent/10 rounded-full">
+                  <Award className="h-4 w-4 text-accent" />
+                  <span className="text-sm font-medium text-accent">Your Achievements</span>
+                </div>
+
+                <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-foreground leading-tight text-balance">
+                  Download Your <span className="text-primary">Certificates</span>
+                </h1>
+
+                <p className="text-lg text-muted-foreground leading-relaxed max-w-2xl mx-auto">
+                  Congratulations on completing your courses! Download your certificates to showcase your achievements
+                  and advance your career.
+                </p>
               </div>
+            </div>
+          </section>
 
-              <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-foreground leading-tight text-balance">
-                Download Your <span className="text-primary">Certificates</span>
-              </h1>
+          {/* Certificates Section */}
+          <section className="py-16">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+              {certificates.length > 0 ? (
+                <div className="space-y-8">
+                  <div className="text-center">
+                    <h2 className="text-3xl font-bold text-foreground mb-4">Your Certificates</h2>
+                    <p className="text-muted-foreground">Download and share your course completion certificates</p>
+                  </div>
 
-              <p className="text-lg text-muted-foreground leading-relaxed max-w-2xl mx-auto">
-                Congratulations on completing your courses! Download your certificates to showcase your achievements
-                and advance your career.
-              </p>
+                  <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {certificates.map((certificate) => (
+                      <CertificateCard 
+                        key={certificate.id}
+                        certificate={certificate}
+                        onPreview={setPreviewCertificate}
+                        onDownload={handleDownloadCertificate}
+                      />
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-12">
+                  <div className="mx-auto flex items-center justify-center h-24 w-24 rounded-full bg-gray-100 mb-4">
+                    <FileText className="h-12 w-12 text-gray-400" />
+                  </div>
+                  <h3 className="text-lg font-medium text-gray-900">No certificates yet</h3>
+                  <p className="mt-1 text-gray-500">Complete a course to earn your first certificate.</p>
+                  <div className="mt-6">
+                    <Button onClick={() => router.push('/courses')}>
+                      <BookOpen className="mr-2 h-4 w-4" />
+                      Browse Courses
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {/* Enrolled Courses Section */}
+              {enrollmentsWithoutCertificates.length > 0 && (
+                <div className="mt-16">
+                  <div className="text-center">
+                    <h2 className="text-3xl font-bold text-foreground mb-4">Your Course Progress</h2>
+                    <p className="text-muted-foreground">Track your enrolled courses and certificate availability</p>
+                  </div>
+
+                  <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mt-8">
+                    {enrollmentsWithoutCertificates.map((enrollment) => (
+                      <EnrollmentCard 
+                        key={enrollment.id}
+                        enrollment={enrollment}
+                        onViewCourse={() => router.push(`/courses/${enrollment.courseId}`)}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </section>
+        </main>
+      </Suspense>
+
+      {/* Certificate Preview Dialog */}
+      <Dialog open={!!previewCertificate} onOpenChange={(open) => !open && setPreviewCertificate(null)}>
+        <DialogContent className="max-w-4xl p-0 overflow-hidden">
+          <DialogHeader className="px-6 pt-6">
+            <DialogTitle>Certificate Preview</DialogTitle>
+          </DialogHeader>
+          <div className="px-6 pb-6 max-h-[80vh] overflow-y-auto">
+            {previewCertificate && (
+              <div className="p-4">
+                <CertificatePreview certificate={previewCertificate} />
+              </div>
+            )}
+            <div className="mt-6 flex justify-end space-x-3">
+              <Button 
+                variant="outline" 
+                onClick={() => setPreviewCertificate(null)}
+              >
+                Close
+              </Button>
+              <Button 
+                onClick={() => previewCertificate && handleDownloadCertificate(previewCertificate)}
+              >
+                <Download className="mr-2 h-4 w-4" />
+                Download
+              </Button>
             </div>
           </div>
-        </section>
-
-        {/* Certificates Section */}
-        <section className="py-20">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            {/* Certificates */}
-            {certificates.length > 0 && (
-              <div className="space-y-8 mb-16">
-                <div className="text-center">
-                  <h2 className="text-3xl font-bold text-foreground mb-4">Your Certificates</h2>
-                  <p className="text-muted-foreground">Congratulations! Download your earned certificates</p>
-                </div>
-
-                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {certificates.map((certificate) => (
-                    <Card key={certificate.id} className="group hover:shadow-lg transition-shadow">
-                      <CardHeader className="text-center">
-                        <div className="mx-auto mb-4 p-4 bg-primary/10 rounded-full w-fit">
-                          <Award className="h-8 w-8 text-primary" />
-                        </div>
-                        <CardTitle className="text-xl">{certificate.courseTitle}</CardTitle>
-                        <CardDescription>
-                          Completed on {certificate.completionDate.toLocaleDateString('en-US', {
-                            year: 'numeric',
-                            month: 'long',
-                            day: 'numeric'
-                          })}
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent className="text-center">
-                        <Badge variant="secondary" className="mb-4">
-                          <CheckCircle className="h-3 w-3 mr-1" />
-                          Certificate Available
-                        </Badge>
-                        <div className="flex gap-2">
-                          <Dialog>
-                            <DialogTrigger asChild>
-                              <Button
-                                variant="outline"
-                                className="flex-1 group-hover:border-primary/50 transition-colors"
-                                onClick={() => setPreviewCertificate(certificate)}
-                              >
-                                <Eye className="h-4 w-4 mr-2" />
-                                Preview
-                              </Button>
-                            </DialogTrigger>
-                            <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
-                              <DialogHeader>
-                                <DialogTitle className="text-center">Certificate Preview</DialogTitle>
-                              </DialogHeader>
-                              <CertificatePreview certificate={certificate} />
-                              <div className="flex justify-center mt-6">
-                                <Button onClick={() => handleDownload(certificate)} className="w-full max-w-xs">
-                                  <Download className="h-4 w-4 mr-2" />
-                                  Download Certificate
-                                </Button>
-                              </div>
-                            </DialogContent>
-                          </Dialog>
-                          <Button
-                            onClick={() => handleDownload(certificate)}
-                            className="flex-1 group-hover:bg-primary/90 transition-colors"
-                          >
-                            <Download className="h-4 w-4 mr-2" />
-                            Download
-                          </Button>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Enrolled Courses Status */}
-            {enrollments.length > 0 && (
-              <div className="space-y-8">
-                <div className="text-center">
-                  <h2 className="text-3xl font-bold text-foreground mb-4">Your Course Progress</h2>
-                  <p className="text-muted-foreground">Track your enrolled courses and certificate availability</p>
-                </div>
-
-                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {enrollments.map((enrollment) => {
-                    // Check if certificate exists for this enrollment
-                    const hasCertificate = certificates.some(cert => cert.enrollmentId === enrollment.id)
-
-                    return (
-                      <Card key={enrollment.id} className="group hover:shadow-lg transition-shadow">
-                        <CardHeader className="text-center">
-                          <div className="mx-auto mb-4 p-4 bg-accent/10 rounded-full w-fit">
-                            {hasCertificate ? (
-                              <Award className="h-8 w-8 text-primary" />
-                            ) : (
-                              <BookOpen className="h-8 w-8 text-accent" />
-                            )}
-                          </div>
-                          <CardTitle className="text-xl">{enrollment.courseTitle}</CardTitle>
-                          <CardDescription>
-                            Enrolled on {enrollment.enrollmentDate.toLocaleDateString('en-US', {
-                              year: 'numeric',
-                              month: 'long',
-                              day: 'numeric'
-                            })}
-                          </CardDescription>
-                        </CardHeader>
-                        <CardContent className="text-center">
-                          <Badge
-                            variant={hasCertificate ? "default" : "secondary"}
-                            className="mb-4"
-                          >
-                            {hasCertificate ? (
-                              <>
-                                <CheckCircle className="h-3 w-3 mr-1" />
-                                Certificate Available
-                              </>
-                            ) : (
-                              <>
-                                <Clock className="h-3 w-3 mr-1" />
-                                In Progress
-                              </>
-                            )}
-                          </Badge>
-
-                          {hasCertificate ? (
-                            <p className="text-sm text-muted-foreground">
-                              Your certificate is ready for download above
-                            </p>
-                          ) : (
-                            <div className="space-y-2">
-                              <p className="text-sm text-muted-foreground">
-                                Complete this course to earn your certificate
-                              </p>
-                              <Button variant="outline" size="sm" asChild>
-                                <a href={`/courses/${enrollment.courseId}`}>
-                                  Continue Learning
-                                </a>
-                              </Button>
-                            </div>
-                          )}
-                        </CardContent>
-                      </Card>
-                    )
-                  })}
-                </div>
-              </div>
-            )}
-
-            {/* No certificates or enrollments */}
-            {certificates.length === 0 && enrollments.length === 0 && (
-              <div className="text-center py-20">
-                <div className="mx-auto mb-6 p-6 bg-muted/50 rounded-full w-fit">
-                  <BookOpen className="h-12 w-12 text-muted-foreground" />
-                </div>
-                <h3 className="text-2xl font-semibold text-foreground mb-2">No Courses Yet</h3>
-                <p className="text-muted-foreground mb-6 max-w-md mx-auto">
-                  Enroll in a course to start your learning journey and earn certificates upon completion.
-                </p>
-                <Button asChild size="lg">
-                  <a href="/courses">
-                    Browse Courses
-                  </a>
-                </Button>
-              </div>
-            )}
-          </div>
-        </section>
-      </main>
-      <Footer />
+        </DialogContent>
+      </Dialog>
     </div>
-  )
+  );
 }

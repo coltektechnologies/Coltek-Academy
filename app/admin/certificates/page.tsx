@@ -1,14 +1,26 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
+import dynamic from 'next/dynamic';
 import { collection, getDocs, query, orderBy } from 'firebase/firestore';
 import { format } from 'date-fns';
 import { Loader2 } from 'lucide-react';
 
 import { db } from '@/lib/firebase';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import type { Certificate } from '@/types/certificate';
+
+// Lazy load components
+const Card = dynamic(() => import('@/components/ui/card').then(mod => mod.Card), { ssr: false });
+const CardContent = dynamic(() => import('@/components/ui/card').then(mod => mod.CardContent), { ssr: false });
+const CardHeader = dynamic(() => import('@/components/ui/card').then(mod => mod.CardHeader), { ssr: false });
+const CardTitle = dynamic(() => import('@/components/ui/card').then(mod => mod.CardTitle), { ssr: false });
+const Button = dynamic(() => import('@/components/ui/button').then(mod => mod.Button), { ssr: false });
+
+const LoadingFallback = () => (
+  <div className="flex items-center justify-center min-h-[200px]">
+    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+  </div>
+);
 
 export default function CertificatesPage() {
   const [certificates, setCertificates] = useState<Certificate[]>([]);

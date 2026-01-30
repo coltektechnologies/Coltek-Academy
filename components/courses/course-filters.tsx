@@ -96,8 +96,8 @@ export function CourseFilters({
         </Select>
       </div>
 
-      {/* Sort By */}
-      <div>
+      {/* Sort By - Hidden on desktop, shown in main content */}
+      <div className="lg:hidden">
         <label className="text-sm font-medium text-foreground mb-2 block">Sort By</label>
         <Select value={sortBy} onValueChange={setSortBy}>
           <SelectTrigger className="w-full">
