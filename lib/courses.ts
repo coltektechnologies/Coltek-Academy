@@ -8,10 +8,10 @@ export async function getAllCourses(): Promise<Course[]> {
     const q = query(coursesRef, orderBy('title'));
     const querySnapshot = await getDocs(q);
     
-    return querySnapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
-    } as Course));
+    return querySnapshot.docs.map(doc => {
+      const data = doc.data();
+      return { id: doc.id, ...data, price: 150 } as Course; // All courses 150 Ghana Cedis
+    });
   } catch (error) {
     console.error('Error fetching courses:', error);
     return [];

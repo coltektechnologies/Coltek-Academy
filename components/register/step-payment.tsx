@@ -165,11 +165,11 @@ export function StepPayment({ formData, updateFormData, errors, onPaymentSuccess
           <div className="space-y-3">
             <div className="flex justify-between">
               <span className="text-muted-foreground">{selectedCourse.title}</span>
-              <span className="font-medium text-foreground">${selectedCourse.price}</span>
+              <span className="font-medium text-foreground">GH₵{selectedCourse.price}</span>
             </div>
             <div className="border-t border-border pt-3 flex justify-between">
               <span className="font-semibold text-foreground">Total</span>
-              <span className="font-bold text-foreground text-xl">${selectedCourse.price}</span>
+              <span className="font-bold text-foreground text-xl">GH₵{selectedCourse.price}</span>
             </div>
           </div>
         </div>
@@ -229,7 +229,7 @@ export function StepPayment({ formData, updateFormData, errors, onPaymentSuccess
               </>
             ) : (
               selectedCourse && (selectedCourse.price > 0 
-                ? `Pay ₦${selectedCourse.price} with Paystack` 
+                ? `Pay GH₵${selectedCourse.price} with Paystack` 
                 : 'Enroll for Free')
             )}
           </Button>

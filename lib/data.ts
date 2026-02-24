@@ -10,9 +10,9 @@ export const courses: Course[] = [
       "This comprehensive bootcamp takes you from zero to hero in web development. You will learn everything from basic HTML and CSS to advanced JavaScript frameworks like React, backend development with Node.js, database management, and deployment strategies. By the end of this course, you will have built multiple real-world projects and be ready to land your first developer job.",
     image: "/web-development-coding-laptop.jpg",
     category: "Web",
-    level: "Beginner",
-    duration: "1 week",
-    price: 1, 
+    level: "Intermediate",
+    duration: "10 weeks",
+    price: 150, 
     instructor: {
       name: "Mr. Boansi Kyeremateng Collins",
       bio: "Senior Software Engineer at Google with 10+ years of experience teaching web development.",
@@ -52,14 +52,15 @@ export const courses: Course[] = [
     id: "2",
     title: "Data Science & Machine Learning",
     slug: "data-science-machine-learning",
+    upcoming: true,
     description: "Master Python, data analysis, visualization, and machine learning algorithms.",
     fullDescription:
       "Dive deep into the world of data science and machine learning. This course covers everything from Python programming basics to advanced machine learning algorithms. You will work with real datasets, build predictive models, and learn how to extract insights from complex data. Perfect for aspiring data scientists and analysts.",
     image: "/data-science-visualization-charts.png",
     category: "Data Science",
-    level: "Intermediate",
-    duration: "16 weeks",
-    price: 0, // 10 GHS = ~$0.80 USD (for testing)
+    level: "Beginner",
+    duration: "10 weeks",
+    price: 150,
     instructor: {
       name: "Prof. Michael Rodriguez",
       bio: "Former Data Scientist at Netflix, PhD in Machine Learning from Stanford.",
@@ -103,7 +104,7 @@ export const courses: Course[] = [
     category: "UI/UX",
     level: "Beginner",
     duration: "10 weeks",
-    price: 10, // 10 GHS = ~$0.80 USD (for testing)
+    price: 150,
     instructor: {
       name: "Emma Thompson",
       bio: "Lead Product Designer at Airbnb with expertise in user-centered design.",
@@ -146,8 +147,8 @@ export const courses: Course[] = [
     image: "/ux-ui-design-interface-mockup.jpg",
     category: "Graphic Design",
     level: "Beginner",
-    duration: "1 week",
-    price: 10, // 10 GHS = ~$0.80 USD (for testing)
+    duration: "10 weeks",
+    price: 150,
     instructor: {
       name: "Maria Gonzalez",
       bio: "Senior Graphic Designer at Adobe with 12 years of experience in branding and visual design.",
@@ -187,8 +188,8 @@ export const courses: Course[] = [
     image: "/cloud-computing-aws-servers.jpg",
     category: "Cloud Computing",
     level: "Intermediate",
-    duration: "8 weeks",
-    price: 10, // 10 GHS = ~$0.80 USD (for testing)
+    duration: "10 weeks",
+    price: 150,
     instructor: {
       name: "James Wilson",
       bio: "AWS Solutions Architect with 15 years of cloud infrastructure experience.",
@@ -225,12 +226,12 @@ export const courses: Course[] = [
     image: "/digital-marketing-social-media-analytics.jpg",
     category: "Marketing",
     level: "Beginner",
-    duration: "6 weeks",
-    price: 10, // 10 GHS = ~$0.80 USD (for testing)
+    duration: "10 weeks",
+    price: 150,
     instructor: {
-      name: "Lisa Park",
-      bio: "CMO at a Fortune 500 company with 12 years of digital marketing experience.",
-      avatar: "/professional-business-woman.png",
+      name: "Miss. Alhassan Habibah",
+      bio: "Chief Academic Officer with extensive experience in curriculum development and educational technology.",
+      avatar: "/habiba.jpeg",
     },
     curriculum: [
       {
@@ -267,18 +268,18 @@ export const courses: Course[] = [
   },
   {
     id: "7",
-    title: "Mobile App Development withFlutter",
+    title: "Mobile App Development with Flutter",
     slug: "mobile-app-development-react-native",
     description: "Build cross-platform mobile apps for iOS and Android withFlutter.",
     fullDescription:
       "Learn to build beautiful, high-performance mobile applications usingFlutter. This course covers everything from setting up your development environment to publishing apps on the App Store and Google Play. Build real projects including a social media app, e-commerce app, and more.",
     image: "/mobile-app-development.png",
     category: "Mobile App",
-    level: "Intermediate",
+    level: "Beginner",
     duration: "10 weeks",
-    price: 10, // 10 GHS = ~$0.80 USD (for testing)
+    price: 150,
     instructor: {
-      name: "Alex Kim",
+      name: "Mr. Frederick Owusu Bonsu",
       bio: "Mobile Developer at Meta with expertise inFlutter and cross-platform development.",
       avatar: "/young-professional-developer.jpg",
     },
@@ -316,8 +317,9 @@ export const courses: Course[] = [
     image: "/cybersecurity-hacking-security-lock.jpg",
     category: "Cybersecurity",
     level: "Advanced",
-    duration: "14 weeks",
-    price: 10, // 10 GHS = ~$0.80 USD (for testing)
+    upcoming: true,
+    duration: "10 weeks",
+    price: 150,
     instructor: {
       name: "David Martinez",
       bio: "Former NSA Cybersecurity Analyst, CEH and CISSP certified instructor.",
@@ -357,8 +359,8 @@ export const courses: Course[] = [
     image: "/project-management-team.png",
     category: "Business",
     level: "Intermediate",
-    duration: "8 weeks",
-    price: 10, // 10 GHS = ~$0.80 USD (for testing)
+    duration: "10 weeks",
+    price: 150,
     instructor: {
       name: "Jennifer Adams",
       bio: "PMP certified Project Manager with 20 years of experience leading Fortune 500 projects.",
@@ -439,8 +441,8 @@ export const testimonials = [
 ]
 
 export const stats = [
-  { value: "50,000+", label: "Students Enrolled" },
-  { value: "100+", label: "Expert Instructors" },
-  { value: "200+", label: "Courses Available" },
+  { value: "50+", label: "Students Enrolled" },
+  { value: "12+", label: "Expert Instructors" },
+  { value: null, label: "Courses Available" }, // Dynamic: fetched at runtime
   { value: "95%", label: "Success Rate" },
 ]

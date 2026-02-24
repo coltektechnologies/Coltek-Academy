@@ -312,7 +312,7 @@ export const CourseForm: React.FC<CourseFormProps> = ({
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="price">Price (USD) *</Label>
+                  <Label htmlFor="price">Price (GHS) *</Label>
                   <Input
                     id="price"
                     name="price"
@@ -325,7 +325,7 @@ export const CourseForm: React.FC<CourseFormProps> = ({
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="originalPrice">Original Price (USD)</Label>
+                  <Label htmlFor="originalPrice">Original Price (GHS)</Label>
                   <Input
                     id="originalPrice"
                     name="originalPrice"

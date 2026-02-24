@@ -8,10 +8,15 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useToast } from "@/hooks/use-toast"
 import { BookOpen, Loader2, Eye, EyeOff } from "lucide-react"
+import { GoogleButton } from "./google-button"
+import { GithubButton } from "./github-button"
 import { 
   createUserWithEmailAndPassword, 
   updateProfile, 
-  fetchSignInMethodsForEmail 
+  fetchSignInMethodsForEmail,
+  signInWithPopup,
+  GoogleAuthProvider,
+  GithubAuthProvider
 } from "firebase/auth"
 import { auth, db } from "@/lib/firebase"
 import { doc, setDoc } from "firebase/firestore"
@@ -19,6 +24,7 @@ import { doc, setDoc } from "firebase/firestore"
 export function SignupForm() {
   const { toast } = useToast()
   const [isLoading, setIsLoading] = useState(false)
+  const [socialProvider, setSocialProvider] = useState<"google" | "github" | null>(null)
   const [showPassword, setShowPassword] = useState(false)
   const [formData, setFormData] = useState({
     name: "",
@@ -101,8 +107,8 @@ export function SignupForm() {
         description: "Your account has been created successfully.",
       })
 
-      // Redirect to home page or dashboard
-      router.push('/')
+      // Full page reload ensures auth state is loaded before homepage renders
+      window.location.href = '/'
     } catch (error: any) {
       console.error('Error signing up:', error)
       let errorMessage = "Failed to create account. Please try again."
@@ -143,6 +149,125 @@ export function SignupForm() {
       ...prev,
       [name]: type === 'checkbox' ? (e.target as HTMLInputElement).checked : value
     }))
+  }
+
+  const handleGoogleSignUp = async () => {
+    setSocialProvider("google")
+    try {
+      const provider = new GoogleAuthProvider()
+      provider.setCustomParameters({ prompt: "select_account" })
+      const userCredential = await signInWithPopup(auth, provider)
+      const user = userCredential.user
+
+      const userDoc = {
+        uid: user.uid,
+        displayName: user.displayName || "",
+        email: user.email || "",
+        emailVerified: user.emailVerified,
+        photoURL: user.photoURL || "",
+        role: "student",
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      }
+
+      await setDoc(doc(db, "users", user.uid), userDoc, { merge: true })
+
+      toast({
+        title: "Account created!",
+        description: "Welcome to Coltek Academy.",
+      })
+      window.location.href = "/"
+    } catch (error: any) {
+      console.error("Google sign-up error:", error)
+      let errorMessage = "Failed to sign up with Google. Please try again."
+
+      if (error.code === "auth/popup-blocked") {
+        errorMessage = "Sign-up popup was blocked. Please allow popups for this site."
+      } else if (error.code === "auth/popup-closed-by-user" || error.code === "auth/cancelled-popup-request") {
+        return
+      } else if (error.code === "auth/account-exists-with-different-credential") {
+        errorMessage = "An account already exists with this email. Please sign in instead."
+        toast({
+          title: "Account exists",
+          description: errorMessage,
+          variant: "destructive",
+          action: (
+            <Button variant="outline" size="sm" onClick={() => router.push("/login")}>
+              Go to Login
+            </Button>
+          ),
+        })
+        return
+      }
+
+      toast({
+        title: "Sign-up failed",
+        description: errorMessage,
+        variant: "destructive",
+      })
+    } finally {
+      setSocialProvider(null)
+    }
+  }
+
+  const handleGitHubSignUp = async () => {
+    setSocialProvider("github")
+    try {
+      const provider = new GithubAuthProvider()
+      provider.addScope("read:user")
+      provider.addScope("user:email")
+      const userCredential = await signInWithPopup(auth, provider)
+      const user = userCredential.user
+
+      const userDoc = {
+        uid: user.uid,
+        displayName: user.displayName || "",
+        email: user.email || "",
+        emailVerified: user.emailVerified,
+        photoURL: user.photoURL || "",
+        role: "student",
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      }
+
+      await setDoc(doc(db, "users", user.uid), userDoc, { merge: true })
+
+      toast({
+        title: "Account created!",
+        description: "Welcome to Coltek Academy.",
+      })
+      window.location.href = "/"
+    } catch (error: any) {
+      console.error("GitHub sign-up error:", error)
+      let errorMessage = "Failed to sign up with GitHub. Please try again."
+
+      if (error.code === "auth/popup-blocked") {
+        errorMessage = "Sign-up popup was blocked. Please allow popups for this site."
+      } else if (error.code === "auth/popup-closed-by-user" || error.code === "auth/cancelled-popup-request") {
+        return
+      } else if (error.code === "auth/account-exists-with-different-credential") {
+        errorMessage = "An account already exists with this email. Please sign in instead."
+        toast({
+          title: "Account exists",
+          description: errorMessage,
+          variant: "destructive",
+          action: (
+            <Button variant="outline" size="sm" onClick={() => router.push("/login")}>
+              Go to Login
+            </Button>
+          ),
+        })
+        return
+      }
+
+      toast({
+        title: "Sign-up failed",
+        description: errorMessage,
+        variant: "destructive",
+      })
+    } finally {
+      setSocialProvider(null)
+    }
   }
 
   return (
@@ -234,6 +359,32 @@ export function SignupForm() {
             {isLoading ? "Creating account..." : "Sign Up"}
           </Button>
         </form>
+
+        <div className="relative my-6">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t border-border" />
+          </div>
+          <div className="relative flex justify-center text-xs">
+            <span className="bg-card px-2 text-muted-foreground">or continue with</span>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 gap-3">
+          <GoogleButton
+            onClick={handleGoogleSignUp}
+            disabled={!!socialProvider}
+            isLoading={socialProvider === "google"}
+            label="Continue with Google"
+            loadingLabel="Creating account..."
+          />
+          <GithubButton
+            onClick={handleGitHubSignUp}
+            disabled={!!socialProvider}
+            isLoading={socialProvider === "github"}
+            label="Continue with GitHub"
+            loadingLabel="Creating account..."
+          />
+        </div>
 
         <div className="mt-6 text-center text-sm">
           <p className="text-muted-foreground">

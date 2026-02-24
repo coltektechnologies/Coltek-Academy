@@ -68,7 +68,7 @@ export function StepCourseSelection({
           <SelectContent>
             {courses.map((course) => (
               <SelectItem key={course.id} value={course.id}>
-                {course.title} - ${course.price}
+                {course.title} - GH₵{course.price}
               </SelectItem>
             ))}
           </SelectContent>
@@ -85,7 +85,7 @@ export function StepCourseSelection({
             <span>•</span>
             <span>{selectedCourse.level}</span>
             <span>•</span>
-            <span className="font-semibold text-foreground">${selectedCourse.price}</span>
+            <span className="font-semibold text-foreground">GH₵{selectedCourse.price}</span>
           </div>
         </div>
       )}

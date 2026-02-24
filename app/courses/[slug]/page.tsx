@@ -217,6 +217,26 @@ export default function CoursePage() {
     notFound()
   }
 
+  const isUpcoming = course.upcoming || ['cybersecurity-essentials', 'data-science-machine-learning'].includes(course.slug || '')
+
+  if (isUpcoming) {
+    return (
+      <div className="min-h-screen flex flex-col">
+        <Navbar />
+        <main className="flex-1 flex items-center justify-center p-4">
+          <Alert className="max-w-md">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Upcoming</AlertTitle>
+            <AlertDescription>
+              This course is coming soon. Stay tuned for updates!
+            </AlertDescription>
+          </Alert>
+        </main>
+        <Footer />
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen flex flex-col">
       <Navbar />

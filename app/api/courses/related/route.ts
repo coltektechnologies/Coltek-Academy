@@ -28,10 +28,10 @@ export async function GET(request: Request) {
     const relatedCourses = querySnapshot.docs
       .filter(doc => doc.id !== excludeId) // Filter out the current course
       .slice(0, limitCount) // Apply limit after filtering
-      .map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
+      .map(doc => {
+        const data = doc.data();
+        return { id: doc.id, ...data, price: 150 };
+      });
 
     return NextResponse.json(relatedCourses);
   } catch (error) {

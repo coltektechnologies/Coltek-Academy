@@ -1,8 +1,12 @@
+/* Testimonials section hidden - uncomment to show
 import Image from "next/image"
 import { Star, Quote } from "lucide-react"
 import { testimonials } from "@/lib/data"
+*/
 
 export function TestimonialsSection() {
+  return null
+  /* Commented out to hide testimonials
   return (
     <section className="py-20 bg-background">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -42,4 +46,5 @@ export function TestimonialsSection() {
       </div>
     </section>
   )
+  */
 }

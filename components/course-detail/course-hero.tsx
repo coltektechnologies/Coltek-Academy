@@ -9,12 +9,25 @@ interface CourseHeroProps {
   course: Course
 }
 
+const TEAM_BY_IMAGE = {
+  ceo: { name: "Mr. Boansi Kyeremateng Collins", image: "/ceo.jpg" },
+  cto: { name: "Mr. Frederick Owusu Bonsu", image: "/CTO.jpg" },
+  cao: { name: "Miss. Alhassan Habibah", image: "/habiba.jpeg" },
+} as const
+
 export function CourseHero({ course }: CourseHeroProps) {
   const levelColors = {
     Beginner: "bg-green-100 text-green-800",
     Intermediate: "bg-yellow-100 text-yellow-800",
     Advanced: "bg-red-100 text-red-800",
   }
+
+  const instructor =
+    course.category === "Mobile App"
+      ? TEAM_BY_IMAGE.cto
+      : course.category === "Marketing"
+        ? TEAM_BY_IMAGE.cao
+        : TEAM_BY_IMAGE.ceo
 
   return (
     <section className="bg-gradient-to-br from-primary/10 via-background to-accent/5">
@@ -65,18 +78,18 @@ export function CourseHero({ course }: CourseHeroProps) {
               </div>
             </div>
 
-            {/* Instructor */}
+            {/* Instructor - CEO/CTO/CAO from About page */}
             <div className="flex items-center gap-4">
               <Image
-                src={course.instructor.avatar || "/placeholder.svg"}
-                alt={course.instructor.name}
+                src={instructor.image}
+                alt={instructor.name}
                 width={48}
                 height={48}
                 className="rounded-full"
               />
               <div>
                 <div className="text-sm text-muted-foreground">Created by</div>
-                <div className="font-semibold text-foreground">{course.instructor.name}</div>
+                <div className="font-semibold text-foreground">{instructor.name}</div>
               </div>
             </div>
 
@@ -105,7 +118,7 @@ export function CourseHero({ course }: CourseHeroProps) {
               </div>
               <div className="p-6 space-y-6">
                 <div className="flex items-baseline gap-2">
-                  <span className="text-4xl font-bold text-foreground">${course.price}</span>
+                  <span className="text-4xl font-bold text-foreground">GH₵{course.price}</span>
                 </div>
 
                 <div className="space-y-3">

@@ -536,10 +536,10 @@ export default function AdminCoursesPage() {
                           <span className="font-medium text-green-600">Free</span>
                         ) : (
                           <>
-                            ${course.price?.toFixed(2)}
+                            GH₵{course.price?.toFixed(2)}
                             {course.hasDiscount && course.originalPrice && (
                               <span className="ml-2 text-sm text-muted-foreground line-through">
-                                ${course.originalPrice.toFixed(2)}
+                                GH₵{course.originalPrice.toFixed(2)}
                               </span>
                             )}
                           </>

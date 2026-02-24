@@ -22,10 +22,9 @@ export async function GET(
     try {
       const courseDoc = await getDoc(doc(db, 'courses', slug));
       if (courseDoc.exists()) {
-        return NextResponse.json({
-          id: courseDoc.id,
-          ...courseDoc.data()
-        });
+        const data = courseDoc.data();
+        const courseSlug = data.slug || courseDoc.id;
+        return NextResponse.json({ id: courseDoc.id, ...data, price: 150, upcoming: ['cybersecurity-essentials', 'data-science-machine-learning'].includes(courseSlug) });
       }
     } catch (error) {
       console.log('Document not found by ID, trying slug query...');
@@ -49,10 +48,9 @@ export async function GET(
     }
 
     const courseDoc = querySnapshot.docs[0];
-    const courseData = {
-      id: courseDoc.id,
-      ...courseDoc.data()
-    };
+    const data = courseDoc.data();
+    const courseSlug = data.slug || courseDoc.id;
+    const courseData = { id: courseDoc.id, ...data, price: 150, upcoming: ['cybersecurity-essentials', 'data-science-machine-learning'].includes(courseSlug) };
 
     return NextResponse.json(courseData);
   } catch (error) {

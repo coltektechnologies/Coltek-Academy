@@ -97,7 +97,7 @@ export async function GET() {
       shortDescription: course.shortDescription || course.description?.substring(0, 100) || '',
       category: course.category || 'Uncategorized',
       level: course.level || 'Beginner',
-      price: typeof course.price === 'number' ? course.price : 0,
+      price: 150, // All courses 150 Ghana Cedis
       image: course.image || '/placeholder-course.jpg',
       instructor: course.instructor || { name: 'Instructor' },
       rating: typeof course.rating === 'number' ? course.rating : 0,
@@ -106,7 +106,8 @@ export async function GET() {
       duration: course.duration || 0,
       slug: course.slug || course.id,
       isPublished: course.isPublished !== false,
-      lastUpdated: course.updatedAt?.toDate?.()?.toISOString() || new Date().toISOString()
+      lastUpdated: course.updatedAt?.toDate?.()?.toISOString() || new Date().toISOString(),
+      upcoming: ['cybersecurity-essentials', 'data-science-machine-learning'].includes(course.slug || course.id)
     }));
 
     return NextResponse.json(courses);

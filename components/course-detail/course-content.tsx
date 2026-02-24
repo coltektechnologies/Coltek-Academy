@@ -3,11 +3,36 @@ import { CheckCircle } from "lucide-react"
 import type { Course } from "@/lib/types"
 import { CourseCurriculum } from "./course-curriculum"
 
+const TEAM_BY_CATEGORY = {
+  ceo: {
+    name: "Mr. Boansi Kyeremateng Collins",
+    image: "/ceo.jpg",
+    bio: "Software Engineer dedicated to empowering learners through hands-on tech education.",
+  },
+  cto: {
+    name: "Mr. Frederick Owusu Bonsu",
+    image: "/CTO.jpg",
+    bio: "Chief Technology Officer and mobile application engineer focused on building reliable and scalable digital learning solutions.",
+  },
+  cao: {
+    name: "Miss. Alhassan Habibah",
+    image: "/habiba.jpeg",
+    bio: "Chief Academic Officer with extensive experience in curriculum development and educational technology.",
+  },
+} as const
+
 interface CourseContentProps {
   course: Course
 }
 
 export function CourseContent({ course }: CourseContentProps) {
+  const instructor =
+    course.category === "Mobile App"
+      ? TEAM_BY_CATEGORY.cto
+      : course.category === "Marketing"
+        ? TEAM_BY_CATEGORY.cao
+        : TEAM_BY_CATEGORY.ceo
+
   return (
     <div className="max-w-4xl">
       {/* Full Description */}
@@ -50,15 +75,15 @@ export function CourseContent({ course }: CourseContentProps) {
         <h2 className="text-2xl font-bold text-foreground mb-6">Your Instructor</h2>
         <div className="flex items-start gap-6">
           <Image
-            src={course.instructor.avatar || "/placeholder.svg"}
-            alt={course.instructor.name}
+            src={instructor.image}
+            alt={instructor.name}
             width={96}
             height={96}
             className="rounded-full"
           />
           <div>
-            <h3 className="text-xl font-semibold text-foreground mb-2">{course.instructor.name}</h3>
-            <p className="text-muted-foreground leading-relaxed">{course.instructor.bio}</p>
+            <h3 className="text-xl font-semibold text-foreground mb-2">{instructor.name}</h3>
+            <p className="text-muted-foreground leading-relaxed">{instructor.bio}</p>
           </div>
         </div>
       </section>
