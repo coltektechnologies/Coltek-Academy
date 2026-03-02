@@ -23,8 +23,14 @@ export async function GET(
       const courseDoc = await getDoc(doc(db, 'courses', slug));
       if (courseDoc.exists()) {
         const data = courseDoc.data();
+        if (data.isPublished !== true) {
+          return NextResponse.json({ error: 'Course not found' }, { status: 404 });
+        }
         const courseSlug = data.slug || courseDoc.id;
-        return NextResponse.json({ id: courseDoc.id, ...data, price: 150, upcoming: ['cybersecurity-essentials', 'data-science-machine-learning'].includes(courseSlug) });
+        const upcomingSlugs = ['cybersecurity-essentials', 'data-science-machine-learning', 'cloud-computing-aws', 'project-management-professional'];
+        const isUpcoming = data.upcoming === true || upcomingSlugs.includes(courseSlug);
+        const price = typeof data.price === 'number' ? data.price : 0;
+        return NextResponse.json({ id: courseDoc.id, ...data, price, upcoming: isUpcoming });
       }
     } catch (error) {
       console.log('Document not found by ID, trying slug query...');
@@ -49,8 +55,14 @@ export async function GET(
 
     const courseDoc = querySnapshot.docs[0];
     const data = courseDoc.data();
+    if (data.isPublished !== true) {
+      return NextResponse.json({ error: 'Course not found' }, { status: 404 });
+    }
     const courseSlug = data.slug || courseDoc.id;
-    const courseData = { id: courseDoc.id, ...data, price: 150, upcoming: ['cybersecurity-essentials', 'data-science-machine-learning'].includes(courseSlug) };
+    const upcomingSlugs = ['cybersecurity-essentials', 'data-science-machine-learning', 'cloud-computing-aws', 'project-management-professional'];
+    const isUpcoming = data.upcoming === true || upcomingSlugs.includes(courseSlug);
+    const price = typeof data.price === 'number' ? data.price : 0;
+    const courseData = { id: courseDoc.id, ...data, price, upcoming: isUpcoming };
 
     return NextResponse.json(courseData);
   } catch (error) {

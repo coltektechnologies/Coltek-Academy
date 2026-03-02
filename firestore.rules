@@ -79,12 +79,13 @@ service cloud.firestore {
         isAdmin()
       );
 
-      // Allow create with proper validation
-      allow create: if 
-        request.auth != null &&
-        request.auth.uid == userId &&
-        request.resource.data.uid == userId &&
-        request.resource.data.email == request.auth.token.email;
+      // Allow create: users create their own doc on signup, or admin creates user docs
+      allow create: if request.auth != null && (
+        (request.auth.uid == userId &&
+         request.resource.data.uid == userId &&
+         request.resource.data.email == request.auth.token.email) ||
+        isAdmin()
+      );
     }
     
     // Allow listing all users for admin

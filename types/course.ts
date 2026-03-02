@@ -82,6 +82,7 @@ export interface Course extends DocumentData {
   // Status & Visibility
   isPublished: boolean;
   isFeatured: boolean;
+  upcoming?: boolean;
   isApproved: boolean;
   certificateIncluded: boolean;
   

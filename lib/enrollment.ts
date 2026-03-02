@@ -5,18 +5,24 @@ import type { UserEnrollment, RegistrationFormData, Course } from './types'
 export async function saveUserEnrollment(
   userId: string,
   userEmail: string,
-  formData: RegistrationFormData,
+  formData: Partial<RegistrationFormData> & { selectedCourseId?: string },
   paymentReference: string,
   paymentAmount: number,
-  paymentMethod: string
+  paymentMethod: string,
+  courseIdOverride?: string
 ): Promise<string> {
   try {
+    const courseId = courseIdOverride || formData.selectedCourseId
+    if (!courseId) {
+      throw new Error('Course ID is required');
+    }
+
     const enrollmentId = `enrollment_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
 
     // Get course details from Firestore
-    const courseDoc = await getDoc(doc(db, 'courses', formData.selectedCourseId));
+    const courseDoc = await getDoc(doc(db, 'courses', courseId));
     if (!courseDoc.exists()) {
-      throw new Error('Selected course not found');
+      throw new Error(`Selected course not found (id: ${courseId})`);
     }
     const selectedCourse = { id: courseDoc.id, ...courseDoc.data() } as Course;
     
@@ -24,7 +30,7 @@ export async function saveUserEnrollment(
       id: enrollmentId,
       userId,
       userEmail,
-      courseId: formData.selectedCourseId,
+      courseId,
       courseTitle: selectedCourse.title,
       enrollmentDate: new Date(),
       paymentReference,
@@ -32,20 +38,20 @@ export async function saveUserEnrollment(
       paymentMethod,
       status: 'active',
       personalInfo: {
-        firstName: formData.firstName,
-        lastName: formData.lastName,
-        email: formData.email,
-        phone: formData.phone,
+        firstName: formData.firstName ?? '',
+        lastName: formData.lastName ?? '',
+        email: formData.email ?? userEmail,
+        phone: formData.phone ?? '',
       },
       education: {
-        highestEducation: formData.highestEducation,
-        fieldOfStudy: formData.fieldOfStudy,
-        currentOccupation: formData.currentOccupation,
-        yearsOfExperience: formData.yearsOfExperience,
+        highestEducation: formData.highestEducation ?? '',
+        fieldOfStudy: formData.fieldOfStudy ?? '',
+        currentOccupation: formData.currentOccupation ?? '',
+        yearsOfExperience: formData.yearsOfExperience ?? '',
       },
       courseDetails: {
-        learningGoals: formData.learningGoals,
-        preferredSchedule: formData.preferredSchedule,
+        learningGoals: formData.learningGoals ?? '',
+        preferredSchedule: formData.preferredSchedule ?? 'weekdays',
       },
     }
 
@@ -59,6 +65,7 @@ export async function saveUserEnrollment(
     return enrollmentId
   } catch (error) {
     console.error('Error saving enrollment:', error)
+    if (error instanceof Error) throw error
     throw new Error('Failed to save enrollment data')
   }
 }

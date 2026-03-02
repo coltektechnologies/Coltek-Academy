@@ -54,13 +54,13 @@ export const courses: Course[] = [
     slug: "data-science-machine-learning",
     upcoming: true,
     description: "Master Python, data analysis, visualization, and machine learning algorithms.",
+    price: 0,
     fullDescription:
       "Dive deep into the world of data science and machine learning. This course covers everything from Python programming basics to advanced machine learning algorithms. You will work with real datasets, build predictive models, and learn how to extract insights from complex data. Perfect for aspiring data scientists and analysts.",
     image: "/data-science-visualization-charts.png",
     category: "Data Science",
     level: "Beginner",
     duration: "10 weeks",
-    price: 150,
     instructor: {
       name: "Prof. Michael Rodriguez",
       bio: "Former Data Scientist at Netflix, PhD in Machine Learning from Stanford.",
@@ -182,6 +182,7 @@ export const courses: Course[] = [
     id: "5",
     title: "Cloud Computing with AWS",
     slug: "cloud-computing-aws",
+    upcoming: true,
     description: "Become an AWS certified professional and master cloud architecture.",
     fullDescription:
       "Get certified in Amazon Web Services and become a cloud computing expert. This course prepares you for the AWS Solutions Architect certification while teaching you practical skills in cloud infrastructure, serverless computing, and DevOps practices. Perfect for IT professionals looking to transition to cloud roles.",
@@ -189,7 +190,7 @@ export const courses: Course[] = [
     category: "Cloud Computing",
     level: "Intermediate",
     duration: "10 weeks",
-    price: 150,
+    price: 0,
     instructor: {
       name: "James Wilson",
       bio: "AWS Solutions Architect with 15 years of cloud infrastructure experience.",
@@ -218,11 +219,11 @@ export const courses: Course[] = [
   },
   {
     id: "6",
-    title: "Digital Marketing Fundamentals",
-    slug: "digital-marketing-fundamentals",
-    description: "Learn SEO, social media marketing, content strategy, and analytics.",
+    title: "Social Media Management",
+    slug: "social-media-management",
+    description: "Learn social media strategy, content creation, community management, and analytics.",
     fullDescription:
-      "Master the art and science of digital marketing. This course covers all aspects of online marketing including search engine optimization, pay-per-click advertising, social media strategy, email marketing, and analytics. Learn how to create data-driven campaigns that deliver real results.",
+      "Master social media management for brands and businesses. This course covers platform strategy, content creation, community management, advertising, and analytics. Learn how to grow engagement and run data-driven social campaigns.",
     image: "/digital-marketing-social-media-analytics.jpg",
     category: "Marketing",
     level: "Beginner",
@@ -236,7 +237,7 @@ export const courses: Course[] = [
     curriculum: [
       {
         module: "Marketing Foundations",
-        lessons: ["Digital Marketing Overview", "Customer Journey", "Brand Strategy", "Market Research"],
+        lessons: ["Social Media Overview", "Customer Journey", "Brand Strategy", "Market Research"],
       },
       {
         module: "Search & Content",
@@ -319,7 +320,7 @@ export const courses: Course[] = [
     level: "Advanced",
     upcoming: true,
     duration: "10 weeks",
-    price: 150,
+    price: 0,
     instructor: {
       name: "David Martinez",
       bio: "Former NSA Cybersecurity Analyst, CEH and CISSP certified instructor.",
@@ -353,6 +354,7 @@ export const courses: Course[] = [
     id: "9",
     title: "Project Management Professional",
     slug: "project-management-professional",
+    upcoming: true,
     description: "Master project management methodologies and prepare for PMP certification.",
     fullDescription:
       "Become a certified project manager with this comprehensive course covering traditional and agile methodologies. Learn to lead projects from initiation to closure, manage stakeholders, and deliver projects on time and within budget. Perfect preparation for the PMP certification exam.",
@@ -360,7 +362,7 @@ export const courses: Course[] = [
     category: "Business",
     level: "Intermediate",
     duration: "10 weeks",
-    price: 150,
+    price: 0,
     instructor: {
       name: "Jennifer Adams",
       bio: "PMP certified Project Manager with 20 years of experience leading Fortune 500 projects.",

@@ -6,7 +6,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Button } from "@/components/ui/button"
 import { CreditCard, Building, Wallet, Loader2 } from "lucide-react"
-import { courses } from "@/lib/data"
+import { getCourseById } from "@/lib/courses"
 import { useAuth } from "@/hooks/use-auth"
 import { useToast } from "@/hooks/use-toast"
 import { saveUserEnrollment } from "@/lib/enrollment"
@@ -42,7 +42,15 @@ export function StepPayment({ formData, updateFormData, errors, onPaymentSuccess
   const { user } = useAuth()
   const { toast } = useToast()
   const [isProcessing, setIsProcessing] = useState(false)
-  const selectedCourse = courses.find((c) => c.id === formData.selectedCourseId)
+  const [selectedCourse, setSelectedCourse] = useState<{ id: string; title: string; price: number; [key: string]: any } | null>(null)
+
+  useEffect(() => {
+    if (formData.selectedCourseId) {
+      getCourseById(formData.selectedCourseId).then(setSelectedCourse)
+    } else {
+      setSelectedCourse(null)
+    }
+  }, [formData.selectedCourseId])
 
   const handleFreeEnrollment = async () => {
     if (!selectedCourse || !user) return

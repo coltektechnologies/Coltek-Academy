@@ -24,13 +24,14 @@ export async function GET(request: Request) {
     
     const querySnapshot = await getDocs(q);
     
-    // Filter out the current course and limit results
+    // Filter out the current course, only published courses, and limit results
     const relatedCourses = querySnapshot.docs
-      .filter(doc => doc.id !== excludeId) // Filter out the current course
-      .slice(0, limitCount) // Apply limit after filtering
+      .filter(doc => doc.id !== excludeId && doc.data().isPublished === true)
+      .slice(0, limitCount)
       .map(doc => {
         const data = doc.data();
-        return { id: doc.id, ...data, price: 150 };
+        const price = typeof data.price === 'number' ? data.price : 0;
+        return { id: doc.id, ...data, price };
       });
 
     return NextResponse.json(relatedCourses);

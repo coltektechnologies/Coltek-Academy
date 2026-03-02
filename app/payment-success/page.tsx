@@ -7,7 +7,9 @@ import { saveUserEnrollment } from '@/lib/enrollment'
 import { getCourseById } from '@/lib/courses'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { CheckCircle, Loader2 } from 'lucide-react'
+import { CheckCircle, Loader2, MessageCircle } from 'lucide-react'
+
+const WHATSAPP_GROUP_LINK = 'https://chat.whatsapp.com/D5oD57BPAH4Derlxf2bOHu?mode=gi_t'
 
 export default function PaymentSuccessPage() {
   const searchParams = useSearchParams()
@@ -44,13 +46,15 @@ export default function PaymentSuccessPage() {
         return
       }
 
-      // For real payments, verify with Paystack first
+      let verifyData: { status?: string; data?: { status?: string; metadata?: { courseId?: string; courseTitle?: string; userId?: string; userEmail?: string } } } = {}
+
+      // For real payments, verify with Paystack first (and get metadata as fallback)
       if (!isMockPayment) {
         try {
           const verifyResponse = await fetch(`/api/paystack/verify?reference=${paymentRef}`)
-          const verifyData = await verifyResponse.json()
+          verifyData = await verifyResponse.json()
 
-          if (!verifyResponse.ok || !verifyData.status || verifyData.data.status !== 'success') {
+          if (!verifyResponse.ok || !verifyData.status || verifyData.data?.status !== 'success') {
             setError('Payment verification failed')
             setIsProcessing(false)
             return
@@ -64,20 +68,28 @@ export default function PaymentSuccessPage() {
       }
 
       try {
-        // Extract course info from localStorage
-        const courseId = localStorage.getItem('selectedCourseId')
-        const courseTitle = localStorage.getItem('selectedCourseTitle')
+        // Get course info: prefer localStorage, fallback to Paystack verify metadata (survives redirect)
+        const storedCourseId = localStorage.getItem('selectedCourseId')
+        const storedCourseTitle = localStorage.getItem('selectedCourseTitle')
         const storedFormData = localStorage.getItem('registrationFormData')
         const formData = storedFormData ? JSON.parse(storedFormData) : {}
 
+        const rawMeta = verifyData.data?.metadata
+        const metadata = typeof rawMeta === 'string' ? (() => { try { return JSON.parse(rawMeta) } catch { return null } })() : rawMeta
+        const courseId = storedCourseId || metadata?.courseId
+        const courseTitle = storedCourseTitle || metadata?.courseTitle
+
         if (!courseId) {
-          throw new Error('Course ID not found in local storage')
+          throw new Error('Course ID not found. It may have been cleared after redirect. Please contact support with your payment reference.')
         }
+
+        // Merge courseId into formData in case it was lost (e.g. localStorage cleared partially)
+        const formDataWithCourse = { ...formData, selectedCourseId: courseId }
 
         // Get course details from Firestore
         const selectedCourse = await getCourseById(courseId)
         if (!selectedCourse) {
-          throw new Error('Course not found')
+          throw new Error(`Course not found (id: ${courseId})`)
         }
 
         if (!paymentRef) {
@@ -88,15 +100,32 @@ export default function PaymentSuccessPage() {
           throw new Error('User not authenticated. Please log in to complete your enrollment.')
         }
 
-        // Save enrollment to Firebase
+        // Save enrollment to Firebase (pass courseId override for reliability)
         await saveUserEnrollment(
           user.uid,
           user.email || '',
-          formData,
+          formDataWithCourse,
           paymentRef,
-          selectedCourse.price,
-          'paystack'
+          selectedCourse.price ?? 0,
+          'paystack',
+          courseId
         )
+
+        // Send confirmation email with WhatsApp group invite
+        try {
+          await fetch('/api/register/send-confirmation', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              email: user.email || formData.email,
+              firstName: formData.firstName || 'Student',
+              courseTitle: selectedCourse.title,
+            }),
+          })
+        } catch (emailError) {
+          console.error('Failed to send confirmation email:', emailError)
+          // Don't fail the flow - enrollment was successful
+        }
 
         // Clear stored data
         localStorage.removeItem('selectedCourseId')
@@ -106,7 +135,8 @@ export default function PaymentSuccessPage() {
         setIsProcessing(false)
       } catch (err) {
         console.error('Error saving enrollment:', err)
-        setError('Payment was successful but enrollment could not be saved. Please contact support with reference: ' + paymentRef)
+        const errMessage = err instanceof Error ? err.message : String(err)
+        setError('Payment was successful but enrollment could not be saved. ' + errMessage + ' Please contact support with reference: ' + paymentRef)
         setIsProcessing(false)
       }
     }
@@ -173,7 +203,7 @@ export default function PaymentSuccessPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background">
+    <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <CardTitle className="flex items-center justify-center gap-2 text-green-600">
@@ -183,11 +213,25 @@ export default function PaymentSuccessPage() {
           <CardDescription>
             {searchParams.get('reference')?.startsWith('MOCK-') || searchParams.get('trxref')?.startsWith('MOCK-')
               ? "This was a test payment. In production, you would be charged."
-              : "You have been successfully enrolled in your course. You can now access your course materials."
+              : "You have been successfully enrolled in your course. A confirmation email has been sent with next steps."
             }
           </CardDescription>
         </CardHeader>
         <CardContent className="text-center space-y-4">
+          <div className="rounded-lg border border-green-200 bg-green-50 dark:bg-green-950/30 dark:border-green-900 p-4 text-left">
+            <p className="font-medium text-green-800 dark:text-green-200 mb-2 flex items-center gap-2">
+              <MessageCircle className="h-4 w-4" />
+              Join the CADs WhatsApp Group
+            </p>
+            <p className="text-sm text-muted-foreground mb-3">
+              Connect with fellow students and stay updated on course announcements.
+            </p>
+            <Button asChild className="w-full bg-[#25D366] hover:bg-[#20BD5A] text-white">
+              <a href={WHATSAPP_GROUP_LINK} target="_blank" rel="noopener noreferrer">
+                Join WhatsApp Group
+              </a>
+            </Button>
+          </div>
           <div className="text-sm text-muted-foreground">
             Payment Reference: {searchParams.get('reference') || searchParams.get('trxref')}
           </div>

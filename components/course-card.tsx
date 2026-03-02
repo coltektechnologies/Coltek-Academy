@@ -6,7 +6,6 @@ import { Clock, Users, Star } from "lucide-react"
 import { Card, CardContent, CardFooter } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { useToast } from "@/hooks/use-toast"
 import type { Course } from "@/lib/types"
 
 interface CourseCardProps {
@@ -14,17 +13,12 @@ interface CourseCardProps {
 }
 
 export function CourseCard({ course }: CourseCardProps) {
-  const { toast } = useToast()
-  const isUpcoming = course.upcoming || ['cybersecurity-essentials', 'data-science-machine-learning'].includes(course.slug || '')
+  const upcomingSlugs = ['cybersecurity-essentials', 'data-science-machine-learning', 'cloud-computing-aws', 'project-management-professional']
+  const isUpcoming = course.upcoming || upcomingSlugs.includes(course.slug || '')
   const levelColors = {
     Beginner: "bg-green-100 text-green-800",
     Intermediate: "bg-yellow-100 text-yellow-800",
     Advanced: "bg-red-100 text-red-800",
-  }
-
-  const handleUpcomingClick = (e: React.MouseEvent) => {
-    e.preventDefault()
-    toast({ title: "Upcoming", description: "This course is coming soon. Stay tuned!" })
   }
 
   return (
@@ -52,13 +46,7 @@ export function CourseCard({ course }: CourseCardProps) {
           </Badge>
         </div>
         <h3 className="font-semibold text-lg text-foreground mb-2 line-clamp-2 group-hover:text-primary transition-colors">
-          {isUpcoming ? (
-            <button onClick={handleUpcomingClick} className="text-left w-full cursor-pointer hover:underline">
-              {course.title}
-            </button>
-          ) : (
-            <Link href={`/courses/${course.slug}`}>{course.title}</Link>
-          )}
+          <Link href={`/courses/${course.slug}`}>{course.title}</Link>
         </h3>
         <p className="text-muted-foreground text-sm mb-4 line-clamp-2">{course.description}</p>
         <div className="flex items-center gap-4 text-sm text-muted-foreground">
@@ -77,10 +65,14 @@ export function CourseCard({ course }: CourseCardProps) {
         </div>
       </CardContent>
       <CardFooter className="px-5 py-4 border-t border-border/50 flex items-center justify-between flex-shrink-0 min-h-[60px]">
-        <span className="text-xl font-bold text-foreground">GH₵{course.price}</span>
         {isUpcoming ? (
-          <Button size="sm" variant="outline" onClick={handleUpcomingClick}>
-            View Course
+          <span className="text-sm font-medium text-muted-foreground">Coming soon</span>
+        ) : (
+          <span className="text-xl font-bold text-foreground">GH₵{course.price}</span>
+        )}
+        {isUpcoming ? (
+          <Button asChild size="sm" variant="outline">
+            <Link href={`/courses/${course.slug}`}>View Course</Link>
           </Button>
         ) : (
           <Button asChild size="sm">

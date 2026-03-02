@@ -232,6 +232,7 @@ export default function AdminCoursesPage() {
           image: '',
           isPublished: false,
           isFeatured: false,
+          upcoming: false,
           isApproved: false,
           certificateIncluded: false,
           instructor: {

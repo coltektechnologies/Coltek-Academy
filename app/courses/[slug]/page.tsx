@@ -1,11 +1,13 @@
 "use client"
 
+import Link from "next/link"
 import { notFound, useParams } from "next/navigation"
-import { Suspense, useEffect, useState, useCallback } from "react"
+import { Suspense, useEffect, useRef, useState, useCallback } from "react"
 import dynamic from 'next/dynamic';
-import { Loader2, AlertCircle } from 'lucide-react';
+import { Loader2, AlertCircle, Sparkles } from 'lucide-react';
 import { Button } from "@/components/ui/button"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { useToast } from "@/hooks/use-toast"
 import type { Course } from "@/lib/types"
 
 const LoadingFallback = () => (
@@ -119,10 +121,12 @@ const useRelatedCourses = (course: Course | null) => {
 
 export default function CoursePage() {
   const params = useParams();
+  const { toast } = useToast();
   const [course, setCourse] = useState<Course | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
+  const upcomingToastShown = useRef(false);
   
   // Call all hooks at the top level
   useCourseMetadata(course);
@@ -183,6 +187,20 @@ export default function CoursePage() {
     setRetryCount(prev => prev + 1);
   }, []);
 
+  const upcomingSlugs = ['cybersecurity-essentials', 'data-science-machine-learning', 'cloud-computing-aws', 'project-management-professional'];
+  const isUpcoming = course ? (course.upcoming || upcomingSlugs.includes(course.slug || '')) : false;
+
+  // Show toast once when viewing an upcoming course (no full content)
+  useEffect(() => {
+    if (isUpcoming && !upcomingToastShown.current) {
+      upcomingToastShown.current = true;
+      toast({
+        title: "Coming soon",
+        description: "This course is coming soon. Stay tuned!",
+      });
+    }
+  }, [isUpcoming, toast]);
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -217,24 +235,27 @@ export default function CoursePage() {
     notFound()
   }
 
-  const isUpcoming = course.upcoming || ['cybersecurity-essentials', 'data-science-machine-learning'].includes(course.slug || '')
-
   if (isUpcoming) {
     return (
       <div className="min-h-screen flex flex-col">
         <Navbar />
         <main className="flex-1 flex items-center justify-center p-4">
           <Alert className="max-w-md">
-            <AlertCircle className="h-4 w-4" />
-            <AlertTitle>Upcoming</AlertTitle>
+            <Sparkles className="h-4 w-4" />
+            <AlertTitle>Coming soon</AlertTitle>
             <AlertDescription>
-              This course is coming soon. Stay tuned for updates!
+              <span className="font-medium text-foreground">{course.title}</span> is not yet available. This course is coming soon — stay tuned!
             </AlertDescription>
+            <div className="mt-4">
+              <Button asChild>
+                <Link href="/courses">Browse courses</Link>
+              </Button>
+            </div>
           </Alert>
         </main>
         <Footer />
       </div>
-    )
+    );
   }
 
   return (
@@ -242,7 +263,7 @@ export default function CoursePage() {
       <Navbar />
       <main className="flex-1">
         <Suspense fallback={<LoadingFallback />}>
-          <CourseHero course={course} />
+          <CourseHero course={course} isUpcoming={false} />
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <CourseContent course={course} />
           </div>

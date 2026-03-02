@@ -29,7 +29,7 @@ const initialFormData: RegistrationFormData = {
   yearsOfExperience: "",
   selectedCourseId: "",
   learningGoals: "",
-  preferredSchedule: "flexible",
+  preferredSchedule: "weekdays",
   paymentMethod: "",
   agreeToTerms: false,
 }

@@ -416,7 +416,7 @@ export const CourseForm: React.FC<CourseFormProps> = ({
                 ) : (
                   <div className="space-y-6">
                     {formData.curriculum.map((section, sectionIndex) => (
-                      <div key={section.id} className="border rounded-lg p-4">
+                      <div key={section.id || `section-${sectionIndex}`} className="border rounded-lg p-4">
                         <div className="flex justify-between items-center mb-4">
                           <h3 className="font-medium">
                             {section.title || 'Untitled Section'}
@@ -501,7 +501,7 @@ export const CourseForm: React.FC<CourseFormProps> = ({
                           <div className="space-y-2 mt-4">
                             {section.resources.map((lecture, lectureIndex) => (
                               <div
-                                key={lecture.id}
+                                key={lecture.id || `lecture-${sectionIndex}-${lectureIndex}`}
                                 className="flex items-center justify-between p-2 border rounded hover:bg-muted/50"
                               >
                                 <div className="flex items-center space-x-3">
@@ -634,6 +634,21 @@ export const CourseForm: React.FC<CourseFormProps> = ({
                       checked={formData.isFeatured}
                       onCheckedChange={(checked) =>
                         setFormData(prev => ({ ...prev, isFeatured: checked }))
+                      }
+                    />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label htmlFor="upcoming">Upcoming Course</Label>
+                      <p className="text-sm text-muted-foreground">
+                        Mark as coming soon—visible but not yet available for enrollment
+                      </p>
+                    </div>
+                    <Switch
+                      id="upcoming"
+                      checked={formData.upcoming}
+                      onCheckedChange={(checked) =>
+                        setFormData(prev => ({ ...prev, upcoming: checked }))
                       }
                     />
                   </div>

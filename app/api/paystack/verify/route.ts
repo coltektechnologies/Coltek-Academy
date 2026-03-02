@@ -21,13 +21,16 @@ export async function GET(request: NextRequest) {
     const data = await response.json()
 
     if (data.status && data.data.status === 'success') {
+      const paystackData = data.data
+      const metadata = paystackData.metadata
       return NextResponse.json({
         status: 'success',
         data: {
-          reference: data.data.reference,
-          amount: data.data.amount,
-          currency: data.data.currency,
-          status: data.data.status,
+          reference: paystackData.reference,
+          amount: paystackData.amount,
+          currency: paystackData.currency,
+          status: paystackData.status,
+          metadata: metadata || null,
         }
       })
     } else {

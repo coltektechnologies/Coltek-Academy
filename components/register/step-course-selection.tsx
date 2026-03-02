@@ -122,12 +122,6 @@ export function StepCourseSelection({
               Weekends (Saturday - Sunday)
             </Label>
           </div>
-          <div className="flex items-center space-x-3">
-            <RadioGroupItem value="flexible" id="flexible" />
-            <Label htmlFor="flexible" className="font-normal cursor-pointer">
-              Flexible / Self-paced
-            </Label>
-          </div>
         </RadioGroup>
       </div>
     </div>

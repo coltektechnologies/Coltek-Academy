@@ -23,7 +23,7 @@ function formatCourseData(courseData: any) {
     totalRatings: typeof data.totalRatings === 'number' ? data.totalRatings : 0,
     enrolledStudents: typeof data.enrolledStudents === 'number' ? data.enrolledStudents : 0,
     duration: data.duration || 0,
-    isPublished: data.isPublished !== false,
+    isPublished: data.isPublished === true,
     createdAt: data.createdAt?.toDate?.()?.toISOString() || new Date().toISOString(),
     updatedAt: data.updatedAt?.toDate?.()?.toISOString() || new Date().toISOString(),
   };
@@ -38,6 +38,7 @@ export async function GET() {
       id: string;
       title: string;
       isPublished: boolean;
+      upcoming?: boolean;
       category?: string;
       level?: string;
       price?: number;
@@ -59,7 +60,7 @@ export async function GET() {
       return {
         id: doc.id,
         title: data.title || 'Untitled',
-        isPublished: data.isPublished !== false,
+        isPublished: data.isPublished === true,
         category: data.category,
         level: data.level,
         price: data.price,
@@ -72,6 +73,7 @@ export async function GET() {
         description: data.description,
         shortDescription: data.shortDescription,
         slug: data.slug,
+        upcoming: data.upcoming,
         createdAt: data.createdAt,
         updatedAt: data.updatedAt
       } as FirestoreCourse;
@@ -90,25 +92,33 @@ export async function GET() {
     console.log(`Published courses: ${publishedCourses.length} of ${allCourses.length}`);
     
     // Convert Firestore timestamps to ISO strings and ensure all fields are present
-    const courses = publishedCourses.map(course => ({
-      id: course.id,
-      title: course.title,
-      description: course.description || '',
-      shortDescription: course.shortDescription || course.description?.substring(0, 100) || '',
-      category: course.category || 'Uncategorized',
-      level: course.level || 'Beginner',
-      price: 150, // All courses 150 Ghana Cedis
-      image: course.image || '/placeholder-course.jpg',
-      instructor: course.instructor || { name: 'Instructor' },
-      rating: typeof course.rating === 'number' ? course.rating : 0,
-      totalRatings: typeof course.totalRatings === 'number' ? course.totalRatings : 0,
-      enrolledStudents: typeof course.enrolledStudents === 'number' ? course.enrolledStudents : 0,
-      duration: course.duration || 0,
-      slug: course.slug || course.id,
-      isPublished: course.isPublished !== false,
-      lastUpdated: course.updatedAt?.toDate?.()?.toISOString() || new Date().toISOString(),
-      upcoming: ['cybersecurity-essentials', 'data-science-machine-learning'].includes(course.slug || course.id)
-    }));
+    const upcomingSlugs = ['cybersecurity-essentials', 'data-science-machine-learning', 'cloud-computing-aws', 'project-management-professional'];
+    const courses = publishedCourses
+      .map(course => {
+        const isUpcoming = course.upcoming === true || upcomingSlugs.includes(course.slug || course.id);
+        const price = typeof course.price === 'number' ? course.price : 0;
+        return {
+          id: course.id,
+          title: course.title,
+          description: course.description || '',
+          shortDescription: course.shortDescription || course.description?.substring(0, 100) || '',
+          category: course.category || 'Uncategorized',
+          level: course.level || 'Beginner',
+          price,
+          image: course.image || '/placeholder-course.jpg',
+          instructor: course.instructor || { name: 'Instructor' },
+          rating: typeof course.rating === 'number' ? course.rating : 0,
+          totalRatings: typeof course.totalRatings === 'number' ? course.totalRatings : 0,
+          enrolledStudents: typeof course.enrolledStudents === 'number' ? course.enrolledStudents : 0,
+          duration: course.duration || 0,
+          slug: course.slug || course.id,
+          isPublished: course.isPublished !== false,
+          lastUpdated: course.updatedAt?.toDate?.()?.toISOString() || new Date().toISOString(),
+          upcoming: isUpcoming
+        };
+      })
+      // Current (available) courses first, upcoming courses last
+      .sort((a, b) => (a.upcoming === b.upcoming ? 0 : a.upcoming ? 1 : -1));
 
     return NextResponse.json(courses);
   } catch (error) {

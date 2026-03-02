@@ -37,6 +37,7 @@ export const useCourseForm = (initialCourse?: Partial<CourseFormData>) => {
     // Status & Visibility
     isPublished: false,
     isFeatured: false,
+    upcoming: false,
     isApproved: false,
     certificateIncluded: false,
     
@@ -217,6 +218,7 @@ export const useCourseForm = (initialCourse?: Partial<CourseFormData>) => {
       imagePreview: "",
       isPublished: false,
       isFeatured: false,
+      upcoming: false,
       isApproved: false,
       certificateIncluded: false,
       instructor: {

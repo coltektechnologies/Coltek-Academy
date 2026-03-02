@@ -134,16 +134,11 @@ export default function CoursesPage() {
         
         console.log(`Processed ${validCourses.length} valid courses out of ${data.length}`);
         
-        if (validCourses.length === 0) {
-          console.warn('No valid courses found in the response');
-          setError('No courses found. Please try again later.');
-        } else {
-          console.log('Setting allCourses state with:', validCourses);
-          setAllCourses(validCourses);
-        }
+        setAllCourses(validCourses);
       } catch (err) {
         console.error('Error fetching courses:', err);
-        setError('Failed to load courses. Please try again later.');
+        setError('Failed to load courses.');
+        setAllCourses([]);
       } finally {
         setIsLoading(false);
       }
@@ -239,24 +234,26 @@ export default function CoursesPage() {
       console.log(`Price filter (${priceRange}): ${beforePrice} -> ${filtered.length} courses`);
     }
 
-    // Sort
-    switch (sortBy) {
-      case "popular":
-        filtered.sort((a, b) => b.enrolledStudents - a.enrolledStudents)
-        break
-      case "newest":
-        filtered.sort((a, b) => new Date(b.lastUpdated).getTime() - new Date(a.lastUpdated).getTime())
-        break
-      case "price-low":
-        filtered.sort((a, b) => a.price - b.price)
-        break
-      case "price-high":
-        filtered.sort((a, b) => b.price - a.price)
-        break
-      case "rating":
-        filtered.sort((a, b) => b.rating - a.rating)
-        break
+    // Sort: apply sort within current and upcoming, then keep current courses first
+    const sortCompare = (a: Course, b: Course) => {
+      switch (sortBy) {
+        case "popular":
+          return b.enrolledStudents - a.enrolledStudents
+        case "newest":
+          return new Date(b.lastUpdated).getTime() - new Date(a.lastUpdated).getTime()
+        case "price-low":
+          return a.price - b.price
+        case "price-high":
+          return b.price - a.price
+        case "rating":
+          return b.rating - a.rating
+        default:
+          return 0
+      }
     }
+    const current = filtered.filter((c) => !c.upcoming).sort(sortCompare)
+    const upcoming = filtered.filter((c) => c.upcoming).sort(sortCompare)
+    filtered = [...current, ...upcoming]
 
     console.log(`Final filtered courses: ${filtered.length}`);
     return filtered
@@ -287,23 +284,6 @@ export default function CoursesPage() {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <h2 className="text-2xl font-semibold text-red-600 mb-2">Error loading courses</h2>
-          <p className="text-gray-600">{error}</p>
-          <button 
-            onClick={() => window.location.reload()}
-            className="mt-4 px-4 py-2 bg-primary text-white rounded-md hover:bg-primary/90"
-          >
-            Try Again
-          </button>
-        </div>
       </div>
     );
   }
@@ -344,6 +324,17 @@ export default function CoursesPage() {
 
             {/* Main content */}
             <div className="flex-1">
+              {error && (
+                <div className="mb-6 p-4 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-200 text-sm flex items-center justify-between gap-4">
+                  <span>{error}</span>
+                  <button
+                    onClick={() => window.location.reload()}
+                    className="shrink-0 px-3 py-1.5 rounded-md bg-amber-200/50 dark:bg-amber-800/30 hover:bg-amber-200 dark:hover:bg-amber-800/50 text-sm font-medium"
+                  >
+                    Try again
+                  </button>
+                </div>
+              )}
               <Suspense fallback={<LoadingFallback />}>
                 <div className="mb-6 flex justify-between items-center">
                   <h2 className="text-xl font-semibold">
