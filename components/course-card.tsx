@@ -1,3 +1,5 @@
+"use client"
+
 import Image from "next/image"
 import Link from "next/link"
 import { Clock, Users, Star } from "lucide-react"
@@ -11,6 +13,8 @@ interface CourseCardProps {
 }
 
 export function CourseCard({ course }: CourseCardProps) {
+  const upcomingSlugs = ['cybersecurity-essentials', 'data-science-machine-learning', 'cloud-computing-aws', 'project-management-professional']
+  const isUpcoming = course.upcoming || upcomingSlugs.includes(course.slug || '')
   const levelColors = {
     Beginner: "bg-green-100 text-green-800",
     Intermediate: "bg-yellow-100 text-yellow-800",
@@ -18,7 +22,7 @@ export function CourseCard({ course }: CourseCardProps) {
   }
 
   return (
-    <Card className="group overflow-hidden hover:shadow-lg transition-all duration-300 border-border/50 bg-card">
+    <Card className="group overflow-hidden hover:shadow-lg transition-all duration-300 border-border/50 bg-card h-full flex flex-col py-0 gap-0">
       <div className="relative aspect-video overflow-hidden">
         <Image
           src={course.image || "/placeholder.svg"}
@@ -29,8 +33,13 @@ export function CourseCard({ course }: CourseCardProps) {
         <div className="absolute top-3 left-3">
           <Badge className={levelColors[course.level]}>{course.level}</Badge>
         </div>
+        {isUpcoming && (
+          <div className="absolute top-3 right-3">
+            <Badge variant="secondary" className="bg-amber-100 text-amber-800">Upcoming</Badge>
+          </div>
+        )}
       </div>
-      <CardContent className="p-5">
+      <CardContent className="p-5 flex-1 flex flex-col min-h-0">
         <div className="mb-2">
           <Badge variant="secondary" className="text-xs">
             {course.category}
@@ -55,11 +64,21 @@ export function CourseCard({ course }: CourseCardProps) {
           </div>
         </div>
       </CardContent>
-      <CardFooter className="px-5 py-4 border-t border-border/50 flex items-center justify-between">
-        <span className="text-xl font-bold text-foreground">${course.price}</span>
-        <Button asChild size="sm">
-          <Link href={`/courses/${course.slug}`}>View Course</Link>
-        </Button>
+      <CardFooter className="px-5 py-4 border-t border-border/50 flex items-center justify-between flex-shrink-0 min-h-[60px]">
+        {isUpcoming ? (
+          <span className="text-sm font-medium text-muted-foreground">Coming soon</span>
+        ) : (
+          <span className="text-xl font-bold text-foreground">GH₵{course.price}</span>
+        )}
+        {isUpcoming ? (
+          <Button asChild size="sm" variant="outline">
+            <Link href={`/courses/${course.slug}`}>View Course</Link>
+          </Button>
+        ) : (
+          <Button asChild size="sm">
+            <Link href={`/courses/${course.slug}`}>View Course</Link>
+          </Button>
+        )}
       </CardFooter>
     </Card>
   )

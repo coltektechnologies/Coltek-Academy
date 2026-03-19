@@ -9,7 +9,7 @@ const faqs = [
   {
     question: "What payment methods do you accept?",
     answer:
-      "We accept all major credit cards (Visa, MasterCard, American Express), PayPal, and bank transfers for select regions. We also offer installment payment plans for courses over $500.",
+      "We accept all major credit cards (Visa, MasterCard, American Express), PayPal, and bank transfers for select regions. We also offer installment payment plans for courses over GH₵500.",
   },
   {
     question: "Can I get a refund if I'm not satisfied?",

@@ -3,34 +3,34 @@ import { Linkedin, Twitter } from "lucide-react"
 
 const team = [
   {
-    name: "Dr. Emily Zhang",
+    name: "Mr. Boansi Kyeremateng Collins",
     role: "CEO & Founder",
-    image: "/professional-asian-ceo.png",
-    bio: "Former Stanford professor with a passion for accessible education.",
-    linkedin: "#",
-    twitter: "#",
+    image: "/ceo.jpg",
+    bio: "Software Engineer dedicated to empowering learners through hands-on tech education.",
+    linkedin: "www.linkedin.com/in/boansi-kyeremateng-collins",
+    twitter: "https://x.com/Profs123456",
   },
   {
-    name: "Marcus Johnson",
+    name: "Miss. Alhassan Habibah",
     role: "Chief Academic Officer",
-    image: "/black-executive-portrait.png",
-    bio: "20+ years experience in curriculum development and ed-tech.",
-    linkedin: "#",
+    image: "/habiba.jpeg",
+    bio: "Chief Academic Officer with extensive experience in curriculum development and educational technology.",
+    linkedin: "https://www.linkedin.com/in/habiba-alhassan-6075202bb?utm_source=share_via&utm_content=profile&utm_medium=member_ios",
     twitter: "#",
   },
   {
-    name: "Sarah Mitchell",
+    name: "Mr. Donkor Pius",
     role: "VP of Student Success",
-    image: "/professional-woman-portrait.png",
+    image: "/pius.jpeg",
     bio: "Dedicated to ensuring every student achieves their goals.",
-    linkedin: "#",
-    twitter: "#",
+    linkedin: "https://www.linkedin.com/in/pius-donkor",
+    twitter: "https://x.com/PiusDonkor35156",
   },
   {
-    name: "David Park",
+    name: "Mr. Frederick Owusu Bonsu",
     role: "Chief Technology Officer",
-    image: "/professional-asian-man-tech-executive-portrait.jpg",
-    bio: "Former Google engineer building the future of learning.",
+    image: "/CTO.jpg",
+    bio: "Chief Technology Officer and mobile application engineer focused on building reliable and scalable digital learning solutions.",
     linkedin: "#",
     twitter: "#",
   },
@@ -43,8 +43,7 @@ export function TeamSection() {
         <div className="text-center mb-12">
           <h2 className="text-3xl font-bold text-foreground mb-4">Meet Our Leadership</h2>
           <p className="text-muted-foreground max-w-2xl mx-auto">
-            Our team brings together experts from education, technology, and business to deliver the best learning
-            experience.
+          Driven by passion and experience, our leadership team blends technology, education, and innovation to shape impactful learning experiences at COLTEK ACADEMY.
           </p>
         </div>
 

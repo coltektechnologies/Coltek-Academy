@@ -46,7 +46,7 @@ export function ContactForm() {
             <Label htmlFor="name">Full Name</Label>
             <Input
               id="name"
-              placeholder="John Doe"
+              placeholder="Ampaabeng  Nancy"
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               required
@@ -57,7 +57,7 @@ export function ContactForm() {
             <Input
               id="email"
               type="email"
-              placeholder="john@example.com"
+              placeholder="nancy@gmail.com"
               value={formData.email}
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
               required

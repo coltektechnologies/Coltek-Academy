@@ -8,9 +8,11 @@ export function MissionSection() {
           <div>
             <h2 className="text-3xl font-bold text-foreground mb-6">Our Mission</h2>
             <p className="text-muted-foreground mb-4 leading-relaxed">
-              At EduLearn, we believe that quality education should be accessible to everyone, regardless of their
-              background or location. Our mission is to democratize learning by providing world-class courses taught by
-              industry experts.
+            At COLTEK ACADEMY, we believe that practical technology education should be accessible to everyone, regardless of background or location. Our mission is to equip learners with in-demand coding and digital skills through hands-on, industry-focused training.
+
+As a training arm of Coltek Technologies, we design our curriculum around real-world challenges and current industry needs. Our students go beyond theory by working on practical projects that build problem-solving ability, confidence, and job-ready experience.
+
+Whether you are starting your tech journey, transitioning into a new career, or strengthening your existing skills, COLTEK ACADEMY provides the guidance, tools, and mentorship needed to succeed in today’s digital world.
             </p>
             <p className="text-muted-foreground mb-4 leading-relaxed">
               We partner with leading companies and universities to create curriculum that reflects real-world demands.
@@ -18,7 +20,7 @@ export function MissionSection() {
             </p>
             <p className="text-muted-foreground leading-relaxed">
               Whether you&apos;re looking to switch careers, advance in your current role, or simply expand your
-              knowledge, EduLearn provides the tools and support you need to succeed.
+              knowledge, Coltek Academy provides the tools and support you need to succeed.
             </p>
           </div>
           <div className="relative h-80 lg:h-96 rounded-2xl overflow-hidden">

@@ -7,8 +7,8 @@ export function AboutHero() {
         <div className="text-center max-w-3xl mx-auto">
           <h1 className="text-4xl md:text-5xl font-bold text-foreground mb-6">Transforming Lives Through Education</h1>
           <p className="text-lg text-muted-foreground mb-12 leading-relaxed">
-            Since 2018, EduLearn has been at the forefront of online education, empowering individuals worldwide to
-            achieve their career goals through expert-led courses and hands-on learning experiences.
+          Founded as a training arm of Coltek Technologies, COLTEK ACADEMY is dedicated to equipping learners with practical coding and technology skills. Over the past five months, the academy has 
+          focused on hands-on learning, real-world projects, and industry-relevant instruction to prepare students for careers in the tech ecosystem.
           </p>
         </div>
 
@@ -17,21 +17,21 @@ export function AboutHero() {
             <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
               <GraduationCap className="h-6 w-6 text-primary" />
             </div>
-            <h3 className="text-2xl font-bold text-foreground mb-1">50,000+</h3>
-            <p className="text-muted-foreground text-sm">Graduates Worldwide</p>
+            <h3 className="text-2xl font-bold text-foreground mb-1">30+</h3>
+            <p className="text-muted-foreground text-sm">Graduates</p>
           </div>
           <div className="bg-card border border-border rounded-xl p-6 text-center">
             <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
               <Users className="h-6 w-6 text-primary" />
             </div>
-            <h3 className="text-2xl font-bold text-foreground mb-1">100+</h3>
+            <h3 className="text-2xl font-bold text-foreground mb-1">12+</h3>
             <p className="text-muted-foreground text-sm">Expert Instructors</p>
           </div>
           <div className="bg-card border border-border rounded-xl p-6 text-center">
             <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
               <Award className="h-6 w-6 text-primary" />
             </div>
-            <h3 className="text-2xl font-bold text-foreground mb-1">95%</h3>
+            <h3 className="text-2xl font-bold text-foreground mb-1">80%</h3>
             <p className="text-muted-foreground text-sm">Job Placement Rate</p>
           </div>
         </div>

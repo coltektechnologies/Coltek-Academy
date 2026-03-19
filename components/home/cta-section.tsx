@@ -10,7 +10,7 @@ export function CTASection() {
           Ready to Start Your Learning Journey?
         </h2>
         <p className="text-primary-foreground/90 text-lg mb-8 max-w-2xl mx-auto">
-          Join thousands of learners who are already advancing their careers with EduLearn. Start today and transform
+          Join thousands of learners who are already advancing their careers with Coltek Academy. Start today and transform
           your future.
         </p>
         <div className="flex flex-col sm:flex-row gap-4 justify-center">

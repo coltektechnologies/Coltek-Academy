@@ -9,12 +9,12 @@ export const courses: Course[] = [
     fullDescription:
       "This comprehensive bootcamp takes you from zero to hero in web development. You will learn everything from basic HTML and CSS to advanced JavaScript frameworks like React, backend development with Node.js, database management, and deployment strategies. By the end of this course, you will have built multiple real-world projects and be ready to land your first developer job.",
     image: "/web-development-coding-laptop.jpg",
-    category: "Web Development",
-    level: "Beginner",
-    duration: "12 weeks",
-    price: 499,
+    category: "Web",
+    level: "Intermediate",
+    duration: "10 weeks",
+    price: 150, 
     instructor: {
-      name: "Dr. Sarah Chen",
+      name: "Mr. Boansi Kyeremateng Collins",
       bio: "Senior Software Engineer at Google with 10+ years of experience teaching web development.",
       avatar: "/professional-woman-portrait.png",
     },
@@ -52,14 +52,15 @@ export const courses: Course[] = [
     id: "2",
     title: "Data Science & Machine Learning",
     slug: "data-science-machine-learning",
+    upcoming: true,
     description: "Master Python, data analysis, visualization, and machine learning algorithms.",
+    price: 0,
     fullDescription:
       "Dive deep into the world of data science and machine learning. This course covers everything from Python programming basics to advanced machine learning algorithms. You will work with real datasets, build predictive models, and learn how to extract insights from complex data. Perfect for aspiring data scientists and analysts.",
     image: "/data-science-visualization-charts.png",
     category: "Data Science",
-    level: "Intermediate",
-    duration: "16 weeks",
-    price: 699,
+    level: "Beginner",
+    duration: "10 weeks",
     instructor: {
       name: "Prof. Michael Rodriguez",
       bio: "Former Data Scientist at Netflix, PhD in Machine Learning from Stanford.",
@@ -100,10 +101,10 @@ export const courses: Course[] = [
     fullDescription:
       "Transform your design skills with this comprehensive UX/UI masterclass. Learn the principles of user-centered design, master tools like Figma and Adobe XD, and build a portfolio that will impress employers. From user research to high-fidelity prototypes, this course covers the entire design process.",
     image: "/ux-ui-design-interface-mockup.jpg",
-    category: "Design",
+    category: "UI/UX",
     level: "Beginner",
     duration: "10 weeks",
-    price: 399,
+    price: 150,
     instructor: {
       name: "Emma Thompson",
       bio: "Lead Product Designer at Airbnb with expertise in user-centered design.",
@@ -138,16 +139,58 @@ export const courses: Course[] = [
   },
   {
     id: "4",
+    title: "Graphic Design Fundamentals",
+    slug: "graphic-design-fundamentals",
+    description: "Master Adobe Creative Suite, design principles, and create stunning visual content.",
+    fullDescription:
+      "Learn the fundamentals of graphic design and master industry-standard tools like Adobe Photoshop, Illustrator, and InDesign. This course covers design theory, typography, color theory, and practical projects including logos, posters, and branding materials. Perfect for aspiring designers and creative professionals.",
+    image: "/ux-ui-design-interface-mockup.jpg",
+    category: "Graphic Design",
+    level: "Beginner",
+    duration: "10 weeks",
+    price: 150,
+    instructor: {
+      name: "Maria Gonzalez",
+      bio: "Senior Graphic Designer at Adobe with 12 years of experience in branding and visual design.",
+      avatar: "/creative-latin-woman.png",
+    },
+    curriculum: [
+      {
+        module: "Design Fundamentals",
+        lessons: ["Design Principles", "Color Theory", "Typography", "Composition & Layout"],
+      },
+      { module: "Adobe Photoshop", lessons: ["Interface & Tools", "Photo Editing", "Digital Art", "Effects & Filters"] },
+      { module: "Adobe Illustrator", lessons: ["Vector Graphics", "Logo Design", "Illustrations", "Branding"] },
+      { module: "Adobe InDesign", lessons: ["Layout Design", "Print Production", "Digital Publishing", "Portfolio Creation"] },
+    ],
+    whatYouLearn: [
+      "Master Adobe Creative Suite tools",
+      "Apply design principles and theory",
+      "Create professional logos and branding",
+      "Design marketing materials and posters",
+      "Work with both print and digital media",
+      "Build a professional design portfolio",
+    ],
+    prerequisites: ["No design experience required", "Basic computer skills"],
+    enrolledStudents: 4200,
+    rating: 4.6,
+    reviewCount: 892,
+    language: "English",
+    lastUpdated: "2025-12-12",
+  },
+  {
+    id: "5",
     title: "Cloud Computing with AWS",
     slug: "cloud-computing-aws",
+    upcoming: true,
     description: "Become an AWS certified professional and master cloud architecture.",
     fullDescription:
       "Get certified in Amazon Web Services and become a cloud computing expert. This course prepares you for the AWS Solutions Architect certification while teaching you practical skills in cloud infrastructure, serverless computing, and DevOps practices. Perfect for IT professionals looking to transition to cloud roles.",
     image: "/cloud-computing-aws-servers.jpg",
     category: "Cloud Computing",
     level: "Intermediate",
-    duration: "8 weeks",
-    price: 549,
+    duration: "10 weeks",
+    price: 0,
     instructor: {
       name: "James Wilson",
       bio: "AWS Solutions Architect with 15 years of cloud infrastructure experience.",
@@ -175,26 +218,26 @@ export const courses: Course[] = [
     lastUpdated: "2025-12-10",
   },
   {
-    id: "5",
-    title: "Digital Marketing Fundamentals",
-    slug: "digital-marketing-fundamentals",
-    description: "Learn SEO, social media marketing, content strategy, and analytics.",
+    id: "6",
+    title: "Social Media Management",
+    slug: "social-media-management",
+    description: "Learn social media strategy, content creation, community management, and analytics.",
     fullDescription:
-      "Master the art and science of digital marketing. This course covers all aspects of online marketing including search engine optimization, pay-per-click advertising, social media strategy, email marketing, and analytics. Learn how to create data-driven campaigns that deliver real results.",
+      "Master social media management for brands and businesses. This course covers platform strategy, content creation, community management, advertising, and analytics. Learn how to grow engagement and run data-driven social campaigns.",
     image: "/digital-marketing-social-media-analytics.jpg",
     category: "Marketing",
     level: "Beginner",
-    duration: "6 weeks",
-    price: 299,
+    duration: "10 weeks",
+    price: 150,
     instructor: {
-      name: "Lisa Park",
-      bio: "CMO at a Fortune 500 company with 12 years of digital marketing experience.",
-      avatar: "/professional-business-woman.png",
+      name: "Miss. Alhassan Habibah",
+      bio: "Chief Academic Officer with extensive experience in curriculum development and educational technology.",
+      avatar: "/habiba.jpeg",
     },
     curriculum: [
       {
         module: "Marketing Foundations",
-        lessons: ["Digital Marketing Overview", "Customer Journey", "Brand Strategy", "Market Research"],
+        lessons: ["Social Media Overview", "Customer Journey", "Brand Strategy", "Market Research"],
       },
       {
         module: "Search & Content",
@@ -225,20 +268,20 @@ export const courses: Course[] = [
     lastUpdated: "2025-11-25",
   },
   {
-    id: "6",
-    title: "Mobile App Development with React Native",
+    id: "7",
+    title: "Mobile App Development with Flutter",
     slug: "mobile-app-development-react-native",
-    description: "Build cross-platform mobile apps for iOS and Android with React Native.",
+    description: "Build cross-platform mobile apps for iOS and Android withFlutter.",
     fullDescription:
-      "Learn to build beautiful, high-performance mobile applications using React Native. This course covers everything from setting up your development environment to publishing apps on the App Store and Google Play. Build real projects including a social media app, e-commerce app, and more.",
+      "Learn to build beautiful, high-performance mobile applications usingFlutter. This course covers everything from setting up your development environment to publishing apps on the App Store and Google Play. Build real projects including a social media app, e-commerce app, and more.",
     image: "/mobile-app-development.png",
-    category: "Mobile Development",
-    level: "Intermediate",
+    category: "Mobile App",
+    level: "Beginner",
     duration: "10 weeks",
-    price: 449,
+    price: 150,
     instructor: {
-      name: "Alex Kim",
-      bio: "Mobile Developer at Meta with expertise in React Native and cross-platform development.",
+      name: "Mr. Frederick Owusu Bonsu",
+      bio: "Mobile Developer at Meta with expertise inFlutter and cross-platform development.",
       avatar: "/young-professional-developer.jpg",
     },
     curriculum: [
@@ -266,7 +309,7 @@ export const courses: Course[] = [
     lastUpdated: "2025-12-08",
   },
   {
-    id: "7",
+    id: "8",
     title: "Cybersecurity Essentials",
     slug: "cybersecurity-essentials",
     description: "Learn ethical hacking, network security, and security best practices.",
@@ -275,8 +318,9 @@ export const courses: Course[] = [
     image: "/cybersecurity-hacking-security-lock.jpg",
     category: "Cybersecurity",
     level: "Advanced",
-    duration: "14 weeks",
-    price: 799,
+    upcoming: true,
+    duration: "10 weeks",
+    price: 0,
     instructor: {
       name: "David Martinez",
       bio: "Former NSA Cybersecurity Analyst, CEH and CISSP certified instructor.",
@@ -307,17 +351,18 @@ export const courses: Course[] = [
     lastUpdated: "2025-12-05",
   },
   {
-    id: "8",
+    id: "9",
     title: "Project Management Professional",
     slug: "project-management-professional",
+    upcoming: true,
     description: "Master project management methodologies and prepare for PMP certification.",
     fullDescription:
       "Become a certified project manager with this comprehensive course covering traditional and agile methodologies. Learn to lead projects from initiation to closure, manage stakeholders, and deliver projects on time and within budget. Perfect preparation for the PMP certification exam.",
     image: "/project-management-team.png",
     category: "Business",
     level: "Intermediate",
-    duration: "8 weeks",
-    price: 599,
+    duration: "10 weeks",
+    price: 0,
     instructor: {
       name: "Jennifer Adams",
       bio: "PMP certified Project Manager with 20 years of experience leading Fortune 500 projects.",
@@ -354,12 +399,13 @@ export const courses: Course[] = [
 
 export const categories = [
   "All Categories",
-  "Web Development",
+  "Web",
   "Data Science",
-  "Design",
+  "UI/UX",
+  "Graphic Design",
   "Cloud Computing",
   "Marketing",
-  "Mobile Development",
+  "Mobile App",
   "Cybersecurity",
   "Business",
 ]
@@ -373,7 +419,7 @@ export const testimonials = [
     role: "Software Engineer at Microsoft",
     avatar: "/professional-woman-smiling.png",
     content:
-      "EduLearn completely transformed my career. I went from knowing nothing about coding to landing my dream job in just 6 months. The instructors are world-class!",
+      "Coltek Academy completely transformed my career. I went from knowing nothing about coding to landing my dream job in just 6 months. The instructors are world-class!",
     course: "Complete Web Development Bootcamp",
   },
   {
@@ -397,8 +443,8 @@ export const testimonials = [
 ]
 
 export const stats = [
-  { value: "50,000+", label: "Students Enrolled" },
-  { value: "100+", label: "Expert Instructors" },
-  { value: "200+", label: "Courses Available" },
+  { value: "50+", label: "Students Enrolled" },
+  { value: "12+", label: "Expert Instructors" },
+  { value: null, label: "Courses Available" }, // Dynamic: fetched at runtime
   { value: "95%", label: "Success Rate" },
 ]

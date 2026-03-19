@@ -1,40 +1,24 @@
 const milestones = [
-  { year: "2018", title: "Founded", description: "EduLearn was founded with a vision to transform online education." },
   {
-    year: "2019",
-    title: "10,000 Students",
-    description: "Reached our first major milestone of 10,000 enrolled students.",
-  },
-  {
-    year: "2020",
-    title: "100 Courses",
-    description: "Expanded our catalog to over 100 courses across multiple disciplines.",
-  },
-  {
-    year: "2021",
-    title: "Series A Funding",
-    description: "Raised $15M to accelerate platform development and expansion.",
-  },
-  {
-    year: "2022",
-    title: "Global Expansion",
-    description: "Launched in 50+ countries with localized content and support.",
-  },
-  {
-    year: "2023",
-    title: "50,000 Graduates",
-    description: "Celebrated 50,000 successful graduates entering the workforce.",
-  },
-  {
-    year: "2024",
-    title: "AI-Powered Learning",
-    description: "Introduced AI tutoring and personalized learning paths.",
+    year: "2025",
+    title: "Q1: COLTEK ACADEMY Founded",
+    description: "Established COLTEK ACADEMY as the training arm of Coltek Technologies, focusing on practical coding and technology skills.",
   },
   {
     year: "2025",
-    title: "Industry Partnerships",
-    description: "Partnered with Fortune 500 companies for direct hiring pipelines.",
+    title: "Q2: Platform Development",
+    description: "Built our learning platform and infrastructure to support scalable and effective online training programs.",
   },
+  {
+    year: "2025",
+    title: "Q3: Curriculum Finalized",
+    description: "Completed development of our comprehensive curriculum based on industry needs and learner feedback.",
+  },
+  {
+    year: "2025",
+    title: "Q4: First Programs Launched",
+    description: "Successfully launched our initial coding programs, bringing hands-on learning to our first cohort of students."
+  }
 ]
 
 export function MilestonesSection() {
@@ -55,7 +39,7 @@ export function MilestonesSection() {
           <div className="space-y-8">
             {milestones.map((milestone, index) => (
               <div
-                key={milestone.year}
+                key={`${milestone.year}-${index}`}
                 className={`relative flex items-center gap-8 ${
                   index % 2 === 0 ? "md:flex-row" : "md:flex-row-reverse"
                 }`}

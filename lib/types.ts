@@ -29,6 +29,9 @@ export interface Course {
   reviewCount: number
   language: string
   lastUpdated: string
+  relatedCourses?: Course[]
+  // Add any other fields that might be in your database
+  [key: string]: any
 }
 
 export interface RegistrationFormData {
@@ -52,4 +55,54 @@ export interface RegistrationFormData {
   // Step 4: Payment (placeholder)
   paymentMethod: string
   agreeToTerms: boolean
+}
+
+export interface UserEnrollment {
+  id: string
+  userId: string
+  userEmail: string
+  courseId: string
+  courseTitle: string
+  enrollmentDate: Date
+  paymentReference: string
+  paymentAmount: number
+  paymentMethod: string
+  status: 'active' | 'completed' | 'cancelled'
+  personalInfo: {
+    firstName: string
+    lastName: string
+    email: string
+    phone: string
+  }
+  education: {
+    highestEducation: string
+    fieldOfStudy: string
+    currentOccupation: string
+    yearsOfExperience: string
+  }
+  courseDetails: {
+    learningGoals: string
+    preferredSchedule: string
+  }
+}
+
+export interface Certificate {
+  id: string
+  userId: string
+  userEmail: string
+  courseId: string
+  courseTitle: string
+  enrollmentId: string
+  certificateNumber: string
+  issueDate: Date
+  completionDate: Date
+  instructorName: string
+  certificateUrl: string // Firebase Storage URL for PDF
+  previewUrl?: string // Firebase Storage URL for preview image (optional)
+  status: 'issued' | 'revoked'
+  metadata: {
+    templateUsed: string
+    verificationCode: string
+    grade?: string
+  }
 }
