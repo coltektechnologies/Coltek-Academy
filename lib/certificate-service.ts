@@ -1,10 +1,7 @@
 import { collection, doc, getDocs, query, where, addDoc, updateDoc, deleteDoc, orderBy } from 'firebase/firestore'
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage'
-import { getStorage } from 'firebase/storage'
-import { db } from './firebase'
+import { db, storage } from './firebase'
 import type { Certificate } from '@/types/certificate'
-
-const storage = getStorage()
 
 export class CertificateService {
   private static COLLECTION = 'certificates'

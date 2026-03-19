@@ -1,15 +1,12 @@
 import { initializeApp, getApps, getApp, FirebaseApp } from "firebase/app";
-import { 
-  getAuth, 
-  setPersistence, 
+import {
+  getAuth,
+  setPersistence,
   browserSessionPersistence,
   inMemoryPersistence,
-  Auth
+  Auth,
 } from "firebase/auth";
-import { 
-  initializeFirestore,
-  Firestore
-} from "firebase/firestore";
+import { initializeFirestore, Firestore } from "firebase/firestore";
 import { getAnalytics, isSupported, Analytics } from "firebase/analytics";
 import { getStorage, FirebaseStorage } from "firebase/storage";
 
@@ -26,75 +23,98 @@ const firebaseConfig = {
 };
 
 class Firebase {
-  private static instance: Firebase;
   public app: FirebaseApp;
   public auth: Auth;
   public db: Firestore;
   public analytics: Analytics | null = null;
   public storage: FirebaseStorage;
-  
-  public static getInstance(): Firebase {
-    if (!Firebase.instance) {
-      Firebase.instance = new Firebase();
-    }
-    return Firebase.instance;
-  }
 
-  private constructor() {
-    try {
-      // Initialize Firebase
-      this.app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
-      
-      // Initialize Auth with session persistence
-      this.auth = getAuth(this.app);
-      this.initializeAuth();
+  constructor() {
+    // Initialize Firebase
+    this.app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 
-      // Initialize Firestore with long polling for better connection handling
-      this.db = initializeFirestore(this.app, {
-        experimentalForceLongPolling: true
-      });
-      
-      // Initialize Storage
-      this.storage = getStorage(this.app);
-      
-      // Initialize Analytics if in browser
-      if (typeof window !== 'undefined') {
-        this.initializeAnalytics();
-      }
-      
-      console.log("Firebase initialized successfully");
-    } catch (error) {
-      console.error("Firebase initialization error:", error);
-      throw error;
+    // Initialize Auth with session persistence
+    this.auth = getAuth(this.app);
+    void this.initializeAuth();
+
+    // Initialize Firestore with long polling for better connection handling
+    this.db = initializeFirestore(this.app, {
+      experimentalForceLongPolling: true,
+    });
+
+    // Initialize Storage
+    this.storage = getStorage(this.app);
+
+    // Initialize Analytics if in browser
+    if (typeof window !== "undefined") {
+      this.initializeAnalytics();
     }
+
+    console.log("Firebase initialized successfully");
   }
 
   private async initializeAuth() {
     try {
       await setPersistence(this.auth, browserSessionPersistence);
-      console.log('Using session storage for authentication');
+      console.log("Using session storage for authentication");
     } catch (error) {
-      console.warn('Failed to use session storage, falling back to in-memory:', error);
+      console.warn(
+        "Failed to use session storage, falling back to in-memory:",
+        error
+      );
       try {
         await setPersistence(this.auth, inMemoryPersistence);
-        console.log('Using in-memory storage for authentication');
+        console.log("Using in-memory storage for authentication");
       } catch (e) {
-        console.error('Failed to set up any persistence:', e);
+        console.error("Failed to set up any persistence:", e);
       }
     }
   }
 
   private initializeAnalytics() {
-    isSupported().then((supported) => {
-      if (supported) {
-        this.analytics = getAnalytics(this.app);
-      }
-    }).catch(console.error);
+    isSupported()
+      .then((supported) => {
+        if (supported) {
+          this.analytics = getAnalytics(this.app);
+        }
+      })
+      .catch(console.error);
   }
 }
 
-// Create and export a single instance
-const firebase = Firebase.getInstance();
-const { app, auth, db, analytics, storage } = firebase;
+let firebaseInstance: Firebase | null = null;
 
-export { app, auth, db, analytics, storage, firebase as default };
+/**
+ * Lazily create Firebase so `next build` / Vercel can import this module
+ * without valid NEXT_PUBLIC_* keys until a handler actually uses Firestore/Auth.
+ */
+function getFirebaseInstance(): Firebase {
+  if (!firebaseInstance) {
+    firebaseInstance = new Firebase();
+  }
+  return firebaseInstance;
+}
+
+/** Forward property access to the real Firestore/Auth/Storage instance (lazy init). */
+function createLazyService<T extends object>(pick: (f: Firebase) => T): T {
+  return new Proxy({} as T, {
+    get(_target, prop, receiver) {
+      const real = pick(getFirebaseInstance());
+      const value = Reflect.get(real, prop, receiver);
+      return typeof value === "function" ? (value as Function).bind(real) : value;
+    },
+  });
+}
+
+export const app = createLazyService((f) => f.app);
+export const auth = createLazyService((f) => f.auth);
+export const db = createLazyService((f) => f.db);
+export const storage = createLazyService((f) => f.storage);
+
+/** Not lazily synced; nothing in the app imports this. Use getFirebaseInstance().analytics in browser if needed. */
+export const analytics: Analytics | null = null;
+
+const firebaseDefault = {
+  getInstance: getFirebaseInstance,
+};
+export default firebaseDefault;

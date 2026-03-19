@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { collection, getDocs, doc, setDoc, deleteDoc, Timestamp, getDoc, query, orderBy } from 'firebase/firestore';
 import type { DocumentData } from 'firebase/firestore';
-import { db, storage } from '@/lib/firebase';
+import { auth, db, storage } from '@/lib/firebase';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -297,26 +297,25 @@ export default function AdminCoursesPage() {
   }, [fetchCourses, authState]);
 
   useEffect(() => {
-    import('firebase/auth').then(({ getAuth, onAuthStateChanged }) => {
-      const auth = getAuth();
-      return new Promise((resolve) => {
-        const unsubscribe = onAuthStateChanged(auth, (user) => {
-          console.log('Auth state changed:', user);
-          setAuthState({
-            isAuthenticated: !!user,
-            user: user ? {
-              uid: user.uid,
-              email: user.email,
-              emailVerified: user.emailVerified,
-              isAnonymous: user.isAnonymous,
-              providerData: user.providerData
-            } : null
-          });
-          resolve(user);
+    let unsubscribe: (() => void) | undefined;
+    import('firebase/auth').then(({ onAuthStateChanged }) => {
+      unsubscribe = onAuthStateChanged(auth, (user) => {
+        console.log('Auth state changed:', user);
+        setAuthState({
+          isAuthenticated: !!user,
+          user: user ? {
+            uid: user.uid,
+            email: user.email,
+            emailVerified: user.emailVerified,
+            isAnonymous: user.isAnonymous,
+            providerData: user.providerData
+          } : null
         });
-        return () => unsubscribe();
       });
     }).catch(console.error);
+    return () => {
+      unsubscribe?.();
+    };
   }, []);
 
   const handleEditCourse = (course: CourseType) => {
