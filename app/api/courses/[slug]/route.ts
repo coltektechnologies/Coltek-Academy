@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { collection, query, where, getDocs, limit, doc, getDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { firebase } from '@/lib/firebase';
 
 export async function GET(
   request: Request,
@@ -20,7 +20,7 @@ export async function GET(
 
     // First, try to get the course by ID (in case the slug is the document ID)
     try {
-      const courseDoc = await getDoc(doc(db, 'courses', slug));
+      const courseDoc = await getDoc(doc(firebase.db, 'courses', slug));
       if (courseDoc.exists()) {
         const data = courseDoc.data();
         if (data.isPublished !== true) {
@@ -37,7 +37,7 @@ export async function GET(
     }
 
     // If not found by ID, try to find by slug field
-    const coursesRef = collection(db, 'courses');
+    const coursesRef = collection(firebase.db, 'courses');
     const q = query(
       coursesRef,
       where('slug', '==', slug),

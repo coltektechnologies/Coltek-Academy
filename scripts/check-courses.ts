@@ -1,10 +1,10 @@
-import { db } from '../lib/firebase';
+import { firebase } from '../lib/firebase';
 import { collection, getDocs } from 'firebase/firestore';
 
 async function checkCourses() {
   try {
     console.log('Fetching all courses from Firestore...');
-    const coursesRef = collection(db, 'courses');
+    const coursesRef = collection(firebase.db, 'courses');
     const snapshot = await getDocs(coursesRef);
     
     console.log(`Found ${snapshot.size} courses in the database:`);

@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Upload, FileText, Image } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import { useAuth } from '@/hooks/use-auth'
-import { auth } from '@/lib/firebase'
+import { firebase } from '@/lib/firebase'
 
 interface CertificateUploadFormProps {
   onSuccess?: () => void
@@ -118,10 +118,10 @@ export function CertificateUploadForm({ onSuccess }: CertificateUploadFormProps)
   }
 
   const getAuthToken = async () => {
-    if (!auth.currentUser) {
+    if (!firebase.auth.currentUser) {
       throw new Error('User not authenticated')
     }
-    return await auth.currentUser.getIdToken()
+    return await firebase.auth.currentUser.getIdToken()
   }
 
   return (

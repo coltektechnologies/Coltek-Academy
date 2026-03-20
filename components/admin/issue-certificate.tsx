@@ -21,7 +21,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { collection, getDocs, query, where, doc, updateDoc, arrayUnion, getDoc, setDoc, addDoc } from 'firebase/firestore';
-import { db, storage } from '@/lib/firebase';
+import { firebase } from '@/lib/firebase';
 import { ref, uploadBytes, getDownloadURL, uploadBytesResumable } from 'firebase/storage';
 import { logCertificateIssued } from '@/lib/activity-service';
 
@@ -89,7 +89,7 @@ export function IssueCertificate({ users, courses, children }: IssueCertificateP
       if (localUsers.length > 0 || isUsersLoading) return;
       try {
         setIsUsersLoading(true);
-        const snap = await getDocs(collection(db, 'users'));
+        const snap = await getDocs(collection(firebase.db, 'users'));
         const fetched = snap.docs.map(d => ({
           id: d.id,
           email: (d.data() as any).email || '',
@@ -148,12 +148,12 @@ export function IssueCertificate({ users, courses, children }: IssueCertificateP
         console.log(`Fetching enrollments for user: ${selectedUserId}`);
         
         // First, get the user document to check for direct course references
-        const userDoc = await getDoc(doc(db, 'users', selectedUserId));
+        const userDoc = await getDoc(doc(firebase.db, 'users', selectedUserId));
         console.log('User document data:', userDoc.data());
         
         // Then fetch enrollments for this user
         const enrollmentsQuery = query(
-          collection(db, 'enrollments'),
+          collection(firebase.db, 'enrollments'),
           where('userId', '==', selectedUserId)
         );
         const snapshot = await getDocs(enrollmentsQuery);
@@ -375,8 +375,8 @@ export function IssueCertificate({ users, courses, children }: IssueCertificateP
       
       // 1. First, verify the user and course exist
       const [userDoc, courseDoc] = await Promise.all([
-        getDoc(doc(db, 'users', selectedUserId)),
-        getDoc(doc(db, 'courses', selectedCourseId))
+        getDoc(doc(firebase.db, 'users', selectedUserId)),
+        getDoc(doc(firebase.db, 'courses', selectedCourseId))
       ]);
 
       if (!userDoc.exists()) {
@@ -411,7 +411,7 @@ export function IssueCertificate({ users, courses, children }: IssueCertificateP
         createdAt: new Date().toISOString(),
       };
 
-      const certificateRef = await addDoc(collection(db, 'certificates'), certificateData);
+      const certificateRef = await addDoc(collection(firebase.db, 'certificates'), certificateData);
 
       // Log the certificate issuance activity
       if (user && course) {
@@ -431,7 +431,7 @@ export function IssueCertificate({ users, courses, children }: IssueCertificateP
       }
 
       console.log('Updating user document...');
-      const userRef = doc(db, 'users', selectedUserId);
+      const userRef = doc(firebase.db, 'users', selectedUserId);
       await updateDoc(userRef, {
         certificates: arrayUnion(certificateData)
       });
@@ -439,7 +439,7 @@ export function IssueCertificate({ users, courses, children }: IssueCertificateP
 
       // 5. Update course's issued certificates
       console.log('Updating course document...');
-      const courseRef = doc(db, 'courses', selectedCourseId);
+      const courseRef = doc(firebase.db, 'courses', selectedCourseId);
       await updateDoc(courseRef, {
         issuedCertificates: arrayUnion({
           userId: selectedUserId,
@@ -455,7 +455,7 @@ export function IssueCertificate({ users, courses, children }: IssueCertificateP
 
       // 6. Create a new document in the certificates collection
       console.log('Creating certificate document...');
-      const certRef = doc(collection(db, 'certificates'), certId);
+      const certRef = doc(collection(firebase.db, 'certificates'), certId);
       await setDoc(certRef, {
         ...certificateData,
         userId: selectedUserId,

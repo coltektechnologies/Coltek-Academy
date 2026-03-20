@@ -22,6 +22,26 @@ const firebaseConfig = {
   }),
 };
 
+/** True when all required public Firebase env vars are present (Vercel / .env.local). */
+export function isFirebaseConfigured(): boolean {
+  const { apiKey, authDomain, projectId, appId, messagingSenderId, storageBucket } =
+    firebaseConfig;
+  return Boolean(
+    apiKey?.trim() &&
+      authDomain?.trim() &&
+      projectId?.trim() &&
+      appId?.trim() &&
+      messagingSenderId?.trim() &&
+      storageBucket?.trim()
+  );
+}
+
+export const FIREBASE_SETUP_HELP =
+  "Add your Firebase web app keys in Vercel: Project → Settings → Environment Variables. " +
+  "Set NEXT_PUBLIC_FIREBASE_API_KEY, NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN, NEXT_PUBLIC_FIREBASE_PROJECT_ID, " +
+  "NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET, NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID, and NEXT_PUBLIC_FIREBASE_APP_ID " +
+  "(copy from Firebase Console → Project settings → Your apps → SDK setup). Redeploy after saving.";
+
 class Firebase {
   public app: FirebaseApp;
   public auth: Auth;
@@ -83,33 +103,74 @@ class Firebase {
 }
 
 let firebaseInstance: Firebase | null = null;
+let firebaseInitError: Error | null = null;
 
 /**
  * Lazily create Firebase so `next build` / Vercel can import this module
  * without valid NEXT_PUBLIC_* keys until a handler actually uses Firestore/Auth.
  */
 function getFirebaseInstance(): Firebase {
+  if (firebaseInitError) {
+    throw firebaseInitError;
+  }
   if (!firebaseInstance) {
-    firebaseInstance = new Firebase();
+    if (!isFirebaseConfigured()) {
+      firebaseInitError = new Error(
+        `Firebase is not configured. ${FIREBASE_SETUP_HELP}`
+      );
+      throw firebaseInitError;
+    }
+    try {
+      firebaseInstance = new Firebase();
+    } catch (e) {
+      const err =
+        e instanceof Error ? e : new Error(String(e));
+      firebaseInitError = err;
+      console.error("[Firebase]", err.message);
+      throw firebaseInitError;
+    }
   }
   return firebaseInstance;
 }
 
-/** Forward property access to the real Firestore/Auth/Storage instance (lazy init). */
-function createLazyService<T extends object>(pick: (f: Firebase) => T): T {
-  return new Proxy({} as T, {
-    get(_target, prop, receiver) {
-      const real = pick(getFirebaseInstance());
-      const value = Reflect.get(real, prop, receiver);
-      return typeof value === "function" ? (value as Function).bind(real) : value;
-    },
-  });
+/** Clear cached init error (e.g. after fixing env in dev). */
+export function resetFirebaseInitError(): void {
+  firebaseInitError = null;
+  firebaseInstance = null;
 }
 
-export const app = createLazyService((f) => f.app);
-export const auth = createLazyService((f) => f.auth);
-export const db = createLazyService((f) => f.db);
-export const storage = createLazyService((f) => f.storage);
+/**
+ * Lazy accessors returning real Firebase instances (not Proxies).
+ * `collection(db, …)` requires a real Firestore — Proxies fail instanceof checks.
+ */
+export const firebase = {
+  get app(): FirebaseApp {
+    return getFirebaseInstance().app;
+  },
+  get auth(): Auth {
+    return getFirebaseInstance().auth;
+  },
+  get db(): Firestore {
+    return getFirebaseInstance().db;
+  },
+  get storage(): FirebaseStorage {
+    return getFirebaseInstance().storage;
+  },
+};
+
+/**
+ * Named exports — use `export const` (not `export { db }`) so Turbopack lists them in `[app-route]`.
+ * In Route Handlers, `import { firebase }` + `firebase.db` is the most reliable pattern.
+ */
+const _firebaseCoreOrNull: Firebase | null = isFirebaseConfigured()
+  ? getFirebaseInstance()
+  : null;
+
+export const db: Firestore | null = _firebaseCoreOrNull?.db ?? null;
+export const auth: Auth | null = _firebaseCoreOrNull?.auth ?? null;
+export const storage: FirebaseStorage | null =
+  _firebaseCoreOrNull?.storage ?? null;
+export const app: FirebaseApp | null = _firebaseCoreOrNull?.app ?? null;
 
 /** Not lazily synced; nothing in the app imports this. Use getFirebaseInstance().analytics in browser if needed. */
 export const analytics: Analytics | null = null;

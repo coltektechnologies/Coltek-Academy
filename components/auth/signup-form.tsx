@@ -18,7 +18,7 @@ import {
   GoogleAuthProvider,
   GithubAuthProvider
 } from "firebase/auth"
-import { auth, db } from "@/lib/firebase"
+import { firebase } from "@/lib/firebase"
 import { doc, setDoc } from "firebase/firestore"
 
 export function SignupForm() {
@@ -61,7 +61,7 @@ export function SignupForm() {
 
     try {
       // Check if email already exists
-      const methods = await fetchSignInMethodsForEmail(auth, formData.email);
+      const methods = await fetchSignInMethodsForEmail(firebase.auth, formData.email);
       
       if (methods && methods.length > 0) {
         throw { code: 'auth/email-already-in-use' };
@@ -69,7 +69,7 @@ export function SignupForm() {
 
       // Create user with email and password
       const userCredential = await createUserWithEmailAndPassword(
-        auth,
+        firebase.auth,
         formData.email,
         formData.password
       )
@@ -94,7 +94,7 @@ export function SignupForm() {
         updatedAt: new Date().toISOString(),
       }
 
-      await setDoc(doc(db, 'users', userCredential.user.uid), userDoc, {
+      await setDoc(doc(firebase.db, 'users', userCredential.user.uid), userDoc, {
         merge: false // Don't merge, we want to create a new document
       })
 
@@ -156,7 +156,7 @@ export function SignupForm() {
     try {
       const provider = new GoogleAuthProvider()
       provider.setCustomParameters({ prompt: "select_account" })
-      const userCredential = await signInWithPopup(auth, provider)
+      const userCredential = await signInWithPopup(firebase.auth, provider)
       const user = userCredential.user
 
       const userDoc = {
@@ -170,7 +170,7 @@ export function SignupForm() {
         updatedAt: new Date().toISOString(),
       }
 
-      await setDoc(doc(db, "users", user.uid), userDoc, { merge: true })
+      await setDoc(doc(firebase.db, "users", user.uid), userDoc, { merge: true })
 
       toast({
         title: "Account created!",
@@ -216,7 +216,7 @@ export function SignupForm() {
       const provider = new GithubAuthProvider()
       provider.addScope("read:user")
       provider.addScope("user:email")
-      const userCredential = await signInWithPopup(auth, provider)
+      const userCredential = await signInWithPopup(firebase.auth, provider)
       const user = userCredential.user
 
       const userDoc = {
@@ -230,7 +230,7 @@ export function SignupForm() {
         updatedAt: new Date().toISOString(),
       }
 
-      await setDoc(doc(db, "users", user.uid), userDoc, { merge: true })
+      await setDoc(doc(firebase.db, "users", user.uid), userDoc, { merge: true })
 
       toast({
         title: "Account created!",

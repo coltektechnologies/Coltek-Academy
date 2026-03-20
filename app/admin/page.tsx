@@ -122,7 +122,7 @@ const Clock = dynamic(
   { ssr: false, loading: () => <span className="w-6 h-6" /> }
 );
 
-import { auth, db } from '@/lib/firebase';
+import { firebase } from '@/lib/firebase';
 import { 
   doc, 
   getDoc, 
@@ -212,7 +212,7 @@ export default function AdminPage() {
       }
 
       try {
-        const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
+        const userDoc = await getDoc(doc(firebase.db, 'users', currentUser.uid));
         if (userDoc.exists() && userDoc.data()?.role === 'admin') {
           setIsAdmin(true);
         } else {
@@ -261,7 +261,7 @@ export default function AdminPage() {
     let unsubscribe: (() => void) | null = null;
     try {
       const q = query(
-        collection(db, 'activities'),
+        collection(firebase.db, 'activities'),
         orderBy('timestamp', 'desc'),
         limit(10)
       );
@@ -331,7 +331,7 @@ export default function AdminPage() {
   // Fetch all users
   const fetchUsers = async () => {
     try {
-      const usersRef = collection(db, 'users');
+      const usersRef = collection(firebase.db, 'users');
       const usersSnapshot = await getDocs(usersRef);
       
       const usersData = usersSnapshot.docs.map(docItem => ({
@@ -369,7 +369,7 @@ export default function AdminPage() {
   const fetchCourses = async () => {
     try {
       console.log('1. Starting to fetch courses...');
-      const coursesRef = collection(db, 'courses');
+      const coursesRef = collection(firebase.db, 'courses');
       console.log('2. Collection reference created:', coursesRef);
       
       // First, try to get the documents directly
@@ -461,8 +461,8 @@ export default function AdminPage() {
       try {
         // Check admin status in both users and adminUsers collections
         const [userDoc, adminDoc] = await Promise.all([
-          getDoc(doc(db, 'users', currentUser.uid)),
-          getDoc(doc(db, 'adminUsers', currentUser.uid))
+          getDoc(doc(firebase.db, 'users', currentUser.uid)),
+          getDoc(doc(firebase.db, 'adminUsers', currentUser.uid))
         ]);
 
         const isUserAdmin = adminDoc.exists() && adminDoc.data()?.role === 'admin';
@@ -505,17 +505,17 @@ export default function AdminPage() {
 
     try {
       // Fetch total students (users with role 'student')
-      const usersQuery = query(collection(db, 'users'), where('role', '==', 'student'));
+      const usersQuery = query(collection(firebase.db, 'users'), where('role', '==', 'student'));
       const usersSnapshot = await getCountFromServer(usersQuery);
       const totalStudents = usersSnapshot.data().count;
 
       // Fetch courses from Firestore
-      const coursesQuery = collection(db, 'courses');
+      const coursesQuery = collection(firebase.db, 'courses');
       const coursesSnapshot = await getCountFromServer(coursesQuery);
       const totalCourses = coursesSnapshot.data().count;
 
       // Fetch total certificates issued
-      const certsQuery = collection(db, 'certificates');
+      const certsQuery = collection(firebase.db, 'certificates');
       const certsSnapshot = await getCountFromServer(certsQuery);
       const totalCertificates = certsSnapshot.data().count;
 
@@ -523,7 +523,7 @@ export default function AdminPage() {
       const thirtyDaysAgo = new Date();
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
       const activeUsersQuery = query(
-        collection(db, 'users'),
+        collection(firebase.db, 'users'),
         where('lastLogin', '>=', thirtyDaysAgo)
       );
       const activeUsersSnapshot = await getCountFromServer(activeUsersQuery);

@@ -1,15 +1,15 @@
 import { useEffect } from 'react';
-import { auth, db } from '@/lib/firebase';
+import { firebase } from '@/lib/firebase';
 import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 
 export function useUserActivity() {
   useEffect(() => {
-    if (!auth.currentUser?.uid) return;
+    if (!firebase.auth.currentUser?.uid) return;
 
     // Update lastActive timestamp when component mounts
     const updateLastActive = async () => {
       try {
-        const userRef = doc(db, 'users', auth.currentUser!.uid);
+        const userRef = doc(firebase.db, 'users', firebase.auth.currentUser!.uid);
         await updateDoc(userRef, {
           lastActive: serverTimestamp(),
           updatedAt: serverTimestamp()

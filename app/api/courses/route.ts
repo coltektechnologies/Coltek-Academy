@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { collection, getDocs, query, where } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { collection, getDocs } from 'firebase/firestore';
+import { firebase, isFirebaseConfigured } from '@/lib/firebase';
 
 // Helper function to format course data
 function formatCourseData(courseData: any) {
@@ -31,7 +31,17 @@ function formatCourseData(courseData: any) {
 
 export async function GET() {
   try {
-    const coursesRef = collection(db, 'courses');
+    if (!isFirebaseConfigured()) {
+      return NextResponse.json(
+        {
+          error: 'Firebase is not configured',
+          courses: [],
+        },
+        { status: 503 }
+      );
+    }
+
+    const coursesRef = collection(firebase.db, 'courses');
     const snapshot = await getDocs(coursesRef);
     
     interface FirestoreCourse {

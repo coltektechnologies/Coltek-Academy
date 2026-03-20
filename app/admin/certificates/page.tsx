@@ -6,7 +6,7 @@ import { collection, getDocs, query, orderBy } from 'firebase/firestore';
 import { format } from 'date-fns';
 import { Loader2 } from 'lucide-react';
 
-import { db } from '@/lib/firebase';
+import { firebase } from '@/lib/firebase';
 import type { Certificate } from '@/types/certificate';
 
 // Lazy load components
@@ -32,7 +32,7 @@ export default function CertificatesPage() {
       try {
         setIsLoading(true);
         // Fetch all certificates (admin view)
-        const q = query(collection(db, 'certificates'), orderBy('issueDate', 'desc'));
+        const q = query(collection(firebase.db, 'certificates'), orderBy('issueDate', 'desc'));
         const querySnapshot = await getDocs(q);
         
         const certs = querySnapshot.docs.map(doc => {

@@ -7,7 +7,7 @@ import { Menu, X, BookOpen, LogOut } from "lucide-react"
 import Image from "next/image"
 import { useAuth } from "@/hooks/use-auth"
 import { signOut } from "firebase/auth"
-import { auth } from "@/lib/firebase"
+import { firebase, isFirebaseConfigured } from "@/lib/firebase"
 import { useToast } from "@/hooks/use-toast"
 
 export function Navbar() {
@@ -16,8 +16,9 @@ export function Navbar() {
   const { toast } = useToast()
 
   const handleLogout = async () => {
+    if (!isFirebaseConfigured()) return
     try {
-      await signOut(auth)
+      await signOut(firebase.auth)
       toast({
         title: "Logged out",
         description: "You have been successfully logged out.",

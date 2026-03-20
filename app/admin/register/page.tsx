@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth'
-import { auth, db } from '@/lib/firebase'
+import { firebase } from '@/lib/firebase'
 import { doc, setDoc } from 'firebase/firestore'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -61,7 +61,7 @@ export default function AdminRegisterPage() {
     try {
       // Create user account
       const userCredential = await createUserWithEmailAndPassword(
-        auth,
+        firebase.auth,
         formData.email,
         formData.password
       )
@@ -72,7 +72,7 @@ export default function AdminRegisterPage() {
       })
 
       // Create admin user document in Firestore
-      await setDoc(doc(db, 'adminUsers', userCredential.user.uid), {
+      await setDoc(doc(firebase.db, 'adminUsers', userCredential.user.uid), {
         uid: userCredential.user.uid,
         email: formData.email,
         firstName: formData.firstName,

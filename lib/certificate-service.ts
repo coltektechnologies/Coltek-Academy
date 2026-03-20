@@ -1,6 +1,6 @@
 import { collection, doc, getDocs, query, where, addDoc, updateDoc, deleteDoc, orderBy } from 'firebase/firestore'
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage'
-import { db, storage } from './firebase'
+import { firebase } from './firebase'
 import type { Certificate } from '@/types/certificate'
 
 export class CertificateService {
@@ -15,7 +15,7 @@ export class CertificateService {
       
       // Query certificates directly by userId
       const q = query(
-        collection(db, this.COLLECTION),
+        collection(firebase.db, this.COLLECTION),
         where('userId', '==', userId),
         where('status', '==', 'issued'),
         orderBy('issueDate', 'desc')
@@ -71,8 +71,8 @@ export class CertificateService {
    */
   static async getCertificateById(certificateId: string): Promise<Certificate | null> {
     try {
-      const docRef = doc(db, this.COLLECTION, certificateId)
-      const docSnap = await getDocs(query(collection(db, this.COLLECTION), where('id', '==', certificateId)))
+      const docRef = doc(firebase.db, this.COLLECTION, certificateId)
+      const docSnap = await getDocs(query(collection(firebase.db, this.COLLECTION), where('id', '==', certificateId)))
 
       if (!docSnap.empty) {
         const data = docSnap.docs[0].data()
@@ -104,13 +104,13 @@ export class CertificateService {
       }
 
       // Upload PDF
-      const pdfRef = ref(storage, `certificates/${certificateId}/certificate.pdf`)
+      const pdfRef = ref(firebase.storage, `certificates/${certificateId}/certificate.pdf`)
       await uploadBytes(pdfRef, pdfFile)
       results.certificateUrl = await getDownloadURL(pdfRef)
 
       // Upload preview image if provided
       if (previewFile) {
-        const previewRef = ref(storage, `certificates/${certificateId}/preview.jpg`)
+        const previewRef = ref(firebase.storage, `certificates/${certificateId}/preview.jpg`)
         await uploadBytes(previewRef, previewFile)
         results.previewUrl = await getDownloadURL(previewRef)
       }
@@ -127,7 +127,7 @@ export class CertificateService {
    */
   static async createCertificate(certificateData: Omit<Certificate, 'id'>): Promise<string> {
     try {
-      const docRef = await addDoc(collection(db, this.COLLECTION), {
+      const docRef = await addDoc(collection(firebase.db, this.COLLECTION), {
         ...certificateData,
         issueDate: new Date(certificateData.issueDate),
         completionDate: new Date(certificateData.completionDate),
@@ -149,7 +149,7 @@ export class CertificateService {
    */
   static async updateCertificate(certificateId: string, updates: Partial<Certificate>): Promise<void> {
     try {
-      const docRef = doc(db, this.COLLECTION, certificateId)
+      const docRef = doc(firebase.db, this.COLLECTION, certificateId)
       await updateDoc(docRef, {
         ...updates,
         ...(updates.issueDate && { issueDate: new Date(updates.issueDate) }),
@@ -190,7 +190,7 @@ export class CertificateService {
 
       for (const filePath of filesToDelete) {
         try {
-          const fileRef = ref(storage, filePath)
+          const fileRef = ref(firebase.storage, filePath)
           await deleteObject(fileRef)
         } catch (error) {
           console.warn(`Failed to delete file ${filePath}:`, error)
@@ -198,7 +198,7 @@ export class CertificateService {
       }
 
       // Delete document
-      await deleteDoc(doc(db, this.COLLECTION, certificateId))
+      await deleteDoc(doc(firebase.db, this.COLLECTION, certificateId))
     } catch (error) {
       console.error('Error deleting certificate:', error)
       throw new Error('Failed to delete certificate')
@@ -226,7 +226,7 @@ export class CertificateService {
    */
   static async checkAdminStatus(userId: string): Promise<boolean> {
     try {
-      const adminDoc = await getDocs(query(collection(db, 'adminUsers'), where('uid', '==', userId)))
+      const adminDoc = await getDocs(query(collection(firebase.db, 'adminUsers'), where('uid', '==', userId)))
       return !adminDoc.empty && adminDoc.docs[0].data()?.role === 'admin'
     } catch (error) {
       console.error('Error checking admin status:', error)

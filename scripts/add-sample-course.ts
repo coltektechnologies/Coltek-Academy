@@ -1,9 +1,9 @@
-import { db } from '../lib/firebase';
+import { firebase } from '../lib/firebase';
 import { collection, addDoc } from 'firebase/firestore';
 
 async function addSampleCourse() {
   try {
-    const coursesRef = collection(db, 'courses');
+    const coursesRef = collection(firebase.db, 'courses');
     
     const courseData = {
       title: 'Introduction to Web Development',

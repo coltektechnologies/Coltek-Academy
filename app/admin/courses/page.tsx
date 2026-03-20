@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { collection, getDocs, doc, setDoc, deleteDoc, Timestamp, getDoc, query, orderBy } from 'firebase/firestore';
 import type { DocumentData } from 'firebase/firestore';
-import { auth, db, storage } from '@/lib/firebase';
+import { firebase } from '@/lib/firebase';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -156,7 +156,7 @@ export default function AdminCoursesPage() {
     try {
       console.log('1. Starting to fetch courses...');
       setLoading(true);
-      const coursesRef = collection(db, 'courses');
+      const coursesRef = collection(firebase.db, 'courses');
       console.log('2. Collection reference created:', coursesRef);
       
       console.log('3. Attempting to get documents...');
@@ -299,7 +299,7 @@ export default function AdminCoursesPage() {
   useEffect(() => {
     let unsubscribe: (() => void) | undefined;
     import('firebase/auth').then(({ onAuthStateChanged }) => {
-      unsubscribe = onAuthStateChanged(auth, (user) => {
+      unsubscribe = onAuthStateChanged(firebase.auth, (user) => {
         console.log('Auth state changed:', user);
         setAuthState({
           isAuthenticated: !!user,
@@ -330,12 +330,12 @@ export default function AdminCoursesPage() {
       setIsDeleting(true);
       
       // Delete the course document
-      await deleteDoc(doc(db, 'courses', courseToDelete.id));
+      await deleteDoc(doc(firebase.db, 'courses', courseToDelete.id));
       
       // Delete the course image from storage if it exists
       if (courseToDelete.image) {
         try {
-          const imageRef = ref(storage, courseToDelete.image);
+          const imageRef = ref(firebase.storage, courseToDelete.image);
           await deleteObject(imageRef);
         } catch (error) {
           console.warn('Error deleting course image:', error);
@@ -373,14 +373,14 @@ export default function AdminCoursesPage() {
 
       if (editingCourse) {
         // Update existing course
-        await setDoc(doc(db, 'courses', editingCourse.id), courseData, { merge: true });
+        await setDoc(doc(firebase.db, 'courses', editingCourse.id), courseData, { merge: true });
         toast({
           title: 'Success',
           description: 'Course updated successfully',
         });
       } else {
         // Create new course
-        const courseRef = doc(collection(db, 'courses'));
+        const courseRef = doc(collection(firebase.db, 'courses'));
         await setDoc(courseRef, {
           ...courseData,
           id: courseRef.id,

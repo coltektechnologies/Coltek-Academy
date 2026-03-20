@@ -12,7 +12,7 @@ import { BookOpen, Loader2, Eye, EyeOff } from "lucide-react"
 import { GoogleButton } from "./google-button"
 import { GithubButton } from "./github-button"
 import { signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, GithubAuthProvider } from "firebase/auth"
-import { auth } from "@/lib/firebase"
+import { firebase } from "@/lib/firebase"
 
 export function LoginForm() {
   const { toast } = useToast()
@@ -43,7 +43,7 @@ export function LoginForm() {
     setIsLoading(true)
 
     try {
-      await signInWithEmailAndPassword(auth, formData.email, formData.password)
+      await signInWithEmailAndPassword(firebase.auth, formData.email, formData.password)
       
       toast({
         title: "Login successful!",
@@ -77,7 +77,7 @@ export function LoginForm() {
     try {
       const provider = new GoogleAuthProvider()
       provider.setCustomParameters({ prompt: "select_account" })
-      await signInWithPopup(auth, provider)
+      await signInWithPopup(firebase.auth, provider)
       toast({
         title: "Signed in successfully!",
         description: "Welcome back to Coltek Academy.",
@@ -113,7 +113,7 @@ export function LoginForm() {
       const provider = new GithubAuthProvider()
       provider.addScope("read:user")
       provider.addScope("user:email")
-      await signInWithPopup(auth, provider)
+      await signInWithPopup(firebase.auth, provider)
       toast({
         title: "Signed in successfully!",
         description: "Welcome back to Coltek Academy.",

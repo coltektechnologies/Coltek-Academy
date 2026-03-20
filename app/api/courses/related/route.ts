@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { collection, query, where, limit, getDocs } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { firebase } from '@/lib/firebase';
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -18,7 +18,7 @@ export async function GET(request: Request) {
   try {
     // Get all courses in the same category
     let q = query(
-      collection(db, 'courses'),
+      collection(firebase.db, 'courses'),
       where('category', '==', category)
     );
     

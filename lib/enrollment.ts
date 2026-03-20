@@ -1,5 +1,5 @@
 import { doc, setDoc, collection, query, where, getDocs, getDoc } from 'firebase/firestore'
-import { db } from './firebase'
+import { firebase } from './firebase'
 import type { UserEnrollment, RegistrationFormData, Course } from './types'
 
 export async function saveUserEnrollment(
@@ -20,7 +20,7 @@ export async function saveUserEnrollment(
     const enrollmentId = `enrollment_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
 
     // Get course details from Firestore
-    const courseDoc = await getDoc(doc(db, 'courses', courseId));
+    const courseDoc = await getDoc(doc(firebase.db, 'courses', courseId));
     if (!courseDoc.exists()) {
       throw new Error(`Selected course not found (id: ${courseId})`);
     }
@@ -56,7 +56,7 @@ export async function saveUserEnrollment(
     }
 
     // Save to Firestore
-    await setDoc(doc(db, 'enrollments', enrollmentId), {
+    await setDoc(doc(firebase.db, 'enrollments', enrollmentId), {
       ...enrollmentData,
       enrollmentDate: enrollmentData.enrollmentDate.toISOString(), // Convert Date to string for Firestore
     })
@@ -72,7 +72,7 @@ export async function saveUserEnrollment(
 
 export async function getUserEnrollments(userId: string): Promise<UserEnrollment[]> {
   try {
-    const q = query(collection(db, 'enrollments'), where('userId', '==', userId))
+    const q = query(collection(firebase.db, 'enrollments'), where('userId', '==', userId))
     const querySnapshot = await getDocs(q)
 
     const enrollments: UserEnrollment[] = []
@@ -94,7 +94,7 @@ export async function getUserEnrollments(userId: string): Promise<UserEnrollment
 export async function checkUserEnrollment(userId: string, courseId: string): Promise<boolean> {
   try {
     const q = query(
-      collection(db, 'enrollments'),
+      collection(firebase.db, 'enrollments'),
       where('userId', '==', userId),
       where('courseId', '==', courseId),
       where('status', '==', 'active')

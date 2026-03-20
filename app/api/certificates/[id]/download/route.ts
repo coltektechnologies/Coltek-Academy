@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { CertificateService } from '@/lib/certificate-service';
-import { auth } from '@/lib/firebase';
+import { verifyFirebaseIdToken } from '@/lib/verify-firebase-token';
 
 export async function GET(
   request: NextRequest,
@@ -25,7 +25,7 @@ export async function GET(
     // Verify the token
     let decodedToken;
     try {
-      decodedToken = await auth.verifyIdToken(token);
+      decodedToken = await verifyFirebaseIdToken(token);
     } catch (error) {
       console.error('Token verification failed:', error);
       return NextResponse.json(

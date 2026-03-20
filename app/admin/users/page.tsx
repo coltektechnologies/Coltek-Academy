@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { collection, getDocs, doc, updateDoc, deleteDoc, setDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { firebase } from '@/lib/firebase';
 import { AdminLayout } from '@/components/admin/AdminLayout';
 import { getUserEnrollments } from '@/lib/enrollment';
 import type { UserEnrollment } from '@/lib/types';
@@ -73,7 +73,7 @@ export default function UsersPage() {
 
   const fetchUsers = useCallback(async () => {
     try {
-      const usersRef = collection(db, 'users');
+      const usersRef = collection(firebase.db, 'users');
       const usersSnapshot = await getDocs(usersRef);
       const usersData = usersSnapshot.docs.map(docSnap => ({
         id: docSnap.id,
@@ -99,7 +99,7 @@ export default function UsersPage() {
     setSubmitting(true);
     try {
       const newId = crypto.randomUUID();
-      const userRef = doc(db, 'users', newId);
+      const userRef = doc(firebase.db, 'users', newId);
       await setDoc(userRef, {
         uid: newId,
         displayName: createForm.displayName.trim(),
@@ -126,7 +126,7 @@ export default function UsersPage() {
     if (!editUser || !editForm.displayName.trim() || !editForm.email.trim()) return;
     setSubmitting(true);
     try {
-      const userRef = doc(db, 'users', editUser.id);
+      const userRef = doc(firebase.db, 'users', editUser.id);
       await updateDoc(userRef, {
         displayName: editForm.displayName.trim(),
         email: editForm.email.trim(),
@@ -151,7 +151,7 @@ export default function UsersPage() {
     if (!deleteUser) return;
     setSubmitting(true);
     try {
-      const userRef = doc(db, 'users', deleteUser.id);
+      const userRef = doc(firebase.db, 'users', deleteUser.id);
       await deleteDoc(userRef);
       toast({ title: 'User deleted', description: `${deleteUser.displayName || deleteUser.email} has been removed.` });
       setDeleteUser(null);

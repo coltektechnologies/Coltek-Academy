@@ -1,4 +1,4 @@
-import { db } from './firebase';
+import { firebase } from './firebase';
 import { 
   collection, 
   query, 
@@ -27,7 +27,7 @@ const ACTIVITY_COLLECTION = 'activities';
 
 export async function logActivity(activityData: Omit<ActivityData, 'timestamp'>): Promise<void> {
   try {
-    await addDoc(collection(db, ACTIVITY_COLLECTION), {
+    await addDoc(collection(firebase.db, ACTIVITY_COLLECTION), {
       ...activityData,
       timestamp: Timestamp.now(),
     });
@@ -39,7 +39,7 @@ export async function logActivity(activityData: Omit<ActivityData, 'timestamp'>)
 
 export async function getRecentActivities(count = 10): Promise<Activity[]> {
   const q = query(
-    collection(db, ACTIVITY_COLLECTION),
+    collection(firebase.db, ACTIVITY_COLLECTION),
     orderBy('timestamp', 'desc'),
     limit(count)
   );
@@ -56,7 +56,7 @@ export function subscribeToActivities(
   count = 10
 ): Unsubscribe {
   const q = query(
-    collection(db, ACTIVITY_COLLECTION),
+    collection(firebase.db, ACTIVITY_COLLECTION),
     orderBy('timestamp', 'desc'),
     limit(count)
   );

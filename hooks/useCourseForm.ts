@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import { CourseFormData } from '@/types/course';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { storage } from '@/lib/firebase';
+import { firebase } from '@/lib/firebase';
 
 export const useCourseForm = (initialCourse?: Partial<CourseFormData>) => {
   const [formData, setFormData] = useState<CourseFormData>(() => ({
@@ -164,7 +164,7 @@ export const useCourseForm = (initialCourse?: Partial<CourseFormData>) => {
   // Upload file to Firebase Storage and return the download URL
   const uploadFile = useCallback(async (file: File, path: string): Promise<string> => {
     try {
-      const storageRef = ref(storage, `${path}/${Date.now()}_${file.name}`);
+      const storageRef = ref(firebase.storage, `${path}/${Date.now()}_${file.name}`);
       const snapshot = await uploadBytes(storageRef, file);
       return await getDownloadURL(snapshot.ref);
     } catch (err) {
