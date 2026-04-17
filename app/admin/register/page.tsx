@@ -71,17 +71,36 @@ export default function AdminRegisterPage() {
         displayName: `${formData.firstName} ${formData.lastName}`,
       })
 
-      // Create admin user document in Firestore
-      await setDoc(doc(firebase.db, 'adminUsers', userCredential.user.uid), {
-        uid: userCredential.user.uid,
+      const uid = userCredential.user.uid
+      const displayName = `${formData.firstName} ${formData.lastName}`
+
+      // adminUsers: used by Firestore rules (isAdmin) and some APIs
+      await setDoc(doc(firebase.db, 'adminUsers', uid), {
+        uid,
         email: formData.email,
         firstName: formData.firstName,
         lastName: formData.lastName,
-        displayName: `${formData.firstName} ${formData.lastName}`,
+        displayName,
         role: 'admin',
         createdAt: new Date(),
         isActive: true,
       })
+
+      // users/{uid}: /admin dashboard checks this collection for role === 'admin'
+      await setDoc(
+        doc(firebase.db, 'users', uid),
+        {
+          uid,
+          email: formData.email,
+          displayName,
+          photoURL: '',
+          role: 'admin',
+          emailVerified: userCredential.user.emailVerified,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+        { merge: true }
+      )
 
       toast({
         title: "Registration successful",

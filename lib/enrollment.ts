@@ -76,11 +76,11 @@ export async function getUserEnrollments(userId: string): Promise<UserEnrollment
     const querySnapshot = await getDocs(q)
 
     const enrollments: UserEnrollment[] = []
-    querySnapshot.forEach((doc) => {
-      const data = doc.data()
+    querySnapshot.forEach((docSnap) => {
+      const data = docSnap.data()
       enrollments.push({
         ...data,
-        enrollmentDate: new Date(data.enrollmentDate), // Convert back to Date
+        enrollmentDate: parseEnrollmentDate(data.enrollmentDate),
       } as UserEnrollment)
     })
 
@@ -89,6 +89,31 @@ export async function getUserEnrollments(userId: string): Promise<UserEnrollment
     console.error('Error fetching enrollments:', error)
     throw new Error('Failed to fetch enrollment data')
   }
+}
+
+export function parseEnrollmentDate(value: unknown): Date {
+  if (value instanceof Date) return value
+  if (typeof value === 'string' || typeof value === 'number') return new Date(value)
+  if (value && typeof value === 'object' && 'toDate' in value && typeof (value as { toDate: () => Date }).toDate === 'function') {
+    return (value as { toDate: () => Date }).toDate()
+  }
+  return new Date(0)
+}
+
+/** All course registrations (admin UI). Requires Firestore read access for each enrollment doc. */
+export async function getAllEnrollments(): Promise<UserEnrollment[]> {
+  const querySnapshot = await getDocs(collection(firebase.db, 'enrollments'))
+  const enrollments: UserEnrollment[] = []
+  querySnapshot.forEach((d) => {
+    const data = d.data()
+    enrollments.push({
+      ...data,
+      id: d.id,
+      enrollmentDate: parseEnrollmentDate(data.enrollmentDate),
+    } as UserEnrollment)
+  })
+  enrollments.sort((a, b) => b.enrollmentDate.getTime() - a.enrollmentDate.getTime())
+  return enrollments
 }
 
 export async function checkUserEnrollment(userId: string, courseId: string): Promise<boolean> {

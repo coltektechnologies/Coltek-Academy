@@ -86,6 +86,19 @@ export interface UserEnrollment {
   }
 }
 
+/** Firebase Auth user row returned by GET /api/admin/auth-users */
+export interface AuthUserRow {
+  uid: string
+  email: string | null
+  displayName: string | null
+  photoURL: string | null
+  emailVerified: boolean
+  disabled: boolean
+  providers: string[]
+  creationTime: string | null
+  lastSignInTime: string | null
+}
+
 export interface Certificate {
   id: string
   userId: string

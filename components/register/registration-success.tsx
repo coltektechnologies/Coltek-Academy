@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { getCourseById } from "@/lib/courses"
 import type { Course, RegistrationFormData } from "@/lib/types"
 
-const WHATSAPP_GROUP_LINK = "https://chat.whatsapp.com/D5oD57BPAH4Derlxf2bOHu?mode=gi_t"
+const WHATSAPP_GROUP_LINK = "https://chat.whatsapp.com/CVTzw4zdtqVHjDV3IwC1zy"
 
 interface RegistrationSuccessProps {
   formData: RegistrationFormData

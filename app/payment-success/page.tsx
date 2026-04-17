@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { CheckCircle, Loader2, MessageCircle } from 'lucide-react'
 
-const WHATSAPP_GROUP_LINK = 'https://chat.whatsapp.com/D5oD57BPAH4Derlxf2bOHu?mode=gi_t'
+const WHATSAPP_GROUP_LINK = 'https://chat.whatsapp.com/CVTzw4zdtqVHjDV3IwC1zy'
 
 export default function PaymentSuccessPage() {
   const searchParams = useSearchParams()

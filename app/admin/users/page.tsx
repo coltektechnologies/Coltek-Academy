@@ -1,11 +1,13 @@
 "use client";
 
-import { useEffect, useState, useCallback } from 'react';
-import { collection, getDocs, doc, updateDoc, deleteDoc, setDoc } from 'firebase/firestore';
+import { useEffect, useState, useCallback, useMemo } from 'react';
+import { collection, getDocs, doc, deleteDoc, setDoc } from 'firebase/firestore';
 import { firebase } from '@/lib/firebase';
 import { AdminLayout } from '@/components/admin/AdminLayout';
 import { getUserEnrollments } from '@/lib/enrollment';
 import type { UserEnrollment } from '@/lib/types';
+import { useAuth } from '@/hooks/use-auth';
+import type { AuthUserRow } from '@/lib/types';
 import {
   Sheet,
   SheetContent,
@@ -44,6 +46,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Loader2, User, BookOpen, Calendar, CreditCard, Plus, Pencil, Trash2 } from 'lucide-react';
 
 interface UserData {
@@ -56,8 +59,18 @@ interface UserData {
 
 const ROLES = ['student', 'admin', 'instructor'] as const;
 
+function providerLabel(id: string): string {
+  if (id === 'password') return 'Email';
+  if (id === 'google.com') return 'Google';
+  if (id === 'github.com') return 'GitHub';
+  return id.replace('.com', '');
+}
+
 export default function UsersPage() {
-  const [users, setUsers] = useState<UserData[]>([]);
+  const { user: sessionUser, loading: sessionLoading } = useAuth();
+  const [firestoreProfiles, setFirestoreProfiles] = useState<UserData[]>([]);
+  const [authUsers, setAuthUsers] = useState<AuthUserRow[]>([]);
+  const [authListError, setAuthListError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedUser, setSelectedUser] = useState<UserData | null>(null);
@@ -71,24 +84,80 @@ export default function UsersPage() {
   const [submitting, setSubmitting] = useState(false);
   const { toast } = useToast();
 
-  const fetchUsers = useCallback(async () => {
+  const profileByUid = useMemo(() => {
+    const m = new Map<string, UserData>();
+    for (const p of firestoreProfiles) m.set(p.id, p);
+    return m;
+  }, [firestoreProfiles]);
+
+  const authUidSet = useMemo(() => new Set(authUsers.map((u) => u.uid)), [authUsers]);
+
+  const firestoreOnlyProfiles = useMemo(
+    () => firestoreProfiles.filter((p) => !authUidSet.has(p.id)),
+    [firestoreProfiles, authUidSet]
+  );
+
+  const loadData = useCallback(async () => {
+    if (!sessionUser) {
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    setAuthListError(null);
     try {
       const usersRef = collection(firebase.db, 'users');
       const usersSnapshot = await getDocs(usersRef);
-      const usersData = usersSnapshot.docs.map(docSnap => ({
+      const profiles: UserData[] = usersSnapshot.docs.map((docSnap) => ({
         id: docSnap.id,
         email: docSnap.data().email || '',
         displayName: docSnap.data().displayName || '',
         role: docSnap.data().role || 'student',
         photoURL: docSnap.data().photoURL || '',
       }));
-      setUsers(usersData);
+      setFirestoreProfiles(profiles);
+
+      const token = await sessionUser.getIdToken(true);
+      const res = await fetch('/api/admin/auth-users', {
+        headers: { Authorization: `Bearer ${token}` },
+        cache: 'no-store',
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setAuthUsers([]);
+        setAuthListError(
+          [body.error, body.detail].filter(Boolean).join(' — ') ||
+            `Could not load Auth users (${res.status}).`
+        );
+        return;
+      }
+      setAuthUsers(Array.isArray(body.users) ? body.users : []);
     } catch (err) {
+      console.error(err);
       setError('Failed to load users.');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [sessionUser]);
+
+  useEffect(() => {
+    if (sessionLoading) return;
+    void loadData();
+  }, [sessionLoading, loadData]);
+
+  const mergedForEdit = useCallback(
+    (auth: AuthUserRow): UserData => {
+      const p = profileByUid.get(auth.uid);
+      return {
+        id: auth.uid,
+        email: p?.email || auth.email || '',
+        displayName: p?.displayName || auth.displayName || '',
+        role: (p?.role || 'student') as UserData['role'],
+        photoURL: p?.photoURL || auth.photoURL || '',
+      };
+    },
+    [profileByUid]
+  );
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -109,11 +178,10 @@ export default function UsersPage() {
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       });
-      toast({ title: 'User created', description: `${createForm.displayName} has been added.` });
+      toast({ title: 'User created', description: `${createForm.displayName} has been added (Firestore only — no Auth login).` });
       setCreateOpen(false);
       setCreateForm({ displayName: '', email: '', role: 'student' });
-      setLoading(true);
-      await fetchUsers();
+      await loadData();
     } catch (err) {
       toast({ title: 'Error', description: 'Failed to create user.', variant: 'destructive' });
     } finally {
@@ -127,21 +195,35 @@ export default function UsersPage() {
     setSubmitting(true);
     try {
       const userRef = doc(firebase.db, 'users', editUser.id);
-      await updateDoc(userRef, {
-        displayName: editForm.displayName.trim(),
-        email: editForm.email.trim(),
-        role: editForm.role,
-        updatedAt: new Date().toISOString(),
+      await setDoc(
+        userRef,
+        {
+          uid: editUser.id,
+          displayName: editForm.displayName.trim(),
+          email: editForm.email.trim(),
+          role: editForm.role,
+          photoURL: editUser.photoURL || '',
+          updatedAt: new Date().toISOString(),
+          ...(profileByUid.has(editUser.id) ? {} : { createdAt: new Date().toISOString() }),
+        },
+        { merge: true }
+      );
+      toast({
+        title: profileByUid.has(editUser.id) ? 'User updated' : 'Firestore profile created',
+        description: `${editForm.displayName} saved under users/${editUser.id}.`,
       });
-      toast({ title: 'User updated', description: `${editForm.displayName} has been saved.` });
       setEditUser(null);
-      setLoading(true);
-      await fetchUsers();
+      await loadData();
       if (selectedUser?.id === editUser.id) {
-        setSelectedUser({ ...editUser, ...editForm });
+        setSelectedUser({
+          ...editUser,
+          displayName: editForm.displayName.trim(),
+          email: editForm.email.trim(),
+          role: editForm.role,
+        });
       }
     } catch (err) {
-      toast({ title: 'Error', description: 'Failed to update user.', variant: 'destructive' });
+      toast({ title: 'Error', description: 'Failed to save user.', variant: 'destructive' });
     } finally {
       setSubmitting(false);
     }
@@ -153,11 +235,10 @@ export default function UsersPage() {
     try {
       const userRef = doc(firebase.db, 'users', deleteUser.id);
       await deleteDoc(userRef);
-      toast({ title: 'User deleted', description: `${deleteUser.displayName || deleteUser.email} has been removed.` });
+      toast({ title: 'User deleted', description: `${deleteUser.displayName || deleteUser.email} removed from Firestore.` });
       setDeleteUser(null);
       if (selectedUser?.id === deleteUser.id) setSelectedUser(null);
-      setLoading(true);
-      await fetchUsers();
+      await loadData();
     } catch (err) {
       toast({ title: 'Error', description: 'Failed to delete user.', variant: 'destructive' });
     } finally {
@@ -167,7 +248,11 @@ export default function UsersPage() {
 
   const openEdit = (user: UserData) => {
     setEditUser(user);
-    setEditForm({ displayName: user.displayName || '', email: user.email || '', role: (user.role || 'student') as typeof editForm.role });
+    setEditForm({
+      displayName: user.displayName || '',
+      email: user.email || '',
+      role: (user.role || 'student') as typeof editForm.role,
+    });
   };
 
   const handleUserClick = useCallback(async (user: UserData) => {
@@ -193,16 +278,33 @@ export default function UsersPage() {
     }
   }, []);
 
-  useEffect(() => {
-    fetchUsers();
-  }, [fetchUsers]);
+  if (sessionLoading || loading) {
+    return (
+      <AdminLayout>
+        <div className="p-6 flex items-center gap-2 text-muted-foreground">
+          <Loader2 className="h-5 w-5 animate-spin" />
+          Loading users…
+        </div>
+      </AdminLayout>
+    );
+  }
 
-  if (loading) {
-    return <AdminLayout><div className="p-6">Loading users...</div></AdminLayout>;
+  if (!sessionUser) {
+    return (
+      <AdminLayout>
+        <div className="p-6 text-muted-foreground">
+          Sign in with Firebase (e.g. main site or admin login) to view users.
+        </div>
+      </AdminLayout>
+    );
   }
 
   if (error) {
-    return <AdminLayout><div className="p-6 text-red-600">{error}</div></AdminLayout>;
+    return (
+      <AdminLayout>
+        <div className="p-6 text-red-600">{error}</div>
+      </AdminLayout>
+    );
   }
 
   return (
@@ -211,61 +313,161 @@ export default function UsersPage() {
         <div className="flex items-center justify-between mb-6">
           <div>
             <h1 className="text-2xl font-bold">Users</h1>
-            <p className="text-muted-foreground text-sm mt-1">Click a row to view details. Use Edit and Delete in the detail panel.</p>
+            <p className="text-muted-foreground text-sm mt-1">
+              Firebase Authentication accounts. Firestore column shows app profile at <code className="text-xs bg-muted px-1 rounded">users/{"{uid}"}</code>.
+            </p>
           </div>
-          <Button onClick={() => { setCreateOpen(true); setCreateForm({ displayName: '', email: '', role: 'student' }); }}>
+          <Button
+            onClick={() => {
+              setCreateOpen(true);
+              setCreateForm({ displayName: '', email: '', role: 'student' });
+            }}
+          >
             <Plus className="h-4 w-4 mr-2" />
-            Add User
+            Add Firestore-only row
           </Button>
         </div>
-        <div className="overflow-x-auto rounded-lg border border-border">
-          <table className="min-w-full divide-y divide-border">
+
+        {authListError && (
+          <Alert variant="destructive" className="mb-4">
+            <AlertTitle>Auth user list unavailable</AlertTitle>
+            <AlertDescription>{authListError}</AlertDescription>
+          </Alert>
+        )}
+
+        <div className="overflow-x-auto rounded-lg border border-border mb-10">
+          <table className="min-w-full divide-y divide-border text-sm">
             <thead className="bg-muted/50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Name</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Email</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Role</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Photo</th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">Actions</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Name</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Email</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Sign-in</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Firestore</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Role</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Created</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Last sign-in</th>
+                <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
             <tbody className="bg-card divide-y divide-border">
-              {users.map(user => (
-                <tr
-                  key={user.id}
-                  onClick={() => handleUserClick(user)}
-                  className="cursor-pointer transition-colors hover:bg-muted/50"
-                >
-                  <td className="px-6 py-4 whitespace-nowrap font-medium text-foreground">
-                    {user.displayName || 'N/A'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-muted-foreground">{user.email}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <Badge variant="secondary">{user.role}</Badge>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <Avatar className="h-10 w-10">
-                      <AvatarImage src={user.photoURL} alt={user.displayName} />
-                      <AvatarFallback className="bg-muted text-muted-foreground">
-                        {(user.displayName || user.email || 'U').charAt(0).toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right" onClick={(e) => e.stopPropagation()}>
-                    <div className="flex items-center justify-end gap-2">
-                      <Button variant="ghost" size="icon-sm" onClick={() => openEdit(user)} title="Edit">
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon-sm" onClick={() => setDeleteUser(user)} title="Delete" className="text-destructive hover:text-destructive">
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
+              {authUsers.length === 0 && !authListError ? (
+                <tr>
+                  <td colSpan={8} className="px-4 py-8 text-center text-muted-foreground">
+                    No Firebase Authentication users found.
                   </td>
                 </tr>
-              ))}
+              ) : authUsers.length === 0 && authListError ? (
+                <tr>
+                  <td colSpan={8} className="px-4 py-8 text-center text-muted-foreground">
+                    Fix the configuration above to load Auth users. Firestore-only rows are listed below.
+                  </td>
+                </tr>
+              ) : (
+                authUsers.map((a) => {
+                  const profile = profileByUid.get(a.uid);
+                  const rowUser = mergedForEdit(a);
+                  const hasProfile = !!profile;
+                  return (
+                    <tr
+                      key={a.uid}
+                      onClick={() => handleUserClick(rowUser)}
+                      className="cursor-pointer transition-colors hover:bg-muted/50"
+                    >
+                      <td className="px-4 py-3 font-medium text-foreground whitespace-nowrap">
+                        {rowUser.displayName || '—'}
+                      </td>
+                      <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">{a.email || '—'}</td>
+                      <td className="px-4 py-3 text-muted-foreground">
+                        {a.providers.length ? a.providers.map(providerLabel).join(', ') : '—'}
+                      </td>
+                      <td className="px-4 py-3">
+                        {hasProfile ? (
+                          <Badge variant="default" className="text-xs">Yes</Badge>
+                        ) : (
+                          <Badge variant="outline" className="text-xs">No</Badge>
+                        )}
+                      </td>
+                      <td className="px-4 py-3">
+                        <Badge variant="secondary">{profile?.role || '—'}</Badge>
+                      </td>
+                      <td className="px-4 py-3 text-muted-foreground whitespace-nowrap text-xs">
+                        {a.creationTime ? new Date(a.creationTime).toLocaleString() : '—'}
+                      </td>
+                      <td className="px-4 py-3 text-muted-foreground whitespace-nowrap text-xs">
+                        {a.lastSignInTime ? new Date(a.lastSignInTime).toLocaleString() : '—'}
+                      </td>
+                      <td className="px-4 py-3 text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center justify-end gap-2">
+                          <Button variant="ghost" size="icon-sm" onClick={() => openEdit(rowUser)} title="Edit / create Firestore profile">
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon-sm"
+                            onClick={() => hasProfile && setDeleteUser(rowUser)}
+                            title={hasProfile ? 'Delete Firestore profile' : 'No Firestore doc to delete'}
+                            disabled={!hasProfile}
+                            className={!hasProfile ? 'opacity-40' : 'text-destructive hover:text-destructive'}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
             </tbody>
           </table>
         </div>
+
+        {firestoreOnlyProfiles.length > 0 && (
+          <div>
+            <h2 className="text-lg font-semibold mb-2">Firestore only (no Auth account)</h2>
+            <p className="text-sm text-muted-foreground mb-3">
+              Manual rows or legacy IDs that do not match a Firebase Auth UID.
+            </p>
+            <div className="overflow-x-auto rounded-lg border border-border">
+              <table className="min-w-full divide-y divide-border text-sm">
+                <thead className="bg-muted/50">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Name</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Email</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Doc ID</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Role</th>
+                    <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-card divide-y divide-border">
+                  {firestoreOnlyProfiles.map((user) => (
+                    <tr
+                      key={user.id}
+                      onClick={() => handleUserClick(user)}
+                      className="cursor-pointer hover:bg-muted/50"
+                    >
+                      <td className="px-4 py-3 font-medium">{user.displayName || '—'}</td>
+                      <td className="px-4 py-3 text-muted-foreground">{user.email}</td>
+                      <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{user.id}</td>
+                      <td className="px-4 py-3">
+                        <Badge variant="secondary">{user.role}</Badge>
+                      </td>
+                      <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex justify-end gap-2">
+                          <Button variant="ghost" size="icon-sm" onClick={() => openEdit(user)}>
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="icon-sm" onClick={() => setDeleteUser(user)} className="text-destructive">
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
       </div>
 
       <Sheet open={!!selectedUser} onOpenChange={(open) => !open && setSelectedUser(null)}>
@@ -282,26 +484,26 @@ export default function UsersPage() {
                       </AvatarFallback>
                     </Avatar>
                     <div className="min-w-0">
-                      <SheetTitle className="text-xl">{selectedUser.displayName || 'Student'}</SheetTitle>
+                      <SheetTitle className="text-xl">{selectedUser.displayName || 'User'}</SheetTitle>
                       <SheetDescription>{selectedUser.email}</SheetDescription>
+                      <p className="text-xs text-muted-foreground mt-1 font-mono break-all">UID: {selectedUser.id}</p>
                       <Badge variant="secondary" className="mt-2">{selectedUser.role}</Badge>
                     </div>
                   </div>
                   <div className="flex gap-2 shrink-0">
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      onClick={(e) => { e.stopPropagation(); openEdit(selectedUser); }}
-                      title="Edit user"
-                    >
+                    <Button variant="outline" size="icon" onClick={(e) => { e.stopPropagation(); openEdit(selectedUser); }} title="Edit">
                       <Pencil className="h-4 w-4" />
                     </Button>
                     <Button
                       variant="outline"
                       size="icon"
                       className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-                      onClick={(e) => { e.stopPropagation(); setDeleteUser(selectedUser); }}
-                      title="Delete user"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (profileByUid.has(selectedUser.id)) setDeleteUser(selectedUser);
+                      }}
+                      disabled={!profileByUid.has(selectedUser.id)}
+                      title="Delete Firestore profile"
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
@@ -323,10 +525,7 @@ export default function UsersPage() {
                         </h4>
                         <div className="space-y-3">
                           {enrollments.map((e) => (
-                            <div
-                              key={e.id}
-                              className="rounded-lg border border-border bg-muted/30 p-4"
-                            >
+                            <div key={e.id} className="rounded-lg border border-border bg-muted/30 p-4">
                               <p className="font-medium text-foreground">{e.courseTitle}</p>
                               <div className="mt-2 flex flex-wrap gap-3 text-sm text-muted-foreground">
                                 <span className="flex items-center gap-1">
@@ -378,12 +577,13 @@ export default function UsersPage() {
         </SheetContent>
       </Sheet>
 
-      {/* Create User Dialog */}
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Add User</DialogTitle>
-            <DialogDescription>Create a new user in Firestore. They must sign up via the app to get Firebase Auth login.</DialogDescription>
+            <DialogTitle>Add Firestore-only row</DialogTitle>
+            <DialogDescription>
+              Creates <code className="text-xs">users/{"{random-id}"}</code> with no Firebase login. To manage real members, use Auth users above and Edit to create <code className="text-xs">users/{"{uid}"}</code>.
+            </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleCreate} className="space-y-4">
             <div className="space-y-2">
@@ -428,12 +628,13 @@ export default function UsersPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Edit User Dialog */}
       <Dialog open={!!editUser} onOpenChange={(open) => !open && setEditUser(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Edit User</DialogTitle>
-            <DialogDescription>Update user details. Changes are saved to Firestore.</DialogDescription>
+            <DialogTitle>Edit Firestore profile</DialogTitle>
+            <DialogDescription>
+              Saves to <code className="text-xs">users/{editUser?.id}</code>. Use this to add a missing profile for an Auth user or update role/name.
+            </DialogDescription>
           </DialogHeader>
           {editUser && (
             <form onSubmit={handleUpdate} className="space-y-4">
@@ -480,13 +681,12 @@ export default function UsersPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirmation */}
       <AlertDialog open={!!deleteUser} onOpenChange={(open) => !open && setDeleteUser(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete user</AlertDialogTitle>
+            <AlertDialogTitle>Delete Firestore profile</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete <strong>{deleteUser?.displayName || deleteUser?.email}</strong>? This removes their Firestore document. Their Firebase Auth account (if any) will remain until removed separately.
+              Remove <strong>{deleteUser?.displayName || deleteUser?.email}</strong> from Firestore only. Their Firebase Authentication account (if any) is unchanged.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

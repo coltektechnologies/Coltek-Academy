@@ -7,6 +7,7 @@ import {
   isFirebaseConfigured,
   FIREBASE_SETUP_HELP,
 } from '@/lib/firebase'
+import { ensureFirestoreUserProfile } from '@/lib/ensure-firestore-user'
 import { useRouter } from 'next/navigation'
 
 interface AuthContextType {
@@ -55,6 +56,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       unsubscribe = onAuthStateChanged(firebase.auth, (nextUser) => {
         setUser(nextUser)
         setLoading(false)
+        if (nextUser) {
+          void ensureFirestoreUserProfile(nextUser)
+        }
       })
     } catch (e) {
       const msg =
