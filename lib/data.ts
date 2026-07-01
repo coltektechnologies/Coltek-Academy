@@ -15,7 +15,7 @@ export const courses: Course[] = [
     price: 150, 
     instructor: {
       name: "Mr. Boansi Kyeremateng Collins",
-      bio: "Senior Software Engineer at Google with 10+ years of experience teaching web development.",
+      bio: "Senior Software Engineer with 10+ years of experience teaching web development.",
       avatar: "/professional-woman-portrait.png",
     },
     curriculum: [
