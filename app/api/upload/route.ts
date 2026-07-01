@@ -51,10 +51,24 @@ export async function POST(request: Request) {
       });
     }
 
-    // Production: Generate a file path and return success.
-    // The certificate metadata (including filePath/fileUrl) is stored in Firestore
-    // when the certificate is issued. File persistence is handled at that level.
-    // This route provides the upload endpoint expected by the client.
+    // Production: Store file in Firestore
+    ensureFirebaseAdminInitialized();
+    const app = getColtekFirebaseAdminApp();
+    const db = getFirestore(app);
+    const fileBytes = Buffer.from(await file.arrayBuffer()).toString('base64');
+    const contentType = file.type || 'application/octet-stream';
+
+    const fileCollection = db.collection('certificateFiles');
+    const fileDocRef = fileCollection.doc();
+    await fileDocRef.set({
+      path: `certificates/${userId}/${fileName}`,
+      userId,
+      fileName,
+      contentType,
+      fileData: fileBytes,
+      createdAt: new Date().toISOString(),
+    });
+
     const origin = new URL(request.url).origin;
     const publicUrl = `${origin}/${relativeUploadDir}/${fileName}`;
 
@@ -62,6 +76,7 @@ export async function POST(request: Request) {
       success: true,
       filePath: publicUrl,
       fileName,
+      fileId: fileDocRef.id,
     });
   } catch (error) {
     console.error('Error uploading file:', error);
