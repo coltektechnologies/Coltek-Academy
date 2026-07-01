@@ -28,13 +28,33 @@ export async function POST(request: Request) {
     ensureFirebaseAdminInitialized();
     const app = getColtekFirebaseAdminApp();
     const storage = getStorage(app);
-    const bucketName = process.env.FIREBASE_STORAGE_BUCKET?.trim() || process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET?.trim();
+    const projectId = app.options.projectId as string | undefined;
+    const defaultBucket = (app.options.storageBucket as string | undefined)?.trim();
+    const envBucket = process.env.FIREBASE_STORAGE_BUCKET?.trim() || process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET?.trim();
+    const fallbackBucket = projectId ? `${projectId}.appspot.com` : undefined;
+    const candidateBuckets = [envBucket, defaultBucket, fallbackBucket].filter(Boolean) as string[];
 
-    if (!bucketName) {
-      throw new Error('Firebase storage bucket is not configured. Set FIREBASE_STORAGE_BUCKET or NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET.');
+    let bucket = null as any;
+    let chosenBucketName: string | undefined;
+
+    for (const candidate of candidateBuckets) {
+      const candidateName = candidate.trim();
+      if (!candidateName) continue;
+      const candidateBucket = storage.bucket(candidateName);
+      const [exists] = await candidateBucket.exists();
+      if (exists) {
+        bucket = candidateBucket;
+        chosenBucketName = candidateName;
+        break;
+      }
     }
 
-    const bucket = storage.bucket(bucketName);
+    if (!bucket) {
+      throw new Error(
+        `Firebase storage bucket does not exist. Checked: ${candidateBuckets.join(', ')}.`
+      );
+    }
+
     const safeFileName = `${uuidv4()}-${file.name.replace(/[^a-zA-Z0-9_.-]/g, '_')}`;
     const destination = `certificates/${userId}/${safeFileName}`;
     const blob = bucket.file(destination);
