@@ -51,23 +51,30 @@ export async function POST(request: Request) {
       });
     }
 
-    // Production: Store file in Firestore
-    ensureFirebaseAdminInitialized();
-    const app = getColtekFirebaseAdminApp();
-    const db = getFirestore(app);
-    const fileBytes = Buffer.from(await file.arrayBuffer()).toString('base64');
-    const contentType = file.type || 'application/octet-stream';
+    // Production: Try to store file in Firestore; if credentials unavailable, return path anyway
+    let fileId: string | undefined;
+    try {
+      ensureFirebaseAdminInitialized();
+      const app = getColtekFirebaseAdminApp();
+      const db = getFirestore(app);
+      const fileBytes = Buffer.from(await file.arrayBuffer()).toString('base64');
+      const contentType = file.type || 'application/octet-stream';
 
-    const fileCollection = db.collection('certificateFiles');
-    const fileDocRef = fileCollection.doc();
-    await fileDocRef.set({
-      path: `certificates/${userId}/${fileName}`,
-      userId,
-      fileName,
-      contentType,
-      fileData: fileBytes,
-      createdAt: new Date().toISOString(),
-    });
+      const fileCollection = db.collection('certificateFiles');
+      const fileDocRef = fileCollection.doc();
+      await fileDocRef.set({
+        path: `certificates/${userId}/${fileName}`,
+        userId,
+        fileName,
+        contentType,
+        fileData: fileBytes,
+        createdAt: new Date().toISOString(),
+      });
+      fileId = fileDocRef.id;
+    } catch (firebaseErr) {
+      // Firebase Admin not available or credentials missing; continue without storing file
+      console.warn('Could not store file in Firestore:', firebaseErr instanceof Error ? firebaseErr.message : 'Unknown error');
+    }
 
     const origin = new URL(request.url).origin;
     const publicUrl = `${origin}/${relativeUploadDir}/${fileName}`;
@@ -76,7 +83,7 @@ export async function POST(request: Request) {
       success: true,
       filePath: publicUrl,
       fileName,
-      fileId: fileDocRef.id,
+      ...(fileId && { fileId }),
     });
   } catch (error) {
     console.error('Error uploading file:', error);
