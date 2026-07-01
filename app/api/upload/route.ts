@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { getStorage } from 'firebase-admin/storage';
 import { v4 as uuidv4 } from 'uuid';
-import { firebase } from '@/lib/firebase';
+import { getColtekFirebaseAdminApp, ensureFirebaseAdminInitialized } from '@/lib/verify-firebase-token';
 
 export async function POST(request: Request) {
   try {
@@ -25,20 +25,34 @@ export async function POST(request: Request) {
       return new NextResponse('Missing file or userId', { status: 400 });
     }
 
-    const safeFileName = `${uuidv4()}-${file.name.replace(/\s+/g, '-')}`;
-    const storagePath = `certificates/${userId}/${safeFileName}`;
-    const storageRef = ref(firebase.storage, storagePath);
-    const bytes = await file.arrayBuffer();
+    ensureFirebaseAdminInitialized();
+    const app = getColtekFirebaseAdminApp();
+    const storage = getStorage(app);
+    const bucketName = process.env.FIREBASE_STORAGE_BUCKET?.trim() || process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET?.trim();
 
-    await uploadBytes(storageRef, new Uint8Array(bytes), {
+    if (!bucketName) {
+      throw new Error('Firebase storage bucket is not configured. Set FIREBASE_STORAGE_BUCKET or NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET.');
+    }
+
+    const bucket = storage.bucket(bucketName);
+    const safeFileName = `${uuidv4()}-${file.name.replace(/[^a-zA-Z0-9_.-]/g, '_')}`;
+    const destination = `certificates/${userId}/${safeFileName}`;
+    const blob = bucket.file(destination);
+    const buffer = Buffer.from(await file.arrayBuffer());
+
+    await blob.save(buffer, {
       contentType: file.type || 'application/octet-stream',
+      resumable: false,
     });
 
-    const publicUrl = await getDownloadURL(storageRef);
+    const [signedUrl] = await blob.getSignedUrl({
+      action: 'read',
+      expires: '12-31-2491',
+    });
 
     return NextResponse.json({
       success: true,
-      filePath: publicUrl,
+      filePath: signedUrl,
       fileName: safeFileName,
     });
   } catch (error) {
