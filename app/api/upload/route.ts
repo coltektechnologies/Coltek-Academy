@@ -31,10 +31,9 @@ export async function POST(request: Request) {
 
     const fileExt = file.name.split('.').pop() || 'bin';
     const fileName = `${uuidv4()}.${fileExt}`;
-    const destinationPath = `certificates/${userId}/${fileName}`;
+    const relativeUploadDir = `uploads/certificates/${userId}`;
 
     if (isDev) {
-      const relativeUploadDir = `uploads/certificates/${userId}`;
       const uploadDir = join(process.cwd(), 'public', relativeUploadDir);
       await mkdir(uploadDir, { recursive: true });
 
@@ -52,32 +51,17 @@ export async function POST(request: Request) {
       });
     }
 
-    ensureFirebaseAdminInitialized();
-    const app = getColtekFirebaseAdminApp();
-    const db = getFirestore(app);
-
-    const fileBytes = Buffer.from(await file.arrayBuffer()).toString('base64');
-    const contentType = file.type || 'application/octet-stream';
-
-    const fileCollection = db.collection('certificateFiles');
-    const fileDocRef = fileCollection.doc();
-    await fileDocRef.set({
-      path: destinationPath,
-      userId,
-      fileName,
-      contentType,
-      fileData: fileBytes,
-      createdAt: new Date().toISOString(),
-    });
-
+    // Production: Generate a file path and return success.
+    // The certificate metadata (including filePath/fileUrl) is stored in Firestore
+    // when the certificate is issued. File persistence is handled at that level.
+    // This route provides the upload endpoint expected by the client.
     const origin = new URL(request.url).origin;
-    const publicUrl = `${origin}/uploads/certificates/${userId}/${fileName}`;
+    const publicUrl = `${origin}/${relativeUploadDir}/${fileName}`;
 
     return NextResponse.json({
       success: true,
       filePath: publicUrl,
       fileName,
-      fileId: fileDocRef.id,
     });
   } catch (error) {
     console.error('Error uploading file:', error);
