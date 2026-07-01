@@ -2,6 +2,7 @@
 
 import { useEffect, useState, Suspense } from 'react';
 import dynamic from 'next/dynamic';
+import Link from 'next/link';
 import { collection, getDocs, query, orderBy } from 'firebase/firestore';
 import { format } from 'date-fns';
 import { Loader2 } from 'lucide-react';
@@ -17,7 +18,7 @@ const CardTitle = dynamic(() => import('@/components/ui/card').then(mod => mod.C
 const Button = dynamic(() => import('@/components/ui/button').then(mod => mod.Button), { ssr: false });
 
 const LoadingFallback = () => (
-  <div className="flex items-center justify-center min-h-[200px]">
+  <div className="flex items-center justify-center h-48">
     <Loader2 className="h-8 w-8 animate-spin text-primary" />
   </div>
 );
@@ -42,6 +43,8 @@ export default function CertificatesPage() {
             id: doc.id,
             issueDate: data.issueDate?.toDate ? data.issueDate.toDate() : new Date(data.issueDate || Date.now()),
             completionDate: data.completionDate?.toDate ? data.completionDate.toDate() : new Date(data.completionDate || Date.now()),
+            certificateUrl: data.certificateUrl || data.fileUrl || '',
+            previewUrl: data.previewUrl || data.fileUrl || '',
           } as Certificate;
         });
         
@@ -105,12 +108,21 @@ export default function CertificatesPage() {
                     {cert.courseName || 'Course Certificate'}
                   </p>
                 </div>
-                <div className="flex space-x-2">
-                  {cert.certificateUrl && (
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    asChild
+                    size="sm"
+                    variant="outline"
+                  >
+                    <Link href={`/admin/certificates/${cert.id}`}>
+                      View
+                    </Link>
+                  </Button>
+                  {(cert.certificateUrl || cert.previewUrl) && (
                     <Button
                       size="sm"
                       variant="outline"
-                      onClick={() => handleDownload(cert.certificateUrl, `certificate-${cert.id}.pdf`)}
+                      onClick={() => handleDownload(cert.certificateUrl || cert.previewUrl || '', `certificate-${cert.id}.pdf`)}
                     >
                       Download
                     </Button>

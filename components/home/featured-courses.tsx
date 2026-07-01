@@ -1,11 +1,59 @@
+"use client"
+
 import Link from "next/link"
+import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { CourseCard } from "@/components/course-card"
-import { courses } from "@/lib/data"
+import { CourseCardSkeleton } from "@/components/course-card-skeleton"
+import type { Course } from "@/lib/types"
 import { ArrowRight } from "lucide-react"
 
 export function FeaturedCourses() {
-  const featuredCourses = courses.slice(0, 4)
+  const [featuredCourses, setFeaturedCourses] = useState<Course[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    const controller = new AbortController()
+
+    const fetchFeaturedCourses = async () => {
+      try {
+        setIsLoading(true)
+        setError(null)
+
+        const response = await fetch("/api/courses", {
+          cache: "no-store",
+          signal: controller.signal,
+        })
+
+        if (!response.ok) {
+          throw new Error("Failed to load featured courses")
+        }
+
+        const data = await response.json()
+
+        if (!Array.isArray(data)) {
+          throw new Error("Invalid courses response")
+        }
+
+        setFeaturedCourses(data.slice(0, 4))
+      } catch (err) {
+        if ((err as Error).name !== "AbortError") {
+          console.error("Error loading featured courses:", err)
+          setError("Featured courses are unavailable right now.")
+          setFeaturedCourses([])
+        }
+      } finally {
+        if (!controller.signal.aborted) {
+          setIsLoading(false)
+        }
+      }
+    }
+
+    fetchFeaturedCourses()
+
+    return () => controller.abort()
+  }, [])
 
   return (
     <section className="py-20 bg-background">
@@ -26,10 +74,16 @@ export function FeaturedCourses() {
         </div>
 
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {featuredCourses.map((course) => (
-            <CourseCard key={course.id} course={course} />
-          ))}
+          {isLoading
+            ? Array.from({ length: 4 }).map((_, index) => <CourseCardSkeleton key={index} />)
+            : featuredCourses.map((course) => (
+                <CourseCard key={course.id} course={{ ...course, enrolledStudents: course.enrolledStudents || 0 }} />
+              ))}
         </div>
+
+        {!isLoading && error && (
+          <p className="mt-6 text-sm text-muted-foreground">{error}</p>
+        )}
       </div>
     </section>
   )

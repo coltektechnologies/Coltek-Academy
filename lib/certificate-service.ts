@@ -1,4 +1,4 @@
-import { collection, doc, getDocs, query, where, addDoc, updateDoc, deleteDoc, orderBy } from 'firebase/firestore'
+import { collection, doc, getDoc, getDocs, query, where, addDoc, updateDoc, deleteDoc, orderBy } from 'firebase/firestore'
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage'
 import { firebase } from './firebase'
 import type { Certificate } from '@/types/certificate'
@@ -29,30 +29,40 @@ export class CertificateService {
         const data = doc.data();
         console.log('Processing certificate data:', { id: doc.id, data });
         
-        const issueDate = data.issueDate?.toDate ? data.issueDate.toDate() : new Date(data.issueDate);
-        const completionDate = data.completionDate?.toDate ? data.completionDate.toDate() : new Date(data.issueDate);
-        
+        const issueDate = data.issueDate?.toDate ? data.issueDate.toDate() : new Date(data.issueDate || Date.now());
+        const completionDate = data.completionDate?.toDate ? data.completionDate.toDate() : new Date(data.completionDate || Date.now());
+        const resolvedRecipientEmail = data.recipientEmail || data.userEmail || data.email || '';
+        const resolvedRecipientName =
+          data.recipientName ||
+          data.userName ||
+          data.displayName ||
+          resolvedRecipientEmail.split('@')[0] ||
+          'Certificate Holder';
+        const resolvedCourseTitle = data.courseTitle || data.courseName || 'Unnamed Course';
+
         return {
           id: doc.id,
+          certificateId: data.certificateId || doc.id,
           userId: data.userId || '',
           courseId: data.courseId || '',
-          courseTitle: data.courseTitle || 'Unnamed Course',
-          courseName: data.courseTitle || 'Unnamed Course',
-          recipientName: data.userName || data.userEmail?.split('@')[0] || 'Certificate Holder',
-          recipientEmail: data.userEmail || '',
-          userEmail: data.userEmail || '',
+          courseTitle: resolvedCourseTitle,
+          courseName: resolvedCourseTitle,
+          recipientName: resolvedRecipientName,
+          recipientEmail: resolvedRecipientEmail,
+          userName: data.userName || data.recipientName || '',
+          userEmail: data.userEmail || data.recipientEmail || '',
           enrollmentId: data.enrollmentId || '',
           issueDate,
           completionDate,
           certificateNumber: data.certificateNumber || `CERT-${doc.id.substring(0, 8).toUpperCase()}`,
           status: data.status || 'issued',
           instructorName: data.instructorName || 'Coltek Academy',
-          certificateUrl: data.fileUrl || data.certificateUrl || '',
+          certificateUrl: data.certificateUrl || data.fileUrl || '',
           previewUrl: data.previewUrl || data.fileUrl || '',
           metadata: {
             templateUsed: data.templateUsed || 'default',
-            verificationCode: data.verificationCode || '',
-            remarks: data.remarks || '',
+            verificationCode: data.verificationCode || data.metadata?.verificationCode || '',
+            remarks: data.remarks || data.metadata?.remarks || '',
             ...(data.metadata || {})
           }
         } as Certificate;
@@ -72,15 +82,58 @@ export class CertificateService {
   static async getCertificateById(certificateId: string): Promise<Certificate | null> {
     try {
       const docRef = doc(firebase.db, this.COLLECTION, certificateId)
-      const docSnap = await getDocs(query(collection(firebase.db, this.COLLECTION), where('id', '==', certificateId)))
+      let docSnap = await getDoc(docRef)
 
-      if (!docSnap.empty) {
-        const data = docSnap.docs[0].data()
+      if (!docSnap.exists()) {
+        const byCertificateIdQuery = query(
+          collection(firebase.db, this.COLLECTION),
+          where('certificateId', '==', certificateId)
+        )
+        const querySnapshot = await getDocs(byCertificateIdQuery)
+        if (!querySnapshot.empty) {
+          docSnap = querySnapshot.docs[0]
+        }
+      }
+
+      if (docSnap.exists()) {
+        const data = docSnap.data()
+        let resolvedRecipientEmail = data.recipientEmail || data.userEmail || data.email || '';
+        let resolvedRecipientName =
+          data.recipientName ||
+          data.userName ||
+          data.displayName ||
+          resolvedRecipientEmail.split('@')[0] ||
+          'Certificate Holder';
+        const resolvedCourseTitle = data.courseTitle || data.courseName || 'Unnamed Course';
+
+        if (!resolvedRecipientEmail && data.userId) {
+          const userSnap = await getDoc(doc(firebase.db, 'users', data.userId))
+          if (userSnap.exists()) {
+            const userData = userSnap.data() as any
+            resolvedRecipientEmail = userData.email || resolvedRecipientEmail
+            resolvedRecipientName =
+              userData.displayName ||
+              userData.name ||
+              resolvedRecipientName
+          }
+        }
+
         return {
           ...data,
-          id: docSnap.docs[0].id,
+          id: docSnap.id,
+          certificateId: data.certificateId || docSnap.id,
+          userId: data.userId || '',
+          courseId: data.courseId || '',
+          courseTitle: resolvedCourseTitle,
+          courseName: resolvedCourseTitle,
+          recipientName: resolvedRecipientName,
+          recipientEmail: resolvedRecipientEmail,
+          userName: data.userName || data.recipientName || '',
+          userEmail: data.userEmail || data.recipientEmail || resolvedRecipientEmail || '',
           issueDate: data.issueDate?.toDate ? data.issueDate.toDate() : new Date(data.issueDate || Date.now()),
           completionDate: data.completionDate?.toDate ? data.completionDate.toDate() : new Date(data.completionDate || Date.now()),
+          certificateUrl: data.certificateUrl || data.fileUrl || '',
+          previewUrl: data.previewUrl || data.fileUrl || data.certificateUrl || '',
         } as Certificate
       }
       return null
@@ -134,8 +187,8 @@ export class CertificateService {
         status: 'issued',
       })
 
-      // Update the document with its ID
-      await updateDoc(docRef, { id: docRef.id })
+      // Update the document with its ID and certificateId for consistent lookup
+      await updateDoc(docRef, { id: docRef.id, certificateId: docRef.id })
 
       return docRef.id
     } catch (error) {

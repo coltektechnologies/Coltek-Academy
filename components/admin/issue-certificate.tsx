@@ -19,6 +19,7 @@ import {
 } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { collection, getDocs, query, where, doc, updateDoc, arrayUnion, getDoc, setDoc, addDoc } from 'firebase/firestore';
 import { firebase } from '@/lib/firebase';
@@ -391,38 +392,56 @@ export function IssueCertificate({ users, courses, children }: IssueCertificateP
       const fileUrl = await handleFileUpload(certificateFile);
       console.log('File uploaded successfully:', fileUrl);
       
-      const certId = certificateId || `cert_${Date.now()}`;
+      const certId = certificateId.trim() || `cert_${Date.now()}`;
       const issueDate = new Date().toISOString();
       
       // Get user and course data for activity log
       const user = localUsers.find(u => u.id === selectedUserId);
       const course = courses.find(c => c.id === selectedCourseId);
+      const recipientEmail = userDoc.data()?.email || user?.email || '';
+      const recipientName = userDoc.data()?.displayName || user?.displayName || recipientEmail.split('@')[0] || 'Unknown User';
+      const courseTitle = courseDoc.data()?.title || course?.title || 'Unknown Course';
 
-      // Create certificate document in Firestore
+      // Create certificate document in Firestore with consistent fields
       const certificateData = {
+        id: certId,
+        certificateId: certId,
         userId: selectedUserId,
+        userName: recipientName,
+        userEmail: recipientEmail,
+        recipientName,
+        recipientEmail,
         courseId: selectedCourseId,
-        issueDate: new Date().toISOString(),
-        fileUrl: fileUrl,
+        courseTitle,
+        courseName: courseTitle,
+        issueDate,
+        completionDate: issueDate,
+        certificateUrl: fileUrl,
+        previewUrl: fileUrl,
+        fileUrl,
         filePath: fileUrl,
         status: 'issued',
-        remarks: remarks.trim() || null,
-        certificateId: certificateId.trim() || null,
-        createdAt: new Date().toISOString(),
+        remarks: remarks.trim() || '',
+        metadata: {
+          verificationCode: `CERT-${Math.random().toString(36).slice(2, 10).toUpperCase()}`,
+          remarks: remarks.trim() || '',
+        },
+        createdAt: issueDate,
       };
 
-      const certificateRef = await addDoc(collection(firebase.db, 'certificates'), certificateData);
+      const certificateRef = doc(collection(firebase.db, 'certificates'), certId);
+      await setDoc(certificateRef, certificateData);
 
-      // Log the certificate issuance activity
+      // Log the certificate issuance activity with the actual certificate ID
       if (user && course) {
         try {
           await logCertificateIssued(
             user.id,
-            user.displayName || user.email.split('@')[0],
-            user.email,
+            recipientName,
+            recipientEmail,
             course.id,
             course.title,
-            certificateRef.id
+            certId
           );
         } catch (error) {
           console.error('Failed to log certificate issuance activity:', error);
@@ -433,7 +452,10 @@ export function IssueCertificate({ users, courses, children }: IssueCertificateP
       console.log('Updating user document...');
       const userRef = doc(firebase.db, 'users', selectedUserId);
       await updateDoc(userRef, {
-        certificates: arrayUnion(certificateData)
+        certificates: arrayUnion({
+          ...certificateData,
+          certificateId: certId,
+        }),
       });
       console.log('User document updated');
 
@@ -443,7 +465,7 @@ export function IssueCertificate({ users, courses, children }: IssueCertificateP
       await updateDoc(courseRef, {
         issuedCertificates: arrayUnion({
           userId: selectedUserId,
-          userName: userDoc.data()?.displayName || userDoc.data()?.email || 'Unknown User',
+          userName: recipientName,
           certificateId: certId,
           issueDate,
           remarks: remarks || '',
@@ -453,15 +475,6 @@ export function IssueCertificate({ users, courses, children }: IssueCertificateP
       });
       console.log('Course document updated');
 
-      // 6. Create a new document in the certificates collection
-      console.log('Creating certificate document...');
-      const certRef = doc(collection(firebase.db, 'certificates'), certId);
-      await setDoc(certRef, {
-        ...certificateData,
-        userId: selectedUserId,
-        userName: userDoc.data()?.displayName || userDoc.data()?.email || 'Unknown User',
-        courseTitle: courseDoc.data()?.title || 'Unknown Course'
-      });
       console.log('Certificate document created');
 
       toast({
@@ -493,12 +506,13 @@ export function IssueCertificate({ users, courses, children }: IssueCertificateP
       <DialogTrigger asChild>
         {children || <Button>Issue Certificate</Button>}
       </DialogTrigger>
-      <DialogContent className="max-w-2xl">
-        <DialogHeader className="mb-6">
+      <DialogContent className="max-h-[calc(100dvh-2rem)] gap-0 overflow-hidden p-0 sm:max-w-2xl">
+        <DialogHeader className="border-b px-5 py-4 sm:px-6">
           <DialogTitle className="text-2xl font-bold">Issue New Certificate</DialogTitle>
         </DialogHeader>
         
-        <div className="space-y-6">
+        <div className="max-h-[calc(100dvh-8rem)] overflow-y-auto px-5 py-5 sm:px-6">
+          <div className="space-y-6">
           {/* Student Selection */}
           <div className="space-y-2">
             <Label htmlFor="user" className="text-base">Select Student</Label>
@@ -508,20 +522,20 @@ export function IssueCertificate({ users, courses, children }: IssueCertificateP
                 onValueChange={setSelectedUserId}
                 disabled={isLoading}
               >
-                <SelectTrigger id="user" className="h-12 text-base">
+                <SelectTrigger id="user" className="h-12 w-full min-w-0 text-base">
                   <SelectValue placeholder={
                     students.length > 0 
                       ? "Select a student" 
                       : "No students available"
                   } />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="max-h-72 w-[var(--radix-select-trigger-width)] max-w-[calc(100vw-2rem)]">
                   {studentsSorted.length > 0 ? (
                     studentsSorted.map(user => {
                       const name = user.displayName || 'Unnamed';
                       const email = user.email || '';
                       return (
-                        <SelectItem key={user.id} value={user.id}>
+                        <SelectItem key={user.id} value={user.id} className="[&_span:last-child]:truncate">
                           {email ? `${name} (${email})` : name}
                         </SelectItem>
                       );
@@ -553,16 +567,16 @@ export function IssueCertificate({ users, courses, children }: IssueCertificateP
                 onValueChange={setSelectedCourseId}
                 disabled={isLoading || !enrolledCourses.length}
               >
-                <SelectTrigger id="course" className="h-12 text-base">
+                <SelectTrigger id="course" className="h-12 w-full min-w-0 text-base">
                   <SelectValue placeholder={
                     enrolledCourses.length 
                       ? "Select a course" 
                       : "No enrolled courses found"
                   } />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="max-h-72 w-[var(--radix-select-trigger-width)] max-w-[calc(100vw-2rem)]">
                   {enrolledCourses.map(course => (
-                    <SelectItem key={course.id} value={course.id}>
+                    <SelectItem key={course.id} value={course.id} className="[&_span:last-child]:truncate">
                       {course.title}
                     </SelectItem>
                   ))}
@@ -576,14 +590,14 @@ export function IssueCertificate({ users, courses, children }: IssueCertificateP
             <div className="space-y-6">
               <div className="space-y-2">
                 <Label htmlFor="certificateFile" className="text-base">Certificate File</Label>
-                <div className="flex items-center gap-4">
+                <div className="flex min-w-0 items-center gap-4">
                   <Input
                     id="certificateFile"
                     type="file"
                     accept="application/pdf,image/*"
                     onChange={(e) => setCertificateFile(e.target.files?.[0] || null)}
                     disabled={isLoading}
-                    className="h-12"
+                    className="h-12 w-full min-w-0"
                   />
                 </div>
                 <p className="text-sm text-muted-foreground mt-1">
@@ -593,13 +607,13 @@ export function IssueCertificate({ users, courses, children }: IssueCertificateP
 
               <div className="space-y-2">
                 <Label htmlFor="remarks" className="text-base">Remarks</Label>
-                <Input
+                <Textarea
                   id="remarks"
                   placeholder="Any additional notes about this certificate"
                   value={remarks}
                   onChange={(e) => setRemarks(e.target.value)}
                   disabled={isLoading}
-                  className="h-24"
+                  className="min-h-24 resize-none"
                 />
               </div>
 
@@ -618,7 +632,7 @@ export function IssueCertificate({ users, courses, children }: IssueCertificateP
                 </p>
               </div>
 
-              <div className="flex justify-end space-x-2 pt-4">
+              <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:justify-end">
                 <Button 
                   variant="outline" 
                   onClick={() => setIsOpen(false)}
@@ -635,9 +649,9 @@ export function IssueCertificate({ users, courses, children }: IssueCertificateP
               </div>
             </div>
           )}
+          </div>
         </div>
       </DialogContent>
     </Dialog>
   );
 }
-

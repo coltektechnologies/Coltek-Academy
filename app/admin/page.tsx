@@ -122,6 +122,11 @@ const Clock = dynamic(
   { ssr: false, loading: () => <span className="w-6 h-6" /> }
 );
 
+const MessageSquareQuote = dynamic(
+  () => import('lucide-react').then(mod => mod.MessageSquareQuote),
+  { ssr: false, loading: () => <span className="w-6 h-6" /> }
+);
+
 import { firebase } from '@/lib/firebase';
 import { 
   doc, 
@@ -632,17 +637,23 @@ export default function AdminPage() {
               <CardTitle className="text-lg">Quick Actions</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
-              <Button variant="outline" className="w-full justify-start">
-                <Upload className="mr-2 h-4 w-4" />
-                Issue Certificate
-              </Button>
-              <Button variant="outline" className="w-full justify-start">
+              <IssueCertificate users={users} courses={courses}>
+                <Button variant="outline" className="w-full justify-start">
+                  <Upload className="mr-2 h-4 w-4" />
+                  Issue Certificate
+                </Button>
+              </IssueCertificate>
+              <Button variant="outline" className="w-full justify-start" onClick={() => router.push('/admin/users')}>
                 <Users className="mr-2 h-4 w-4" />
                 Add New User
               </Button>
-              <Button variant="outline" className="w-full justify-start">
+              <Button variant="outline" className="w-full justify-start" onClick={() => router.push('/admin/courses')}>
                 <BookOpen className="mr-2 h-4 w-4" />
                 Create Course
+              </Button>
+              <Button variant="outline" className="w-full justify-start" onClick={() => router.push('/admin/testimonials')}>
+                <MessageSquareQuote className="mr-2 h-4 w-4" />
+                Add Testimonial
               </Button>
             </CardContent>
           </Card>

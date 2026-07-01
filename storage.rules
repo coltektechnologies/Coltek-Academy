@@ -41,6 +41,16 @@ service firebase.storage {
       allow options: if request.method == 'OPTIONS';
     }
 
+    // Public testimonial avatars uploaded by admins.
+    match /testimonials/{fileName} {
+      allow read: if true;
+      allow write: if
+        request.auth != null &&
+        firestore.exists(/databases/(default)/documents/adminUsers/$(request.auth.uid)) &&
+        firestore.get(/databases/(default)/documents/adminUsers/$(request.auth.uid)).data.role == 'admin';
+      allow options: if request.method == 'OPTIONS';
+    }
+
     // Default deny all other access
     match /{allPaths=**} {
       allow read, write: if false;

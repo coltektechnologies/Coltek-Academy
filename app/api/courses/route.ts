@@ -42,7 +42,31 @@ export async function GET() {
     }
 
     const coursesRef = collection(firebase.db, 'courses');
-    const snapshot = await getDocs(coursesRef);
+    const [snapshot, enrollmentsSnapshot] = await Promise.all([
+      getDocs(coursesRef),
+      getDocs(collection(firebase.db, 'enrollments')),
+    ]);
+
+    const enrolledUsersByCourse = new Map<string, Set<string>>();
+    enrollmentsSnapshot.docs.forEach((doc) => {
+      const data = doc.data();
+      const status = String(data.status || '').toLowerCase();
+      const courseId = data.courseId || data.courseDetails?.courseId || data.course?.id;
+      const userId = data.userId || data.userEmail || doc.id;
+
+      if (!courseId || !userId || status === 'cancelled') {
+        return;
+      }
+
+      const normalizedCourseId = String(courseId).trim();
+      const normalizedUserId = String(userId).trim();
+
+      if (!enrolledUsersByCourse.has(normalizedCourseId)) {
+        enrolledUsersByCourse.set(normalizedCourseId, new Set<string>());
+      }
+
+      enrolledUsersByCourse.get(normalizedCourseId)?.add(normalizedUserId);
+    });
     
     interface FirestoreCourse {
       id: string;
@@ -119,7 +143,7 @@ export async function GET() {
           instructor: course.instructor || { name: 'Instructor' },
           rating: typeof course.rating === 'number' ? course.rating : 0,
           totalRatings: typeof course.totalRatings === 'number' ? course.totalRatings : 0,
-          enrolledStudents: typeof course.enrolledStudents === 'number' ? course.enrolledStudents : 0,
+          enrolledStudents: enrolledUsersByCourse.get(course.id)?.size || 0,
           duration: course.duration || 0,
           slug: course.slug || course.id,
           isPublished: course.isPublished !== false,

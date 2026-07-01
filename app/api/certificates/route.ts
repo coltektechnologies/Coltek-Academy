@@ -72,6 +72,7 @@ export async function POST(request: NextRequest) {
       ...certificateData,
       certificateUrl: uploadResult.certificateUrl,
       ...(uploadResult.previewUrl && { previewUrl: uploadResult.previewUrl }),
+      certificateId: '',
     }
 
     const certificateIdResult = await CertificateService.createCertificate(finalCertificateData)
@@ -81,6 +82,7 @@ export async function POST(request: NextRequest) {
       certificateId: certificateIdResult,
       certificate: {
         id: certificateIdResult,
+        certificateId: certificateIdResult,
         ...finalCertificateData,
       },
     })
