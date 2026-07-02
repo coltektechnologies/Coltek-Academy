@@ -109,18 +109,32 @@ export default function AdminCertificateDetailPage() {
     void fetchCertificate()
   }, [authLoading, user, params?.id])
 
-  const handleDownload = () => {
+  const handleDownload = async () => {
     const url = normalizeCertUrl(certificate?.certificateUrl)
     if (!url) return
 
-    const link = document.createElement('a')
-    link.href = url
-    link.download = `certificate-${certificate?.id || params.id}.pdf`
-    link.target = '_blank'
-    link.rel = 'noopener noreferrer'
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
+    try {
+      // Fetch the file as a blob to trigger a proper download
+      const downloadUrl = url.includes('?') ? `${url}&download=1` : `${url}?download=1`
+      const response = await fetch(downloadUrl)
+      if (!response.ok) throw new Error('Failed to download')
+      
+      const blob = await response.blob()
+      const blobUrl = URL.createObjectURL(blob)
+      
+      const ext = url.toLowerCase().endsWith('.pdf') ? 'pdf' : 'jpg'
+      const link = document.createElement('a')
+      link.href = blobUrl
+      link.download = `certificate-${certificate?.id || params.id}.${ext}`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      URL.revokeObjectURL(blobUrl)
+    } catch (err) {
+      console.error('Download error:', err)
+      // Fallback: open in new tab
+      window.open(url, '_blank')
+    }
   }
 
   return (

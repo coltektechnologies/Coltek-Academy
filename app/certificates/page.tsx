@@ -278,15 +278,26 @@ export default function CertificatesPage() {
         throw new Error('No download URL available');
       }
 
-      // Create a temporary link and trigger download
+      // Normalize URL: strip domain if it's a full URL (old records)
+      if (certUrl.startsWith('http')) {
+        try { certUrl = new URL(certUrl).pathname; } catch { /* use as-is */ }
+      }
+
+      // Fetch as blob and trigger proper download
+      const downloadUrl = certUrl.includes('?') ? `${certUrl}&download=1` : `${certUrl}?download=1`;
+      const response = await fetch(downloadUrl);
+      if (!response.ok) throw new Error('Failed to download');
+      
+      const blob = await response.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      const ext = certUrl.toLowerCase().endsWith('.pdf') ? 'pdf' : 'jpg';
       const link = document.createElement('a');
-      link.href = certUrl;
-      link.download = `Certificate-${certificate.id}.pdf`;
-      link.target = '_blank';
-      link.rel = 'noopener noreferrer';
+      link.href = blobUrl;
+      link.download = `Certificate-${certificate.id}.${ext}`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
+      URL.revokeObjectURL(blobUrl);
     } catch (error) {
       console.error('Error downloading certificate:', error);
       setError('Failed to download certificate. Please try again.');

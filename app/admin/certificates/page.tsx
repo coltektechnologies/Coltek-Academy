@@ -75,15 +75,25 @@ export default function CertificatesPage() {
     fetchCertificates();
   }, []);
 
-  const handleDownload = (certificateUrl: string, fileName: string) => {
+  const handleDownload = async (certificateUrl: string, fileName: string) => {
     const url = normalizeCertUrl(certificateUrl);
     if (!url) return;
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = fileName || 'certificate.pdf';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    try {
+      const downloadUrl = url.includes('?') ? `${url}&download=1` : `${url}?download=1`;
+      const response = await fetch(downloadUrl);
+      if (!response.ok) throw new Error('Failed to download');
+      const blob = await response.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = fileName || 'certificate.pdf';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(blobUrl);
+    } catch {
+      window.open(url, '_blank');
+    }
   };
 
   if (isLoading) {

@@ -310,9 +310,9 @@ export function IssueCertificate({ users, courses, children }: IssueCertificateP
         throw new Error(data?.error || 'Upload failed');
       }
 
-      const rawFileUrl = data.fileUrl || data.filePath || `/uploads/certificates/${selectedUserId}/${data.fileName}`;
-      // Always normalize to a relative path (strip domain if present)
-      const fileUrl = rawFileUrl.startsWith('http') ? new URL(rawFileUrl).pathname : rawFileUrl;
+      // The upload API now returns a serving URL based on the Firestore fileId
+      // e.g. /api/files/{fileId} — this is a direct document lookup, no filesystem needed
+      const fileUrl = data.fileUrl || `/api/files/${data.fileId}`;
       const storagePath = data.storagePath || fileUrl;
 
       toast({
