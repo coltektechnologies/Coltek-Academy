@@ -34,14 +34,39 @@ export async function GET(
       fileData?: string
       contentType?: string
       fileName?: string
+      chunkCount?: number
     }
 
-    if (!data?.fileData) {
-      console.error(`Certificate file document ${fileId} has no fileData`)
+    let fileBuffer: Buffer
+
+    if (data.chunkCount && data.chunkCount > 1) {
+      // Assemble from chunks
+      const chunkPromises = []
+      for (let i = 0; i < data.chunkCount; i++) {
+        chunkPromises.push(db.collection('certificateFiles').doc(fileId).collection('chunks').doc(i.toString()).get())
+      }
+      const chunkSnaps = await Promise.all(chunkPromises)
+      
+      const buffers = chunkSnaps.map((snap, i) => {
+        if (!snap.exists) {
+          throw new Error(`Missing chunk ${i} for file ${fileId}`)
+        }
+        const chunkData = snap.data()?.data
+        if (!chunkData) {
+          throw new Error(`Empty chunk ${i} for file ${fileId}`)
+        }
+        return Buffer.from(chunkData, 'base64')
+      })
+      
+      fileBuffer = Buffer.concat(buffers)
+    } else if (data.fileData) {
+      // Legacy or single chunk fallback
+      fileBuffer = Buffer.from(data.fileData, 'base64')
+    } else {
+      console.error(`Certificate file document ${fileId} has no fileData and no chunks`)
       return new NextResponse('File data missing', { status: 404 })
     }
 
-    const buffer = Buffer.from(data.fileData, 'base64')
     const contentType = data.contentType || 'application/octet-stream'
     const fileName = data.fileName || 'certificate'
 
@@ -51,7 +76,7 @@ export async function GET(
 
     const headers: Record<string, string> = {
       'Content-Type': contentType,
-      'Content-Length': buffer.length.toString(),
+      'Content-Length': fileBuffer.length.toString(),
       'Cache-Control': 'public, max-age=3600, immutable',
     }
 
@@ -61,7 +86,7 @@ export async function GET(
       headers['Content-Disposition'] = `inline; filename="${fileName}"`
     }
 
-    return new NextResponse(buffer, {
+    return new NextResponse(fileBuffer, {
       status: 200,
       headers,
     })

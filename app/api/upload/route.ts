@@ -32,35 +32,62 @@ export async function POST(request: Request) {
 
     // Check file size — Firestore documents have a 1 MiB limit.
     // base64 adds ~33% overhead, plus other fields (~1KB).
-    // Allow files up to ~750 KB raw (≈1000 KB base64 + metadata).
-    const MAX_FILE_SIZE = 750 * 1024; // 750 KB
+    // Allow files up to 5 MB by chunking them.
+    const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
     if (fileBytes.length > MAX_FILE_SIZE) {
       return NextResponse.json(
         {
           success: false,
-          error: `File is too large (${(fileBytes.length / 1024).toFixed(0)} KB). Maximum allowed is ${MAX_FILE_SIZE / 1024} KB. Please compress the image or use a smaller file.`,
+          error: `File is too large (${(fileBytes.length / 1024 / 1024).toFixed(2)} MB). Maximum allowed is 5 MB. Please compress the image or use a smaller file.`,
         },
         { status: 400 }
       );
     }
 
-    // Store file data in Firestore — this is the PRIMARY storage mechanism.
-    // On the free Firebase plan (no Storage), this is the only reliable way
-    // to persist files for serving later.
+    // Split the file into chunks to bypass Firestore's 1 MiB document limit.
+    // We use 500 KB chunks (raw size) which safely becomes ~666 KB in base64.
+    const CHUNK_SIZE = 500 * 1024; 
+    const chunkCount = Math.ceil(fileBytes.length / CHUNK_SIZE);
+
     ensureFirebaseAdminInitialized();
     const app = getColtekFirebaseAdminApp();
     const db = getFirestore(app);
 
     const fileCollection = db.collection('certificateFiles');
     const fileDocRef = fileCollection.doc();
+    
+    // Create the main document
     await fileDocRef.set({
       path: `certificates/${userId}/${fileName}`,
       userId,
       fileName,
       contentType,
-      fileData: fileBytes.toString('base64'),
+      chunkCount,
+      // Store the first chunk directly in the main document if it's small enough,
+      // but for consistency we'll just store all data in the chunks subcollection
+      // or we can store fileData if chunkCount === 1 for backward compatibility
+      ...(chunkCount === 1 ? { fileData: fileBytes.toString('base64') } : {}),
       createdAt: new Date().toISOString(),
     });
+
+    // Upload chunks if chunkCount > 1
+    if (chunkCount > 1) {
+      const uploadPromises = [];
+      for (let i = 0; i < chunkCount; i++) {
+        const start = i * CHUNK_SIZE;
+        const end = Math.min(start + CHUNK_SIZE, fileBytes.length);
+        const chunkBytes = fileBytes.slice(start, end);
+        
+        const chunkDocRef = fileDocRef.collection('chunks').doc(i.toString());
+        uploadPromises.push(
+          chunkDocRef.set({
+            index: i,
+            data: chunkBytes.toString('base64'),
+          })
+        );
+      }
+      await Promise.all(uploadPromises);
+    }
 
     const fileId = fileDocRef.id;
 
