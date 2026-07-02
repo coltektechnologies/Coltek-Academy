@@ -29,6 +29,23 @@ function isPdfUrl(url: string): boolean {
   return url.toLowerCase().endsWith('.pdf') || url.toLowerCase().includes('application/pdf')
 }
 
+/**
+ * Normalize a certificate URL to always be a relative path.
+ * Old certificates may have stored full URLs with the domain which bypass
+ * the Next.js API route and hit static hosting (404).
+ */
+function normalizeCertUrl(url: string | undefined): string {
+  if (!url) return ''
+  try {
+    if (url.startsWith('http')) {
+      return new URL(url).pathname
+    }
+  } catch {
+    // Not a valid URL, return as-is
+  }
+  return url
+}
+
 export default function AdminCertificateDetailPage() {
   const params = useParams() as { id?: string }
   const router = useRouter()
@@ -93,11 +110,12 @@ export default function AdminCertificateDetailPage() {
   }, [authLoading, user, params?.id])
 
   const handleDownload = () => {
-    if (!certificate?.certificateUrl) return
+    const url = normalizeCertUrl(certificate?.certificateUrl)
+    if (!url) return
 
     const link = document.createElement('a')
-    link.href = certificate.certificateUrl
-    link.download = `certificate-${certificate.id || params.id}.pdf`
+    link.href = url
+    link.download = `certificate-${certificate?.id || params.id}.pdf`
     link.target = '_blank'
     link.rel = 'noopener noreferrer'
     document.body.appendChild(link)
@@ -125,7 +143,7 @@ export default function AdminCertificateDetailPage() {
                 <Download className="h-4 w-4" />
                 Download PDF
               </Button>
-              <Link href={certificate.certificateUrl} target="_blank" rel="noopener noreferrer">
+              <Link href={normalizeCertUrl(certificate.certificateUrl)} target="_blank" rel="noopener noreferrer">
                 <Button variant="secondary" size="sm" className="gap-2">
                   <Eye className="h-4 w-4" />
                   Open original
@@ -197,12 +215,12 @@ export default function AdminCertificateDetailPage() {
                     isPdfUrl(certificate.previewUrl) ? (
                       <iframe
                         title="Certificate preview"
-                        src={certificate.previewUrl}
+                        src={normalizeCertUrl(certificate.previewUrl)}
                         className="h-90 w-full rounded-3xl border border-border"
                       />
                     ) : (
                       <img
-                        src={certificate.previewUrl}
+                        src={normalizeCertUrl(certificate.previewUrl)}
                         alt={`Preview for certificate ${certificate.id}`}
                         className="h-90 w-full rounded-3xl border border-border object-contain"
                       />
@@ -210,7 +228,7 @@ export default function AdminCertificateDetailPage() {
                   ) : certificate.certificateUrl ? (
                     <iframe
                       title="Certificate preview"
-                      src={certificate.certificateUrl}
+                      src={normalizeCertUrl(certificate.certificateUrl)}
                       className="h-90 w-full rounded-3xl border border-border"
                     />
                   ) : (

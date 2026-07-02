@@ -6,10 +6,11 @@ import { getColtekFirebaseAdminApp, ensureFirebaseAdminInitialized } from '@/lib
 
 export async function GET(
   request: Request,
-  { params }: { params: { segments?: string[] } }
+  context: { params: Promise<{ segments?: string[] }> }
 ) {
   try {
-    const segments = params.segments || []
+    const { segments: rawSegments } = await context.params
+    const segments = rawSegments || []
     if (segments.length < 3 || segments[0] !== 'certificates') {
       return new NextResponse('Not found', { status: 404 })
     }
@@ -20,36 +21,48 @@ export async function GET(
       return new NextResponse('Not found', { status: 404 })
     }
 
-    if (process.env.NODE_ENV === 'development') {
-      const localPath = join(process.cwd(), 'public', 'uploads', 'certificates', userId, fileName)
-      try {
-        const fileBuffer = await readFile(localPath)
-        const extension = fileName.split('.').pop() || ''
-        const contentType = getContentType(extension)
-        return new NextResponse(fileBuffer, {
-          status: 200,
-          headers: {
-            'Content-Type': contentType,
-            'Cache-Control': 'public, max-age=3600',
-          },
-        })
-      } catch (err) {
-        // fall through to Firestore lookup
-      }
+    // Try reading from the local public directory first
+    const localPath = join(process.cwd(), 'public', 'uploads', 'certificates', userId, fileName)
+    try {
+      const fileBuffer = await readFile(localPath)
+      const extension = fileName.split('.').pop() || ''
+      const contentType = getContentType(extension)
+      return new NextResponse(fileBuffer, {
+        status: 200,
+        headers: {
+          'Content-Type': contentType,
+          'Cache-Control': 'public, max-age=3600',
+        },
+      })
+    } catch {
+      // fall through to Firestore lookup
     }
 
+    // Look up file data from Firestore
     ensureFirebaseAdminInitialized()
     const app = getColtekFirebaseAdminApp()
     const db = getFirestore(app)
     const filePath = `certificates/${userId}/${fileName}`
 
-    const snapshot = await db
+    // Try matching with the stored path (could be with or without leading slash)
+    let snapshot = await db
       .collection('certificateFiles')
       .where('path', '==', filePath)
       .limit(1)
       .get()
 
+    // If not found, try matching by fileName and userId directly
     if (snapshot.empty) {
+      snapshot = await db
+        .collection('certificateFiles')
+        .where('userId', '==', userId)
+        .where('fileName', '==', fileName)
+        .limit(1)
+        .get()
+    }
+
+    if (snapshot.empty) {
+      console.error(`Certificate file not found in Firestore. Tried path="${filePath}", userId="${userId}", fileName="${fileName}"`)
       return new NextResponse('Not found', { status: 404 })
     }
 

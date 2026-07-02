@@ -63,13 +63,12 @@ export async function POST(request: Request) {
       console.warn('Could not store file in Firestore:', firebaseErr instanceof Error ? firebaseErr.message : 'Unknown error');
     }
 
-    const requestUrl = new URL(request.url);
-    const publicUrl = new URL(`/uploads/certificates/${userId}/${fileName}`, requestUrl.origin).toString();
+    const relativePath = `/uploads/certificates/${userId}/${fileName}`;
 
     return NextResponse.json({
       success: true,
-      fileUrl: publicUrl,
-      filePath: publicUrl,
+      fileUrl: relativePath,
+      filePath: relativePath,
       fileName,
       storagePath: `certificates/${userId}/${fileName}`,
       ...(fileId && { fileId }),

@@ -3,6 +3,22 @@ import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage
 import { firebase } from './firebase'
 import type { Certificate } from '@/types/certificate'
 
+/**
+ * Normalize a certificate URL to always be a relative path.
+ * Old certificates may have stored full URLs with the domain.
+ */
+function normalizeCertUrl(url: string | undefined): string {
+  if (!url) return ''
+  try {
+    if (url.startsWith('http')) {
+      return new URL(url).pathname
+    }
+  } catch {
+    // Not a valid URL, return as-is
+  }
+  return url
+}
+
 export class CertificateService {
   private static COLLECTION = 'certificates'
 
@@ -57,8 +73,8 @@ export class CertificateService {
           certificateNumber: data.certificateNumber || `CERT-${doc.id.substring(0, 8).toUpperCase()}`,
           status: data.status || 'issued',
           instructorName: data.instructorName || 'Coltek Academy',
-          certificateUrl: data.certificateUrl || data.fileUrl || '',
-          previewUrl: data.previewUrl || data.fileUrl || '',
+          certificateUrl: normalizeCertUrl(data.certificateUrl || data.fileUrl),
+          previewUrl: normalizeCertUrl(data.previewUrl || data.fileUrl),
           metadata: {
             templateUsed: data.templateUsed || 'default',
             verificationCode: data.verificationCode || data.metadata?.verificationCode || '',
@@ -132,8 +148,8 @@ export class CertificateService {
           userEmail: data.userEmail || data.recipientEmail || resolvedRecipientEmail || '',
           issueDate: data.issueDate?.toDate ? data.issueDate.toDate() : new Date(data.issueDate || Date.now()),
           completionDate: data.completionDate?.toDate ? data.completionDate.toDate() : new Date(data.completionDate || Date.now()),
-          certificateUrl: data.certificateUrl || data.fileUrl || '',
-          previewUrl: data.previewUrl || data.fileUrl || data.certificateUrl || '',
+          certificateUrl: normalizeCertUrl(data.certificateUrl || data.fileUrl),
+          previewUrl: normalizeCertUrl(data.previewUrl || data.fileUrl || data.certificateUrl),
         } as Certificate
       }
       return null

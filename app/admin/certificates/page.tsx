@@ -10,6 +10,21 @@ import { Loader2 } from 'lucide-react';
 import { firebase } from '@/lib/firebase';
 import type { Certificate } from '@/types/certificate';
 
+/**
+ * Normalize a certificate URL to always be a relative path.
+ */
+function normalizeCertUrl(url: string | undefined): string {
+  if (!url) return ''
+  try {
+    if (url.startsWith('http')) {
+      return new URL(url).pathname
+    }
+  } catch {
+    // Not a valid URL, return as-is
+  }
+  return url
+}
+
 // Lazy load components
 const Card = dynamic(() => import('@/components/ui/card').then(mod => mod.Card), { ssr: false });
 const CardContent = dynamic(() => import('@/components/ui/card').then(mod => mod.CardContent), { ssr: false });
@@ -61,8 +76,10 @@ export default function CertificatesPage() {
   }, []);
 
   const handleDownload = (certificateUrl: string, fileName: string) => {
+    const url = normalizeCertUrl(certificateUrl);
+    if (!url) return;
     const link = document.createElement('a');
-    link.href = certificateUrl;
+    link.href = url;
     link.download = fileName || 'certificate.pdf';
     document.body.appendChild(link);
     link.click();
