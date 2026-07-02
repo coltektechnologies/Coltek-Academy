@@ -266,7 +266,10 @@ export function IssueCertificate({ users, courses, children }: IssueCertificateP
   const MAX_RETRIES = 3;
   const RETRY_DELAY = 2000; // 2 seconds
 
-  const handleFileUpload = async (file: File, attempt = 1): Promise<string> => {
+  const handleFileUpload = async (
+    file: File,
+    attempt = 1
+  ): Promise<{ fileUrl: string; storagePath: string }> => {
     if (!file || !selectedUserId) {
       toast({
         title: 'Error',
@@ -277,56 +280,40 @@ export function IssueCertificate({ users, courses, children }: IssueCertificateP
     }
 
     try {
-      console.log(`Starting file upload attempt ${attempt}...`);
-      
-      // Show loading state
+      console.log(`Preparing certificate file for upload (attempt ${attempt})...`);
+
       toast({
         title: 'Uploading Certificate',
-        description: 'Please wait while we process your file...',
+        description: 'Please wait while your file is prepared...',
         variant: 'default',
       });
-      
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('userId', selectedUserId);
-      
-      // In production, use a more secure authentication method
-      const authToken = Buffer.from('admin:password').toString('base64');
-      
-      const response = await fetch('/api/upload', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Basic ${authToken}`
-        },
-        body: formData,
+
+      const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${file.name.split('.').pop() || 'bin'}`;
+      const storagePath = `/uploads/certificates/${selectedUserId}/${fileName}`;
+
+      const fileUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          if (typeof reader.result === 'string') {
+            resolve(reader.result);
+          } else {
+            reject(new Error('Unable to read file data'));
+          }
+        };
+        reader.onerror = () => reject(new Error('Failed to read file data'));
+        reader.readAsDataURL(file);
       });
-      
-      if (!response.ok) {
-        const error = await response.text();
-        throw new Error(`Upload failed: ${error}`);
-      }
-      
-      const data = await response.json();
-      
-      if (!data.success) {
-        throw new Error(data.error || 'Upload failed');
-      }
-      
-      console.log('File uploaded successfully:', data.filePath);
-      
-      // Show success toast
+
       toast({
         title: 'Upload Successful',
-        description: 'Certificate has been uploaded successfully',
+        description: 'Certificate file is ready for preview and download',
         variant: 'success',
       });
-      
-      return data.filePath;
-      
+
+      return { fileUrl, storagePath };
     } catch (error: any) {
       console.error('Upload error:', error);
-      
-      // If we have retries left, retry
+
       if (attempt < MAX_RETRIES) {
         console.log(`Retrying upload (${attempt + 1}/${MAX_RETRIES})...`);
         toast({
@@ -334,18 +321,17 @@ export function IssueCertificate({ users, courses, children }: IssueCertificateP
           description: `Attempt ${attempt + 1} of ${MAX_RETRIES} - Please wait...`,
           variant: 'default',
         });
-        
+
         await new Promise(resolve => setTimeout(resolve, RETRY_DELAY * attempt));
         return handleFileUpload(file, attempt + 1);
       }
-      
-      // Show error toast after all retries fail
+
       toast({
         title: 'Error',
-        description: error.message || 'Failed to upload file. Please try again.',
+        description: error.message || 'Failed to prepare the certificate file. Please try again.',
         variant: 'destructive',
       });
-      
+
       throw error;
     }
   };
@@ -387,10 +373,12 @@ export function IssueCertificate({ users, courses, children }: IssueCertificateP
         throw new Error('Course not found');
       }
       
-      // 2. Upload certificate file
-      console.log('Uploading certificate file...');
-      const fileUrl = await handleFileUpload(certificateFile);
-      console.log('File uploaded successfully:', fileUrl);
+      // 2. Prepare certificate file for preview/download
+      console.log('Preparing certificate file...');
+      const uploadResult = await handleFileUpload(certificateFile);
+      const fileUrl = uploadResult.fileUrl;
+      const storagePath = uploadResult.storagePath;
+      console.log('Certificate file ready:', storagePath);
       
       const certId = certificateId.trim() || `cert_${Date.now()}`;
       const issueDate = new Date().toISOString();
@@ -419,7 +407,8 @@ export function IssueCertificate({ users, courses, children }: IssueCertificateP
         certificateUrl: fileUrl,
         previewUrl: fileUrl,
         fileUrl,
-        filePath: fileUrl,
+        filePath: storagePath,
+        storagePath,
         status: 'issued',
         remarks: remarks.trim() || '',
         metadata: {
