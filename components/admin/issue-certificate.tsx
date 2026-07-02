@@ -280,29 +280,38 @@ export function IssueCertificate({ users, courses, children }: IssueCertificateP
     }
 
     try {
-      console.log(`Preparing certificate file for upload (attempt ${attempt})...`);
+      console.log(`Uploading certificate file (attempt ${attempt})...`);
 
       toast({
         title: 'Uploading Certificate',
-        description: 'Please wait while your file is prepared...',
+        description: 'Please wait while your file is uploaded...',
         variant: 'default',
       });
 
-      const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${file.name.split('.').pop() || 'bin'}`;
-      const storagePath = `/uploads/certificates/${selectedUserId}/${fileName}`;
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('userId', selectedUserId);
 
-      const fileUrl = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => {
-          if (typeof reader.result === 'string') {
-            resolve(reader.result);
-          } else {
-            reject(new Error('Unable to read file data'));
-          }
-        };
-        reader.onerror = () => reject(new Error('Failed to read file data'));
-        reader.readAsDataURL(file);
+      const response = await fetch('/api/upload', {
+        method: 'POST',
+        headers: {
+          Authorization: `Basic ${btoa('admin:password')}`,
+        },
+        body: formData,
       });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText || 'Upload failed');
+      }
+
+      const data = await response.json();
+      if (!data?.success) {
+        throw new Error(data?.error || 'Upload failed');
+      }
+
+      const fileUrl = data.filePath || `/uploads/certificates/${selectedUserId}/${data.fileName}`;
+      const storagePath = fileUrl.startsWith('http') ? new URL(fileUrl).pathname : fileUrl;
 
       toast({
         title: 'Upload Successful',
@@ -328,7 +337,7 @@ export function IssueCertificate({ users, courses, children }: IssueCertificateP
 
       toast({
         title: 'Error',
-        description: error.message || 'Failed to prepare the certificate file. Please try again.',
+        description: error.message || 'Failed to upload the certificate file. Please try again.',
         variant: 'destructive',
       });
 

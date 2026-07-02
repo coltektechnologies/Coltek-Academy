@@ -41,13 +41,13 @@ export async function POST(request: Request) {
       const bytes = await file.arrayBuffer();
       await writeFile(filePath, Buffer.from(bytes));
 
-      const origin = new URL(request.url).origin;
-      const publicUrl = `${origin}/${relativeUploadDir}/${fileName}`;
+      const publicUrl = `/uploads/certificates/${userId}/${fileName}`;
 
       return NextResponse.json({
         success: true,
         filePath: publicUrl,
         fileName,
+        storagePath: `certificates/${userId}/${fileName}`,
       });
     }
 
@@ -76,13 +76,13 @@ export async function POST(request: Request) {
       console.warn('Could not store file in Firestore:', firebaseErr instanceof Error ? firebaseErr.message : 'Unknown error');
     }
 
-    const origin = new URL(request.url).origin;
-    const publicUrl = `${origin}/${relativeUploadDir}/${fileName}`;
+    const publicUrl = `/uploads/certificates/${userId}/${fileName}`;
 
     return NextResponse.json({
       success: true,
       filePath: publicUrl,
       fileName,
+      storagePath: `certificates/${userId}/${fileName}`,
       ...(fileId && { fileId }),
     });
   } catch (error) {
