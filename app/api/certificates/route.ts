@@ -36,8 +36,12 @@ export async function POST(request: NextRequest) {
     const certificateData = {
       userId: formData.get('userId') as string,
       userEmail: formData.get('userEmail') as string,
+      userName: (formData.get('userName') as string) || (formData.get('userEmail') as string)?.split('@')[0] || 'Certificate Holder',
+      recipientEmail: formData.get('userEmail') as string,
+      recipientName: (formData.get('userName') as string) || (formData.get('userEmail') as string)?.split('@')[0] || 'Certificate Holder',
       courseId: formData.get('courseId') as string,
       courseTitle: formData.get('courseTitle') as string,
+      courseName: formData.get('courseTitle') as string,
       enrollmentId: formData.get('enrollmentId') as string,
       certificateNumber: formData.get('certificateNumber') as string || CertificateService.generateCertificateNumber(),
       issueDate: new Date(formData.get('issueDate') as string),
@@ -70,9 +74,15 @@ export async function POST(request: NextRequest) {
     // Create certificate record with file URLs
     const finalCertificateData: Omit<Certificate, 'id'> = {
       ...certificateData,
+      certificateId: certificateId,
+      id: certificateId,
       certificateUrl: uploadResult.certificateUrl,
+      previewUrl: uploadResult.previewUrl || uploadResult.certificateUrl,
+      fileUrl: uploadResult.certificateUrl,
+      filePath: `certificates/${certificateId}/certificate.pdf`,
+      storagePath: `certificates/${certificateId}/certificate.pdf`,
+      verificationCode: certificateData.metadata.verificationCode,
       ...(uploadResult.previewUrl && { previewUrl: uploadResult.previewUrl }),
-      certificateId: '',
     }
 
     const certificateIdResult = await CertificateService.createCertificate(finalCertificateData)

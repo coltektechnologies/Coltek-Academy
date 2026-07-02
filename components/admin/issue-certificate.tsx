@@ -400,9 +400,11 @@ export function IssueCertificate({ users, courses, children }: IssueCertificateP
       const courseTitle = courseDoc.data()?.title || course?.title || 'Unknown Course';
 
       // Create certificate document in Firestore with consistent fields
+      const verificationCode = `CERT-${Math.random().toString(36).slice(2, 10).toUpperCase()}`;
       const certificateData = {
         id: certId,
         certificateId: certId,
+        certificateNumber: certId,
         userId: selectedUserId,
         userName: recipientName,
         userEmail: recipientEmail,
@@ -420,15 +422,16 @@ export function IssueCertificate({ users, courses, children }: IssueCertificateP
         storagePath,
         status: 'issued',
         remarks: remarks.trim() || '',
+        verificationCode,
         metadata: {
-          verificationCode: `CERT-${Math.random().toString(36).slice(2, 10).toUpperCase()}`,
+          verificationCode,
           remarks: remarks.trim() || '',
         },
         createdAt: issueDate,
       };
 
       const certificateRef = doc(collection(firebase.db, 'certificates'), certId);
-      await setDoc(certificateRef, certificateData);
+      await setDoc(certificateRef, certificateData, { merge: true });
 
       // Log the certificate issuance activity with the actual certificate ID
       if (user && course) {
