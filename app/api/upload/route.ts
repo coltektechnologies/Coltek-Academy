@@ -5,8 +5,6 @@ import { join } from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import { getColtekFirebaseAdminApp, ensureFirebaseAdminInitialized } from '@/lib/verify-firebase-token';
 
-const isDev = process.env.NODE_ENV === 'development';
-
 export async function POST(request: Request) {
   try {
     const authHeader = request.headers.get('authorization');
@@ -32,32 +30,22 @@ export async function POST(request: Request) {
     const fileExt = file.name.split('.').pop() || 'bin';
     const fileName = `${uuidv4()}.${fileExt}`;
     const relativeUploadDir = `uploads/certificates/${userId}`;
+    const fileBytes = Buffer.from(await file.arrayBuffer());
+    const uploadDir = join(process.cwd(), 'public', relativeUploadDir);
+    const filePath = join(uploadDir, fileName);
 
-    if (isDev) {
-      const uploadDir = join(process.cwd(), 'public', relativeUploadDir);
+    try {
       await mkdir(uploadDir, { recursive: true });
-
-      const filePath = join(uploadDir, fileName);
-      const bytes = await file.arrayBuffer();
-      await writeFile(filePath, Buffer.from(bytes));
-
-      const publicUrl = `/uploads/certificates/${userId}/${fileName}`;
-
-      return NextResponse.json({
-        success: true,
-        filePath: publicUrl,
-        fileName,
-        storagePath: `certificates/${userId}/${fileName}`,
-      });
+      await writeFile(filePath, fileBytes);
+    } catch (diskError) {
+      console.warn('Could not write file to public uploads directory:', diskError instanceof Error ? diskError.message : 'Unknown error');
     }
 
-    // Production: Try to store file in Firestore; if credentials unavailable, return path anyway
     let fileId: string | undefined;
     try {
       ensureFirebaseAdminInitialized();
       const app = getColtekFirebaseAdminApp();
       const db = getFirestore(app);
-      const fileBytes = Buffer.from(await file.arrayBuffer()).toString('base64');
       const contentType = file.type || 'application/octet-stream';
 
       const fileCollection = db.collection('certificateFiles');
@@ -67,19 +55,20 @@ export async function POST(request: Request) {
         userId,
         fileName,
         contentType,
-        fileData: fileBytes,
+        fileData: fileBytes.toString('base64'),
         createdAt: new Date().toISOString(),
       });
       fileId = fileDocRef.id;
     } catch (firebaseErr) {
-      // Firebase Admin not available or credentials missing; continue without storing file
       console.warn('Could not store file in Firestore:', firebaseErr instanceof Error ? firebaseErr.message : 'Unknown error');
     }
 
-    const publicUrl = `/uploads/certificates/${userId}/${fileName}`;
+    const requestUrl = new URL(request.url);
+    const publicUrl = new URL(`/uploads/certificates/${userId}/${fileName}`, requestUrl.origin).toString();
 
     return NextResponse.json({
       success: true,
+      fileUrl: publicUrl,
       filePath: publicUrl,
       fileName,
       storagePath: `certificates/${userId}/${fileName}`,

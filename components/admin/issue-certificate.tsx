@@ -310,8 +310,8 @@ export function IssueCertificate({ users, courses, children }: IssueCertificateP
         throw new Error(data?.error || 'Upload failed');
       }
 
-      const fileUrl = data.filePath || `/uploads/certificates/${selectedUserId}/${data.fileName}`;
-      const storagePath = fileUrl.startsWith('http') ? new URL(fileUrl).pathname : fileUrl;
+      const fileUrl = data.fileUrl || data.filePath || `/uploads/certificates/${selectedUserId}/${data.fileName}`;
+      const storagePath = data.storagePath || (fileUrl.startsWith('http') ? new URL(fileUrl).pathname : fileUrl);
 
       toast({
         title: 'Upload Successful',
