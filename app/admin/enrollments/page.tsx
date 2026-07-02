@@ -2,11 +2,14 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AdminLayout } from "@/components/admin/AdminLayout";
-import { getAllEnrollments } from "@/lib/enrollment";
+import { getAllEnrollments, updateEnrollmentStatus } from "@/lib/enrollment";
 import type { UserEnrollment } from "@/lib/types";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Search } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
+import { Loader2, Search, Plus, CheckCircle } from "lucide-react";
+import { ManualEnrollmentModal } from "@/components/admin/manual-enrollment-modal";
 
 function formatDate(d: Date): string {
   if (!d || Number.isNaN(d.getTime())) return "—";
@@ -18,6 +21,9 @@ export default function AdminEnrollmentsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState("");
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const { toast } = useToast();
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -48,6 +54,27 @@ export default function AdminEnrollmentsPage() {
     });
   }, [rows, query]);
 
+  const handleMarkCompleted = async (enrollmentId: string) => {
+    setUpdatingId(enrollmentId);
+    try {
+      await updateEnrollmentStatus(enrollmentId, 'completed');
+      toast({
+        title: "Success",
+        description: "Enrollment marked as completed.",
+      });
+      load(); // Refresh the list
+    } catch (err) {
+      console.error(err);
+      toast({
+        title: "Error",
+        description: "Failed to update status. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setUpdatingId(null);
+    }
+  };
+
   const uniqueStudents = useMemo(() => new Set(rows.map((e) => e.userId)).size, [rows]);
 
   if (loading) {
@@ -72,22 +99,27 @@ export default function AdminEnrollmentsPage() {
   return (
     <AdminLayout>
       <div className="p-6">
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-foreground">Course enrollments</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            People who completed registration and payment for a course (Firestore{" "}
-            <code className="text-xs bg-muted px-1 rounded">enrollments</code>).
-          </p>
-          <div className="flex flex-wrap gap-4 mt-4 text-sm">
-            <span>
-              <span className="text-muted-foreground">Registrations: </span>
-              <strong>{rows.length}</strong>
-            </span>
-            <span>
-              <span className="text-muted-foreground">Distinct students: </span>
-              <strong>{uniqueStudents}</strong>
-            </span>
+        <div className="mb-6 flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold text-foreground">Course enrollments</h1>
+            <p className="text-sm text-muted-foreground mt-1">
+              Manage student enrollments and track course completion status.
+            </p>
+            <div className="flex flex-wrap gap-4 mt-4 text-sm">
+              <span>
+                <span className="text-muted-foreground">Registrations: </span>
+                <strong>{rows.length}</strong>
+              </span>
+              <span>
+                <span className="text-muted-foreground">Distinct students: </span>
+                <strong>{uniqueStudents}</strong>
+              </span>
+            </div>
           </div>
+          <Button onClick={() => setIsModalOpen(true)} className="gap-2 shrink-0">
+            <Plus className="h-4 w-4" />
+            Manually Enroll Student
+          </Button>
         </div>
 
         <div className="relative mb-4 max-w-md">
@@ -110,6 +142,7 @@ export default function AdminEnrollmentsPage() {
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">Date</th>
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">Payment</th>
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">Status</th>
+                <th className="px-4 py-3 text-right font-medium text-muted-foreground">Actions</th>
               </tr>
             </thead>
             <tbody className="bg-card divide-y divide-border">
@@ -142,7 +175,27 @@ export default function AdminEnrollmentsPage() {
                       )}
                     </td>
                     <td className="px-4 py-3">
-                      <Badge variant={e.status === "active" ? "default" : "secondary"}>{e.status || "active"}</Badge>
+                      <Badge variant={e.status === "completed" ? "success" : e.status === "active" ? "default" : "secondary"}>
+                        {e.status || "active"}
+                      </Badge>
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      {e.status !== "completed" && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleMarkCompleted(e.id)}
+                          disabled={updatingId === e.id}
+                          className="h-8 gap-1.5 text-xs text-muted-foreground hover:text-foreground"
+                        >
+                          {updatingId === e.id ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                            <CheckCircle className="h-3.5 w-3.5" />
+                          )}
+                          Mark completed
+                        </Button>
+                      )}
                     </td>
                   </tr>
                 ))
@@ -151,6 +204,12 @@ export default function AdminEnrollmentsPage() {
           </table>
         </div>
       </div>
+      
+      <ManualEnrollmentModal 
+        isOpen={isModalOpen} 
+        onClose={() => setIsModalOpen(false)} 
+        onSuccess={load} 
+      />
     </AdminLayout>
   );
 }

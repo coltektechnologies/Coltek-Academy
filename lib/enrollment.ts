@@ -1,4 +1,4 @@
-import { doc, setDoc, collection, query, where, getDocs, getDoc } from 'firebase/firestore'
+import { doc, setDoc, updateDoc, collection, query, where, getDocs, getDoc } from 'firebase/firestore'
 import { firebase } from './firebase'
 import type { UserEnrollment, RegistrationFormData, Course } from './types'
 
@@ -130,5 +130,90 @@ export async function checkUserEnrollment(userId: string, courseId: string): Pro
   } catch (error) {
     console.error('Error checking enrollment:', error)
     return false
+  }
+}
+
+export async function createManualEnrollment(
+  userId: string,
+  userEmail: string,
+  courseId: string,
+  markCompleted: boolean
+): Promise<string> {
+  try {
+    const enrollmentId = `enrollment_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+
+    // Get course details from Firestore
+    const courseDoc = await getDoc(doc(firebase.db, 'courses', courseId));
+    if (!courseDoc.exists()) {
+      throw new Error(`Selected course not found (id: ${courseId})`);
+    }
+    const selectedCourse = { id: courseDoc.id, ...courseDoc.data() } as Course;
+    
+    // Get user details
+    const userDoc = await getDoc(doc(firebase.db, 'users', userId));
+    const userData = userDoc.exists() ? userDoc.data() : {};
+    const firstName = userData.firstName || userData.displayName?.split(' ')[0] || '';
+    const lastName = userData.lastName || userData.displayName?.split(' ').slice(1).join(' ') || '';
+
+    const status = markCompleted ? 'completed' : 'active';
+
+    const enrollmentData: UserEnrollment = {
+      id: enrollmentId,
+      userId,
+      userEmail,
+      courseId,
+      courseTitle: selectedCourse.title,
+      enrollmentDate: new Date(),
+      paymentReference: 'MANUAL_ADMIN',
+      paymentAmount: 0,
+      paymentMethod: 'manual',
+      status: status as 'active' | 'completed',
+      personalInfo: {
+        firstName,
+        lastName,
+        email: userEmail,
+        phone: userData.phone || '',
+      },
+      education: {
+        highestEducation: '',
+        fieldOfStudy: '',
+        currentOccupation: '',
+        yearsOfExperience: '',
+      },
+      courseDetails: {
+        learningGoals: 'Manually enrolled by Admin',
+        preferredSchedule: 'weekdays',
+      },
+      // If completed, optionally set progress
+      ...(markCompleted ? { completed: true, progress: 100 } : { completed: false, progress: 0 }),
+    } as any;
+
+    // Save to Firestore
+    await setDoc(doc(firebase.db, 'enrollments', enrollmentId), {
+      ...enrollmentData,
+      enrollmentDate: enrollmentData.enrollmentDate.toISOString(),
+    })
+
+    console.log('Manual enrollment saved successfully:', enrollmentId)
+    return enrollmentId
+  } catch (error) {
+    console.error('Error saving manual enrollment:', error)
+    if (error instanceof Error) throw error
+    throw new Error('Failed to save manual enrollment data')
+  }
+}
+
+export async function updateEnrollmentStatus(enrollmentId: string, status: 'active' | 'completed' | 'cancelled'): Promise<void> {
+  try {
+    const updateData: any = { status };
+    if (status === 'completed') {
+      updateData.completed = true;
+      updateData.progress = 100;
+    }
+    
+    await updateDoc(doc(firebase.db, 'enrollments', enrollmentId), updateData);
+  } catch (error) {
+    console.error('Error updating enrollment status:', error);
+    throw new Error('Failed to update enrollment status');
   }
 }

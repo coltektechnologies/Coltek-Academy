@@ -17,6 +17,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -25,6 +27,8 @@ import { collection, getDocs, query, where, doc, updateDoc, arrayUnion, getDoc, 
 import { firebase } from '@/lib/firebase';
 import { ref, uploadBytes, getDownloadURL, uploadBytesResumable } from 'firebase/storage';
 import { logCertificateIssued } from '@/lib/activity-service';
+import { Check, ChevronsUpDown } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface User {
   id: string;
@@ -71,6 +75,7 @@ export function IssueCertificate({ users, courses, children }: IssueCertificateP
   const [certificateFile, setCertificateFile] = useState<File | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
+  const [openUserCombobox, setOpenUserCombobox] = useState(false);
   const [enrolledCourses, setEnrolledCourses] = useState<Course[]>([]);
   // Local users list as a fallback if parent hasn't loaded users yet
   const [localUsers, setLocalUsers] = useState<User[]>(users);
@@ -504,6 +509,15 @@ export function IssueCertificate({ users, courses, children }: IssueCertificateP
     }
   };
 
+  const selectedUserDisplay = selectedUserId 
+    ? (() => {
+        const u = students.find(u => u.id === selectedUserId);
+        if (!u) return "Select a student";
+        const name = u.displayName || 'Unnamed';
+        return u.email ? `${name} (${u.email})` : name;
+      })()
+    : (students.length > 0 ? "Select a student" : "No students available");
+
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
@@ -520,36 +534,54 @@ export function IssueCertificate({ users, courses, children }: IssueCertificateP
           <div className="space-y-2">
             <Label htmlFor="user" className="text-base">Select Student</Label>
             <div className="space-y-2">
-              <Select 
-                value={selectedUserId} 
-                onValueChange={setSelectedUserId}
-                disabled={isLoading}
-              >
-                <SelectTrigger id="user" className="h-12 w-full min-w-0 text-base">
-                  <SelectValue placeholder={
-                    students.length > 0 
-                      ? "Select a student" 
-                      : "No students available"
-                  } />
-                </SelectTrigger>
-                <SelectContent className="max-h-72 w-[var(--radix-select-trigger-width)] max-w-[calc(100vw-2rem)]">
-                  {studentsSorted.length > 0 ? (
-                    studentsSorted.map(user => {
-                      const name = user.displayName || 'Unnamed';
-                      const email = user.email || '';
-                      return (
-                        <SelectItem key={user.id} value={user.id} className="[&_span:last-child]:truncate">
-                          {email ? `${name} (${email})` : name}
-                        </SelectItem>
-                      );
-                    })
-                  ) : (
-                    <div className="p-2 text-sm text-muted-foreground">
-                      No students found in the system.
-                    </div>
-                  )}
-                </SelectContent>
-              </Select>
+              <Popover open={openUserCombobox} onOpenChange={setOpenUserCombobox}>
+                <PopoverTrigger asChild>
+                  <Button
+                    id="user"
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={openUserCombobox}
+                    disabled={isLoading}
+                    className="w-full justify-between font-normal h-12 text-base"
+                  >
+                    <span className="truncate">{selectedUserDisplay}</span>
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
+                  <Command>
+                    <CommandInput placeholder="Search students by name or email..." />
+                    <CommandList>
+                      <CommandEmpty>No students found.</CommandEmpty>
+                      <CommandGroup>
+                        {studentsSorted.map((user) => {
+                          const name = user.displayName || 'Unnamed';
+                          const email = user.email || '';
+                          const display = email ? `${name} (${email})` : name;
+                          return (
+                            <CommandItem
+                              key={user.id}
+                              value={display}
+                              onSelect={() => {
+                                setSelectedUserId(user.id);
+                                setOpenUserCombobox(false);
+                              }}
+                            >
+                              <Check
+                                className={cn(
+                                  "mr-2 h-4 w-4",
+                                  selectedUserId === user.id ? "opacity-100" : "opacity-0"
+                                )}
+                              />
+                              {display}
+                            </CommandItem>
+                          );
+                        })}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
               {students.length === 0 && (
                 <p className="text-sm text-muted-foreground">
                   No students found. Make sure users have the 'student' role.
