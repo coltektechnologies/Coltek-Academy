@@ -5,6 +5,7 @@ import Link from "next/link"
 import { CheckCircle, ArrowRight, MessageCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { getCourseById } from "@/lib/courses"
+import { useAuth } from "@/hooks/use-auth"
 import type { Course, RegistrationFormData } from "@/lib/types"
 
 const WHATSAPP_GROUP_LINK = "https://chat.whatsapp.com/CVTzw4zdtqVHjDV3IwC1zy"
@@ -14,7 +15,9 @@ interface RegistrationSuccessProps {
 }
 
 export function RegistrationSuccess({ formData }: RegistrationSuccessProps) {
+  const { user } = useAuth()
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null)
+  const [emailStatus, setEmailStatus] = useState<"pending" | "sent" | "failed">("pending")
   const emailSentRef = useRef(false)
 
   useEffect(() => {
@@ -25,19 +28,30 @@ export function RegistrationSuccess({ formData }: RegistrationSuccessProps) {
 
   // Send confirmation email with WhatsApp invite on successful registration
   useEffect(() => {
-    if (emailSentRef.current || !formData.email || !selectedCourse) return
+    if (emailSentRef.current || !user || !selectedCourse) return
     emailSentRef.current = true
 
-    fetch("/api/register/send-confirmation", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        email: formData.email,
-        firstName: formData.firstName || "Student",
-        courseTitle: selectedCourse.title,
-      }),
-    }).catch((err) => console.error("Failed to send confirmation email:", err))
-  }, [formData.email, formData.firstName, selectedCourse])
+    user
+      .getIdToken()
+      .then((token) =>
+        fetch("/api/register/send-confirmation", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          body: JSON.stringify({
+            firstName: formData.firstName || "Student",
+            courseTitle: selectedCourse.title,
+          }),
+        })
+      )
+      .then(async (res) => {
+        const data = await res.json().catch(() => ({}))
+        setEmailStatus(res.ok && data.success ? "sent" : "failed")
+      })
+      .catch((err) => {
+        console.error("Failed to send confirmation email:", err)
+        setEmailStatus("failed")
+      })
+  }, [user, formData.firstName, selectedCourse])
 
   return (
     <div className="text-center space-y-6">
@@ -78,10 +92,18 @@ export function RegistrationSuccess({ formData }: RegistrationSuccessProps) {
       </div>
 
       <div className="space-y-4 max-w-md mx-auto">
-        <p className="text-muted-foreground text-sm">
-          We&apos;ve sent a confirmation email to <strong className="text-foreground">{formData.email}</strong> with
-          details about your enrollment and an invitation to join our WhatsApp group.
-        </p>
+        {emailStatus === "sent" && (
+          <p className="text-muted-foreground text-sm">
+            We&apos;ve sent a confirmation email to <strong className="text-foreground">{user?.email}</strong> with
+            details about your enrollment and an invitation to join our WhatsApp group.
+          </p>
+        )}
+        {emailStatus === "failed" && (
+          <p className="text-muted-foreground text-sm">
+            Your enrollment is saved, but we couldn&apos;t send a confirmation email. Use the WhatsApp link above to
+            join the student group.
+          </p>
+        )}
 
         <div className="flex flex-col sm:flex-row gap-3 justify-center">
           <Button asChild>

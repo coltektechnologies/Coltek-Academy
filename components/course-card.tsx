@@ -2,7 +2,7 @@
 
 import Image from "next/image"
 import Link from "next/link"
-import { Clock, Users, Star } from "lucide-react"
+import { Clock, Users } from "lucide-react"
 import { Card, CardContent, CardFooter } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -56,11 +56,7 @@ export function CourseCard({ course }: CourseCardProps) {
           </div>
           <div className="flex items-center gap-1">
             <Users className="h-4 w-4" />
-            <span>{course.enrolledStudents.toLocaleString()}</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-            <span>{course.rating}</span>
+            <span>{(course.enrolledStudents || 0).toLocaleString()}</span>
           </div>
         </div>
       </CardContent>

@@ -19,7 +19,7 @@ export function HeroSection() {
             </h1>
 
             <p className="text-lg text-muted-foreground leading-relaxed max-w-xl">
-              Discover thousands of courses taught by industry experts. Start learning today and advance your career
+              Discover courses taught by industry experts. Start learning today and advance your career
               with in-demand skills that employers are looking for.
             </p>
 
@@ -37,7 +37,7 @@ export function HeroSection() {
             </div>
 
             <div className="flex flex-col sm:flex-row gap-6 pt-4">
-              {["Lifetime access", "Certificate included", "Money-back guarantee"].map((feature) => (
+              {["Lifetime access", "Certificate included"].map((feature) => (
                 <div key={feature} className="flex items-center gap-2">
                   <CheckCircle className="h-5 w-5 text-primary" />
                   <span className="text-sm text-muted-foreground">{feature}</span>

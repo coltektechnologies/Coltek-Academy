@@ -1,17 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { getCourseById } from '@/lib/courses'
 
 export async function POST(request: NextRequest) {
   try {
-    const { email, amount, courseId, courseTitle, userId, userEmail } = await request.json()
+    const { email, courseId, userId, userEmail } = await request.json()
 
-    console.log('Paystack initialize request:', { email, amount, courseId, courseTitle, userId })
-
-    if (!email || !amount || !courseId) {
+    if (!email || !courseId) {
       return NextResponse.json(
-        { error: 'Missing required fields: email, amount, courseId' },
+        { error: 'Missing required fields: email, courseId' },
         { status: 400 }
       )
     }
+
+    // The amount is always taken from the course record, never from the client request
+    const course = await getCourseById(String(courseId))
+    if (!course) {
+      return NextResponse.json({ error: 'Course not found' }, { status: 404 })
+    }
+    if (typeof course.price !== 'number' || course.price <= 0) {
+      return NextResponse.json({ error: 'This course does not require payment' }, { status: 400 })
+    }
+    const amount = course.price
+    const courseTitle = course.title
 
     const secretKey = process.env.PAYSTACK_SECRET_KEY
     if (!secretKey) {
@@ -24,7 +34,7 @@ export async function POST(request: NextRequest) {
 
     const requestBody = {
       email,
-      amount: amount * 100, // Convert to pesewas (GHS subunit, 1 GHS = 100 pesewas)
+      amount: Math.round(amount * 100), // Convert to pesewas (GHS subunit, 1 GHS = 100 pesewas)
       currency: 'GHS',
       reference: `REG-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       callback_url: `${process.env.NEXT_PUBLIC_BASE_URL || (process.env.NODE_ENV === 'development' ? 'http://localhost:3000' : 'https://coltekacademy.coltektechnologies.io')}/payment-success`,
@@ -35,8 +45,6 @@ export async function POST(request: NextRequest) {
         userEmail,
       },
     }
-
-    console.log('Paystack API request body:', requestBody)
 
     // In development, simulate successful response if Paystack is unreachable
     if (process.env.NODE_ENV === 'development' && process.env.NEXT_PUBLIC_MOCK_PAYSTACK === 'true') {
@@ -64,9 +72,7 @@ export async function POST(request: NextRequest) {
       body: JSON.stringify(requestBody),
     })
 
-    console.log('Paystack API response status:', response.status)
     const data = await response.json()
-    console.log('Paystack API response:', data)
 
     if (!response.ok) {
       console.error('Paystack initialization failed:', {

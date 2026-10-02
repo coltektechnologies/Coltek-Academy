@@ -6,17 +6,18 @@ export async function POST(request: NextRequest) {
     const body = await request.text()
     const signature = request.headers.get('x-paystack-signature')
 
-    // Verify webhook signature (for production)
+    // Every webhook must carry a valid Paystack signature
     const secret = process.env.PAYSTACK_SECRET_KEY
-    if (secret && signature) {
-      const expectedSignature = crypto
-        .createHmac('sha512', secret)
-        .update(body)
-        .digest('hex')
+    if (!secret || !signature) {
+      return NextResponse.json({ error: 'Invalid signature' }, { status: 401 })
+    }
+    const expectedSignature = crypto
+      .createHmac('sha512', secret)
+      .update(body)
+      .digest('hex')
 
-      if (signature !== expectedSignature) {
-        return NextResponse.json({ error: 'Invalid signature' }, { status: 400 })
-      }
+    if (signature !== expectedSignature) {
+      return NextResponse.json({ error: 'Invalid signature' }, { status: 401 })
     }
 
     const event = JSON.parse(body)

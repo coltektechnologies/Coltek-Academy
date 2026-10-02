@@ -1,6 +1,14 @@
 import { NextResponse } from 'next/server';
 import { collection, query, where, getDocs, limit, doc, getDoc } from 'firebase/firestore';
 import { firebase } from '@/lib/firebase';
+import { getEnrolledStudentCounts } from '@/lib/enrollment-counts';
+
+// Seeded rating/review/student figures are not verified, so visitors only see real enrollment counts
+async function withVerifiedStats(course: Record<string, any>) {
+  const counts = await getEnrolledStudentCounts().catch(() => new Map<string, number>());
+  const { rating, reviewCount, totalRatings, ...rest } = course;
+  return { ...rest, enrolledStudents: counts.get(String(course.id)) || 0 };
+}
 
 export async function GET(
   request: Request,
@@ -30,7 +38,7 @@ export async function GET(
         const upcomingSlugs = ['cybersecurity-essentials', 'data-science-machine-learning', 'cloud-computing-aws', 'project-management-professional'];
         const isUpcoming = data.upcoming === true || upcomingSlugs.includes(courseSlug);
         const price = typeof data.price === 'number' ? data.price : 0;
-        return NextResponse.json({ id: courseDoc.id, ...data, price, upcoming: isUpcoming });
+        return NextResponse.json(await withVerifiedStats({ id: courseDoc.id, ...data, price, upcoming: isUpcoming }));
       }
     } catch (error) {
       console.log('Document not found by ID, trying slug query...');
@@ -64,7 +72,7 @@ export async function GET(
     const price = typeof data.price === 'number' ? data.price : 0;
     const courseData = { id: courseDoc.id, ...data, price, upcoming: isUpcoming };
 
-    return NextResponse.json(courseData);
+    return NextResponse.json(await withVerifiedStats(courseData));
   } catch (error) {
     console.error('Error fetching course:', error);
     return NextResponse.json(

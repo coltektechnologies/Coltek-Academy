@@ -297,10 +297,14 @@ export function IssueCertificate({ users, courses, children }: IssueCertificateP
       formData.append('file', file);
       formData.append('userId', selectedUserId);
 
+      if (!currentUser) {
+        throw new Error('You must be signed in as an admin to upload certificates');
+      }
+      const idToken = await currentUser.getIdToken();
       const response = await fetch('/api/upload', {
         method: 'POST',
         headers: {
-          Authorization: `Basic ${btoa('admin:password')}`,
+          Authorization: `Bearer ${idToken}`,
         },
         body: formData,
       });

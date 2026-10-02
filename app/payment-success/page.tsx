@@ -18,6 +18,7 @@ export default function PaymentSuccessPage() {
   const [isProcessing, setIsProcessing] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [isRedirecting, setIsRedirecting] = useState(false)
+  const [emailSent, setEmailSent] = useState(false)
 
   // Handle authentication and payment processing
   useEffect(() => {
@@ -76,8 +77,9 @@ export default function PaymentSuccessPage() {
 
         const rawMeta = verifyData.data?.metadata
         const metadata = typeof rawMeta === 'string' ? (() => { try { return JSON.parse(rawMeta) } catch { return null } })() : rawMeta
-        const courseId = storedCourseId || metadata?.courseId
-        const courseTitle = storedCourseTitle || metadata?.courseTitle
+        // Prefer the course recorded on the verified Paystack transaction over browser storage
+        const courseId = metadata?.courseId || storedCourseId
+        const courseTitle = metadata?.courseTitle || storedCourseTitle
 
         if (!courseId) {
           throw new Error('Course ID not found. It may have been cleared after redirect. Please contact support with your payment reference.')
@@ -113,15 +115,17 @@ export default function PaymentSuccessPage() {
 
         // Send confirmation email with WhatsApp group invite
         try {
-          await fetch('/api/register/send-confirmation', {
+          const idToken = await user.getIdToken()
+          const emailResponse = await fetch('/api/register/send-confirmation', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken}` },
             body: JSON.stringify({
-              email: user.email || formData.email,
               firstName: formData.firstName || 'Student',
               courseTitle: selectedCourse.title,
             }),
           })
+          const emailResult = await emailResponse.json().catch(() => ({}))
+          setEmailSent(emailResponse.ok && emailResult.success === true)
         } catch (emailError) {
           console.error('Failed to send confirmation email:', emailError)
           // Don't fail the flow - enrollment was successful
@@ -213,7 +217,7 @@ export default function PaymentSuccessPage() {
           <CardDescription>
             {searchParams.get('reference')?.startsWith('MOCK-') || searchParams.get('trxref')?.startsWith('MOCK-')
               ? "This was a test payment. In production, you would be charged."
-              : "You have been successfully enrolled in your course. A confirmation email has been sent with next steps."
+              : `You have been successfully enrolled in your course.${emailSent ? " A confirmation email has been sent with next steps." : ""}`
             }
           </CardDescription>
         </CardHeader>

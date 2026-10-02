@@ -4,7 +4,7 @@ import { useEffect, useState } from "react"
 import Image from "next/image"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { Clock, Users, Star, Globe, Calendar, Award, CheckCircle } from "lucide-react"
+import { Clock, Users, Globe, Calendar, Award, CheckCircle } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -102,14 +102,9 @@ export function CourseHero({ course, isUpcoming = false }: CourseHeroProps) {
 
             {/* Stats */}
             <div className="flex flex-wrap items-center gap-6 text-sm">
-              <div className="flex items-center gap-2">
-                <Star className="h-5 w-5 fill-yellow-400 text-yellow-400" />
-                <span className="font-semibold text-foreground">{course.rating}</span>
-                <span className="text-muted-foreground">({course.reviewCount.toLocaleString()} reviews)</span>
-              </div>
               <div className="flex items-center gap-2 text-muted-foreground">
                 <Users className="h-5 w-5" />
-                <span>{course.enrolledStudents.toLocaleString()} students</span>
+                <span>{(course.enrolledStudents || 0).toLocaleString()} students</span>
               </div>
             </div>
 
@@ -204,7 +199,6 @@ export function CourseHero({ course, isUpcoming = false }: CourseHeroProps) {
                       </Button>
                     </div>
 
-                    <div className="text-center text-sm text-muted-foreground">30-Day Money-Back Guarantee</div>
                   </>
                 )}
 

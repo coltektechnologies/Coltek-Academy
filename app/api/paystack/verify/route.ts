@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { getCourseById } from '@/lib/courses'
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
@@ -9,9 +10,7 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    // In production, you would verify the payment with Paystack API
-    // For now, we'll just return a success response for testing
-    const response = await fetch(`https://api.paystack.co/transaction/verify/${reference}`, {
+    const response = await fetch(`https://api.paystack.co/transaction/verify/${encodeURIComponent(reference)}`, {
       headers: {
         'Authorization': `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
         'Content-Type': 'application/json',
@@ -22,7 +21,28 @@ export async function GET(request: NextRequest) {
 
     if (data.status && data.data.status === 'success') {
       const paystackData = data.data
-      const metadata = paystackData.metadata
+      const rawMetadata = paystackData.metadata
+      const metadata =
+        typeof rawMetadata === 'string'
+          ? (() => { try { return JSON.parse(rawMetadata) } catch { return null } })()
+          : rawMetadata
+
+      // Confirm the amount actually paid covers the current course price
+      const course = metadata?.courseId ? await getCourseById(String(metadata.courseId)) : null
+      const expectedAmount = course && typeof course.price === 'number' ? Math.round(course.price * 100) : null
+      if (
+        expectedAmount === null ||
+        paystackData.currency !== 'GHS' ||
+        typeof paystackData.amount !== 'number' ||
+        paystackData.amount < expectedAmount
+      ) {
+        console.error('Payment verification mismatch for reference', paystackData.reference)
+        return NextResponse.json({
+          status: 'failed',
+          message: 'Payment amount does not match the course price'
+        }, { status: 400 })
+      }
+
       return NextResponse.json({
         status: 'success',
         data: {

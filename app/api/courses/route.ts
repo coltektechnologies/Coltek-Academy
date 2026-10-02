@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { collection, getDocs } from 'firebase/firestore';
 import { firebase, isFirebaseConfigured } from '@/lib/firebase';
+import { getEnrolledStudentCounts } from '@/lib/enrollment-counts';
 
 // Helper function to format course data
 function formatCourseData(courseData: any) {
@@ -17,7 +18,7 @@ function formatCourseData(courseData: any) {
     category: data.category || 'Uncategorized',
     level: data.level || 'Beginner',
     price: typeof data.price === 'number' ? data.price : 0,
-    image: data.image || '/placeholder-course.jpg',
+    image: data.image || '/placeholder.svg',
     instructor: data.instructor || { name: 'Instructor' },
     rating: typeof data.rating === 'number' ? data.rating : 0,
     totalRatings: typeof data.totalRatings === 'number' ? data.totalRatings : 0,
@@ -42,32 +43,11 @@ export async function GET() {
     }
 
     const coursesRef = collection(firebase.db, 'courses');
-    const [snapshot, enrollmentsSnapshot] = await Promise.all([
+    const [snapshot, enrolledCounts] = await Promise.all([
       getDocs(coursesRef),
-      getDocs(collection(firebase.db, 'enrollments')),
+      getEnrolledStudentCounts(),
     ]);
 
-    const enrolledUsersByCourse = new Map<string, Set<string>>();
-    enrollmentsSnapshot.docs.forEach((doc) => {
-      const data = doc.data();
-      const status = String(data.status || '').toLowerCase();
-      const courseId = data.courseId || data.courseDetails?.courseId || data.course?.id;
-      const userId = data.userId || data.userEmail || doc.id;
-
-      if (!courseId || !userId || status === 'cancelled') {
-        return;
-      }
-
-      const normalizedCourseId = String(courseId).trim();
-      const normalizedUserId = String(userId).trim();
-
-      if (!enrolledUsersByCourse.has(normalizedCourseId)) {
-        enrolledUsersByCourse.set(normalizedCourseId, new Set<string>());
-      }
-
-      enrolledUsersByCourse.get(normalizedCourseId)?.add(normalizedUserId);
-    });
-    
     interface FirestoreCourse {
       id: string;
       title: string;
@@ -113,17 +93,9 @@ export async function GET() {
       } as FirestoreCourse;
     });
     
-    console.log(`Total courses in Firestore: ${allCourses.length}`);
-    
     const publishedCourses = allCourses.filter(course => {
-      if (!course.isPublished) {
-        console.log('Filtered out unpublished course:', course.id, course.title);
-        return false;
-      }
-      return true;
+      return course.isPublished;
     });
-    
-    console.log(`Published courses: ${publishedCourses.length} of ${allCourses.length}`);
     
     // Convert Firestore timestamps to ISO strings and ensure all fields are present
     const upcomingSlugs = ['cybersecurity-essentials', 'data-science-machine-learning', 'cloud-computing-aws', 'project-management-professional'];
@@ -139,11 +111,11 @@ export async function GET() {
           category: course.category || 'Uncategorized',
           level: course.level || 'Beginner',
           price,
-          image: course.image || '/placeholder-course.jpg',
+          image: course.image || '/placeholder.svg',
           instructor: course.instructor || { name: 'Instructor' },
           rating: typeof course.rating === 'number' ? course.rating : 0,
           totalRatings: typeof course.totalRatings === 'number' ? course.totalRatings : 0,
-          enrolledStudents: enrolledUsersByCourse.get(course.id)?.size || 0,
+          enrolledStudents: enrolledCounts.get(course.id) || 0,
           duration: course.duration || 0,
           slug: course.slug || course.id,
           isPublished: course.isPublished !== false,

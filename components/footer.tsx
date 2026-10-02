@@ -1,14 +1,12 @@
 import Link from "next/link"
-import { Facebook, Twitter, Linkedin, Instagram, Mail } from "lucide-react"
+import { Facebook, Twitter, Linkedin, Instagram } from "lucide-react"
 import Image from "next/image"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 
 export function Footer() {
   return (
     <footer className="bg-primary text-primary-foreground">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12">
           {/* Brand */}
           <div className="space-y-4">
             <Link href="/" className="flex items-center gap-2">
@@ -155,26 +153,6 @@ export function Footer() {
                 </Link>
               </li>
             </ul>
-          </div>
-
-          {/* Newsletter */}
-          <div>
-            <h3 className="font-semibold text-lg mb-4">Stay Updated</h3>
-            <p className="text-primary-foreground/80 text-sm mb-4">
-              Subscribe to our newsletter for the latest courses and learning tips.
-            </p>
-            <form className="space-y-3">
-              <div className="flex gap-2">
-                <Input
-                  type="email"
-                  placeholder="Enter your email"
-                  className="bg-primary-foreground/10 border-primary-foreground/20 text-primary-foreground placeholder:text-primary-foreground/50 flex-1"
-                />
-                <Button variant="secondary" size="icon" type="submit" aria-label="Subscribe">
-                  <Mail className="h-4 w-4" />
-                </Button>
-              </div>
-            </form>
           </div>
         </div>
 

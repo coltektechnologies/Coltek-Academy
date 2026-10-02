@@ -28,7 +28,7 @@ export function MilestonesSection() {
         <div className="text-center mb-12">
           <h2 className="text-3xl font-bold text-foreground mb-4">Our Journey</h2>
           <p className="text-muted-foreground max-w-2xl mx-auto">
-            From a small startup to a global education platform—here&apos;s how we grew.
+            Here&apos;s how COLTEK ACADEMY has grown so far.
           </p>
         </div>
 

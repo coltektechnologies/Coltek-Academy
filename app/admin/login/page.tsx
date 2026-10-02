@@ -108,14 +108,7 @@ export default function AdminLoginPage() {
             </Button>
           </form>
 
-          <div className="mt-6 text-center text-sm text-muted-foreground">
-            Don't have an admin account?{' '}
-            <Link href="/admin/register" className="text-primary hover:underline">
-              Register here
-            </Link>
-          </div>
-
-          <div className="mt-4 text-center">
+          <div className="mt-6 text-center">
             <Link href="/" className="text-sm text-muted-foreground hover:text-foreground">
               ← Back to Coltek Academy
             </Link>

@@ -15,7 +15,6 @@ As a training arm of Coltek Technologies, we design our curriculum around real-w
 Whether you are starting your tech journey, transitioning into a new career, or strengthening your existing skills, COLTEK ACADEMY provides the guidance, tools, and mentorship needed to succeed in today’s digital world.
             </p>
             <p className="text-muted-foreground mb-4 leading-relaxed">
-              We partner with leading companies and universities to create curriculum that reflects real-world demands.
               Our students don&apos;t just learn theory—they gain practical skills that employers value.
             </p>
             <p className="text-muted-foreground leading-relaxed">

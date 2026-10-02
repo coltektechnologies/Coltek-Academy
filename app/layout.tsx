@@ -14,7 +14,7 @@ const _geistMono = Geist_Mono({ subsets: ["latin"] })
 export const metadata: Metadata = {
   title: "Coltek Academy - Transform Your Future with Expert-Led Courses",
   description:
-    "Discover thousands of courses taught by industry experts. Start learning today and advance your career with in-demand skills.",
+    "Discover courses taught by industry experts. Start learning today and advance your career with in-demand skills.",
   keywords: ["online courses", "education", "learning", "professional development", "skills training"],
   openGraph: {
     title: "Coltek Academy - Transform Your Future",

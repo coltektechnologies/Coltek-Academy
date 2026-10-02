@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { collection, query, where, limit, getDocs } from 'firebase/firestore';
 import { firebase } from '@/lib/firebase';
+import { getEnrolledStudentCounts } from '@/lib/enrollment-counts';
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -22,16 +23,19 @@ export async function GET(request: Request) {
       where('category', '==', category)
     );
     
-    const querySnapshot = await getDocs(q);
+    const [querySnapshot, enrolledCounts] = await Promise.all([
+      getDocs(q),
+      getEnrolledStudentCounts().catch(() => new Map<string, number>()),
+    ]);
     
     // Filter out the current course, only published courses, and limit results
     const relatedCourses = querySnapshot.docs
       .filter(doc => doc.id !== excludeId && doc.data().isPublished === true)
       .slice(0, limitCount)
       .map(doc => {
-        const data = doc.data();
+        const { rating, reviewCount, totalRatings, ...data } = doc.data();
         const price = typeof data.price === 'number' ? data.price : 0;
-        return { id: doc.id, ...data, price };
+        return { id: doc.id, ...data, price, enrolledStudents: enrolledCounts.get(doc.id) || 0 };
       });
 
     return NextResponse.json(relatedCourses);

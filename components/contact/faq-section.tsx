@@ -9,17 +9,17 @@ const faqs = [
   {
     question: "What payment methods do you accept?",
     answer:
-      "We accept all major credit cards (Visa, MasterCard, American Express), PayPal, and bank transfers for select regions. We also offer installment payment plans for courses over GH₵500.",
+      "Course payments are processed securely through Paystack. You can pay with a debit or credit card during enrollment.",
   },
   {
     question: "Can I get a refund if I'm not satisfied?",
     answer:
-      "Yes! We offer a 30-day money-back guarantee for all courses. If you're not satisfied with your purchase, contact our support team within 30 days of enrollment for a full refund.",
+      "Refunds are handled according to our Terms & Conditions. Please review them before enrolling, and contact our support team if you have a question about a payment.",
   },
   {
     question: "Do I get a certificate upon completion?",
     answer:
-      "Yes, upon successful completion of any course, you'll receive a verified certificate that you can share on LinkedIn or include in your resume. Our certificates are recognized by employers worldwide.",
+      "Yes, upon successful completion of any course, you'll receive a verified certificate that you can share on LinkedIn or include in your resume.",
   },
   {
     question: "How long do I have access to course materials?",

@@ -7,7 +7,7 @@ const team = [
     role: "CEO & Founder",
     image: "/ceo.jpg",
     bio: "Software Engineer dedicated to empowering learners through hands-on tech education.",
-    linkedin: "www.linkedin.com/in/boansi-kyeremateng-collins",
+    linkedin: "https://www.linkedin.com/in/boansi-kyeremateng-collins",
     twitter: "https://x.com/Profs123456",
   },
   {
@@ -63,20 +63,29 @@ export function TeamSection() {
                 <p className="text-primary text-sm mb-2">{member.role}</p>
                 <p className="text-muted-foreground text-sm mb-4">{member.bio}</p>
                 <div className="flex gap-3">
-                  <a
-                    href={member.linkedin}
-                    className="text-muted-foreground hover:text-primary transition-colors"
-                    aria-label={`${member.name} LinkedIn`}
-                  >
-                    <Linkedin className="h-4 w-4" />
-                  </a>
-                  <a
-                    href={member.twitter}
-                    className="text-muted-foreground hover:text-primary transition-colors"
-                    aria-label={`${member.name} Twitter`}
-                  >
-                    <Twitter className="h-4 w-4" />
-                  </a>
+                  {/* Only render social links that have a real destination */}
+                  {member.linkedin !== "#" && (
+                    <a
+                      href={member.linkedin}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-muted-foreground hover:text-primary transition-colors"
+                      aria-label={`${member.name} LinkedIn`}
+                    >
+                      <Linkedin className="h-4 w-4" />
+                    </a>
+                  )}
+                  {member.twitter !== "#" && (
+                    <a
+                      href={member.twitter}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-muted-foreground hover:text-primary transition-colors"
+                      aria-label={`${member.name} Twitter`}
+                    >
+                      <Twitter className="h-4 w-4" />
+                    </a>
+                  )}
                 </div>
               </div>
             </div>

@@ -152,7 +152,7 @@ export const courses: Course[] = [
     instructor: {
       name: "Maria Gonzalez",
       bio: "Senior Graphic Designer at Adobe with 12 years of experience in branding and visual design.",
-      avatar: "/creative-latin-woman.png",
+      avatar: "/placeholder-user.jpg",
     },
     curriculum: [
       {
@@ -271,9 +271,9 @@ export const courses: Course[] = [
     id: "7",
     title: "Mobile App Development with Flutter",
     slug: "mobile-app-development-react-native",
-    description: "Build cross-platform mobile apps for iOS and Android withFlutter.",
+    description: "Build cross-platform mobile apps for iOS and Android with Flutter.",
     fullDescription:
-      "Learn to build beautiful, high-performance mobile applications usingFlutter. This course covers everything from setting up your development environment to publishing apps on the App Store and Google Play. Build real projects including a social media app, e-commerce app, and more.",
+      "Learn to build beautiful, high-performance mobile applications using Flutter. This course covers everything from setting up your development environment to publishing apps on the App Store and Google Play. Build real projects including a social media app, e-commerce app, and more.",
     image: "/mobile-app-development.png",
     category: "Mobile App",
     level: "Beginner",
@@ -281,7 +281,7 @@ export const courses: Course[] = [
     price: 150,
     instructor: {
       name: "Mr. Frederick Owusu Bonsu",
-      bio: "Mobile Developer at Meta with expertise inFlutter and cross-platform development.",
+      bio: "Mobile Developer at Meta with expertise in Flutter and cross-platform development.",
       avatar: "/young-professional-developer.jpg",
     },
     curriculum: [
@@ -411,40 +411,3 @@ export const categories = [
 ]
 
 export const levels = ["All Levels", "Beginner", "Intermediate", "Advanced"]
-
-export const testimonials = [
-  {
-    id: 1,
-    name: "Amanda Foster",
-    role: "Software Engineer at Microsoft",
-    avatar: "/professional-woman-smiling.png",
-    content:
-      "Coltek Academy completely transformed my career. I went from knowing nothing about coding to landing my dream job in just 6 months. The instructors are world-class!",
-    course: "Complete Web Development Bootcamp",
-  },
-  {
-    id: 2,
-    name: "Robert Chen",
-    role: "Data Analyst at Amazon",
-    avatar: "/asian-professional-man.png",
-    content:
-      "The Data Science course gave me the practical skills I needed to transition into analytics. The projects were challenging but incredibly rewarding.",
-    course: "Data Science & Machine Learning",
-  },
-  {
-    id: 3,
-    name: "Sarah Williams",
-    role: "UX Designer at Spotify",
-    avatar: "/creative-young-woman.jpg",
-    content:
-      "I built an amazing portfolio through this course and got multiple job offers. The feedback from instructors was invaluable.",
-    course: "UX/UI Design Masterclass",
-  },
-]
-
-export const stats = [
-  { value: "50+", label: "Students Enrolled" },
-  { value: "12+", label: "Expert Instructors" },
-  { value: null, label: "Courses Available" }, // Dynamic: fetched at runtime
-  { value: "95%", label: "Success Rate" },
-]

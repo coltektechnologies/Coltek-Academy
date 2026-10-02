@@ -124,7 +124,7 @@ export default function CoursesPage() {
             totalRatings: course.totalRatings || 0,
             lastUpdated: course.lastUpdated || new Date().toISOString(),
             isPublished: course.isPublished !== false,
-            image: course.image || '/placeholder-course.jpg',
+            image: course.image || '/placeholder.svg',
             // Ensure all required fields are present
             category: course.category || 'Uncategorized',
             level: course.level || 'Beginner',

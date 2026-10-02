@@ -30,7 +30,8 @@ const initialFormData: RegistrationFormData = {
   selectedCourseId: "",
   learningGoals: "",
   preferredSchedule: "weekdays",
-  paymentMethod: "",
+  // Paystack is the only supported payment method
+  paymentMethod: "credit-card",
   agreeToTerms: false,
 }
 
@@ -47,7 +48,6 @@ function RegisterPageContent() {
     selectedCourseId: preselectedCourseId,
   })
   const [errors, setErrors] = useState<Record<string, string>>({})
-  const [isSubmitting, setIsSubmitting] = useState(false)
   const [isComplete, setIsComplete] = useState(false)
 
   useEffect(() => {
@@ -117,30 +117,6 @@ function RegisterPageContent() {
   const handleBack = () => {
     setCurrentStep((prev) => prev - 1)
     window.scrollTo({ top: 0, behavior: "smooth" })
-  }
-
-  const handleSubmit = async () => {
-    if (!validateStep(4)) return
-
-    // For Paystack payments, payment is handled separately
-    if (formData.paymentMethod === "credit-card") {
-      return
-    }
-
-    setIsSubmitting(true)
-
-    // Simulate API call for other payment methods
-    await new Promise((resolve) => setTimeout(resolve, 2000))
-
-    // In production, this would call the API endpoint:
-    // await fetch('/api/register', {
-    //   method: 'POST',
-    //   headers: { 'Content-Type': 'application/json' },
-    //   body: JSON.stringify(formData)
-    // })
-
-    setIsSubmitting(false)
-    setIsComplete(true)
   }
 
   const renderStep = () => {
@@ -218,20 +194,8 @@ function RegisterPageContent() {
                 Back
               </Button>
 
-              {currentStep < 4 ? (
-                <Button onClick={handleNext}>Continue</Button>
-              ) : formData.paymentMethod !== "credit-card" ? (
-                <Button onClick={handleSubmit} disabled={isSubmitting}>
-                  {isSubmitting ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Processing...
-                    </>
-                  ) : (
-                    "Complete Registration"
-                  )}
-                </Button>
-              ) : null}
+              {/* Step 4 completes through the Paystack button (or free enrollment) in StepPayment */}
+              {currentStep < 4 && <Button onClick={handleNext}>Continue</Button>}
             </div>
           </div>
         </div>

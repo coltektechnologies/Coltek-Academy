@@ -1,50 +1,53 @@
 import { NextRequest, NextResponse } from 'next/server'
-import nodemailer from 'nodemailer'
+import { escapeHtml, getMailFrom, getMailTransport } from '@/lib/mailer'
+import { verifyFirebaseIdToken } from '@/lib/verify-firebase-token'
 
 const WHATSAPP_GROUP_LINK = 'https://chat.whatsapp.com/CVTzw4zdtqVHjDV3IwC1zy'
 
 interface SendConfirmationBody {
-  email: string
-  firstName: string
-  courseTitle: string
+  firstName?: string
+  courseTitle?: string
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const body: SendConfirmationBody = await request.json()
-    const { email, firstName, courseTitle } = body
+    // Only a signed-in user can trigger this email, and only to their own address
+    const authHeader = request.headers.get('authorization')
+    if (!authHeader?.startsWith('Bearer ')) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+    let email: string | undefined
+    try {
+      const decoded = await verifyFirebaseIdToken(authHeader.substring(7))
+      email = decoded.email
+    } catch {
+      return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
+    }
+    if (!email) {
+      return NextResponse.json({ error: 'Account has no email address' }, { status: 400 })
+    }
 
-    if (!email || !firstName || !courseTitle) {
+    const body: SendConfirmationBody = await request.json()
+    const firstName = String(body.firstName || 'Student').trim().slice(0, 100)
+    const courseTitle = String(body.courseTitle || '').trim().slice(0, 200)
+
+    if (!courseTitle) {
       return NextResponse.json(
-        { error: 'Missing required fields: email, firstName, courseTitle' },
+        { error: 'Missing required field: courseTitle' },
         { status: 400 }
       )
     }
 
-    // Check if SMTP is configured
-    const smtpHost = process.env.SMTP_HOST
-    const smtpUser = process.env.SMTP_USER
-    const smtpPass = process.env.SMTP_PASS
-
-    if (!smtpHost || !smtpUser || !smtpPass) {
+    const transporter = getMailTransport()
+    if (!transporter) {
       console.warn(
         'Email not sent: SMTP not configured. Set SMTP_HOST, SMTP_USER, SMTP_PASS in .env'
       )
       return NextResponse.json({
-        success: true,
-        message: 'Registration recorded. Email skipped (SMTP not configured).',
+        success: false,
+        message: 'Email skipped (SMTP not configured).',
       })
     }
-
-    const transporter = nodemailer.createTransport({
-      host: smtpHost,
-      port: parseInt(process.env.SMTP_PORT || '587', 10),
-      secure: process.env.SMTP_SECURE === 'true',
-      auth: {
-        user: smtpUser,
-        pass: smtpPass,
-      },
-    })
 
     const siteName = process.env.NEXT_PUBLIC_SITE_NAME || 'Coltek Academy'
 
@@ -61,9 +64,9 @@ export async function POST(request: NextRequest) {
   </div>
   
   <div style="padding: 24px 0;">
-    <p>Hello ${firstName},</p>
+    <p>Hello ${escapeHtml(firstName)},</p>
     
-    <p>Thank you for registering for <strong>${courseTitle}</strong> at ${siteName}. Your enrollment has been confirmed.</p>
+    <p>Thank you for registering for <strong>${escapeHtml(courseTitle)}</strong> at ${siteName}. Your enrollment has been confirmed.</p>
     
     <h3 style="color: #0ea5e9;">What's next?</h3>
     <ul>
@@ -104,7 +107,7 @@ ${siteName} Team
 `
 
     await transporter.sendMail({
-      from: process.env.SMTP_FROM || `"${siteName}" <${smtpUser}>`,
+      from: getMailFrom(),
       to: email,
       subject: `Registration Confirmed - ${courseTitle}`,
       text: textContent,

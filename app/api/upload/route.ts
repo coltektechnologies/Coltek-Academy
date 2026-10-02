@@ -1,20 +1,28 @@
 import { NextResponse } from 'next/server';
 import { getFirestore } from 'firebase-admin/firestore';
 import { v4 as uuidv4 } from 'uuid';
-import { getColtekFirebaseAdminApp, ensureFirebaseAdminInitialized } from '@/lib/verify-firebase-token';
+import {
+  getColtekFirebaseAdminApp,
+  ensureFirebaseAdminInitialized,
+  verifyFirebaseIdToken,
+  isUidAdminServer,
+} from '@/lib/verify-firebase-token';
 
 export async function POST(request: Request) {
   try {
+    // Only signed-in admins may upload certificate files
     const authHeader = request.headers.get('authorization');
-    const expectedAuth = `Basic ${Buffer.from('admin:password').toString('base64')}`;
-
-    if (!authHeader || authHeader !== expectedAuth) {
-      return new NextResponse('Unauthorized', {
-        status: 401,
-        headers: {
-          'WWW-Authenticate': 'Basic realm="Secure Area"',
-        },
-      });
+    if (!authHeader?.startsWith('Bearer ')) {
+      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+    }
+    let decoded;
+    try {
+      decoded = await verifyFirebaseIdToken(authHeader.substring(7));
+    } catch {
+      return NextResponse.json({ success: false, error: 'Invalid token' }, { status: 401 });
+    }
+    if (!(await isUidAdminServer(decoded.uid, decoded))) {
+      return NextResponse.json({ success: false, error: 'Admin access required' }, { status: 403 });
     }
 
     const formData = await request.formData();

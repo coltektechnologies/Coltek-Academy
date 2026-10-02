@@ -5,12 +5,14 @@ import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Button } from "@/components/ui/button"
-import { CreditCard, Building, Wallet, Loader2 } from "lucide-react"
+import { CreditCard, Loader2 } from "lucide-react"
 import { getCourseById } from "@/lib/courses"
 import { useAuth } from "@/hooks/use-auth"
 import { useToast } from "@/hooks/use-toast"
 import { saveUserEnrollment } from "@/lib/enrollment"
 import type { RegistrationFormData } from "@/lib/types"
+
+const IS_DEV_BUILD = process.env.NODE_ENV !== "production"
 
 // Paystack type declarations
 interface PaystackTransaction {
@@ -200,24 +202,6 @@ export function StepPayment({ formData, updateFormData, errors, onPaymentSuccess
               Paystack (Credit / Debit Card)
             </Label>
           </div>
-          <div
-            className={`flex items-center space-x-3 p-4 border rounded-lg cursor-pointer transition-colors ${formData.paymentMethod === "bank-transfer" ? "border-primary bg-primary/5" : "border-border hover:border-primary/50"}`}
-          >
-            <RadioGroupItem value="bank-transfer" id="bank-transfer" />
-            <Building className="h-5 w-5 text-muted-foreground" />
-            <Label htmlFor="bank-transfer" className="font-normal cursor-pointer flex-1">
-              Bank Transfer
-            </Label>
-          </div>
-          <div
-            className={`flex items-center space-x-3 p-4 border rounded-lg cursor-pointer transition-colors ${formData.paymentMethod === "paypal" ? "border-primary bg-primary/5" : "border-border hover:border-primary/50"}`}
-          >
-            <RadioGroupItem value="paypal" id="paypal" />
-            <Wallet className="h-5 w-5 text-muted-foreground" />
-            <Label htmlFor="paypal" className="font-normal cursor-pointer flex-1">
-              PayPal
-            </Label>
-          </div>
         </RadioGroup>
         {errors.paymentMethod && <p className="text-sm text-destructive">{errors.paymentMethod}</p>}
       </div>
@@ -271,9 +255,9 @@ export function StepPayment({ formData, updateFormData, errors, onPaymentSuccess
       <div className="p-4 bg-primary/5 rounded-lg border border-primary/20">
         <p className="text-sm text-muted-foreground">
           <strong className="text-foreground">Note:</strong> Payment processing is handled securely through Paystack.
-          {process.env.NEXT_PUBLIC_MOCK_PAYSTACK === 'true' ? ' Currently in development mode with mock payments.' : ' Test payments will not charge your card. For production, use live keys.'}
         </p>
-        {process.env.NEXT_PUBLIC_MOCK_PAYSTACK === 'true' && (
+        {/* Developer-only payment notes: never rendered in production builds */}
+        {IS_DEV_BUILD && process.env.NEXT_PUBLIC_MOCK_PAYSTACK === 'true' && (
           <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded text-sm">
             <strong className="text-blue-800">Development Mode:</strong>
             <p className="text-blue-700 mt-1">
@@ -281,7 +265,7 @@ export function StepPayment({ formData, updateFormData, errors, onPaymentSuccess
             </p>
           </div>
         )}
-        {process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY?.startsWith('pk_test') && !process.env.NEXT_PUBLIC_MOCK_PAYSTACK && (
+        {IS_DEV_BUILD && process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY?.startsWith('pk_test') && process.env.NEXT_PUBLIC_MOCK_PAYSTACK !== 'true' && (
           <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded text-sm">
             <strong className="text-yellow-800">Test Mode:</strong>
             <p className="text-yellow-700 mt-1">
