@@ -2,7 +2,7 @@
 
 import { Info } from 'lucide-react';
 
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { AdminPage, AdminPageHeader, AdminSection } from '@/components/admin/admin-ui';
 import { useAuth } from '@/hooks/use-auth';
 import { CONTACT, SITE_NAME } from '@/lib/site';
 
@@ -32,13 +32,10 @@ export default function SettingsPage() {
   ];
 
   return (
-    <div className="space-y-6 p-4 sm:p-6">
-      <div>
-        <h1 className="text-2xl font-semibold text-primary">Settings</h1>
-        <p className="mt-1 text-sm text-muted-foreground">Current site details and where each setting is managed.</p>
-      </div>
+    <AdminPage>
+      <AdminPageHeader title="Settings" description="Current site details and where each setting is managed." />
 
-      <div className="flex items-start gap-3 rounded-lg border border-border bg-info-subtle p-4 text-sm text-info" role="note">
+      <div className="flex items-start gap-3 rounded-xl border border-info/20 bg-info-subtle p-4 text-sm text-info" role="note">
         <Info className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
         <p>
           These settings can&apos;t be edited from the admin panel yet. Site details are kept in <code className="font-mono">lib/site.ts</code>;
@@ -47,12 +44,7 @@ export default function SettingsPage() {
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>Site details</CardTitle>
-            <CardDescription>Shown in the site header, footer and contact page.</CardDescription>
-          </CardHeader>
-          <CardContent>
+        <AdminSection title="Site details" description="Shown in the site header, footer and contact page." contentClassName="px-5 py-2">
             <dl className="divide-y divide-border text-sm">
               {siteDetails.map((item) => (
                 <div key={item.label} className="flex flex-col gap-1 py-3 sm:flex-row sm:justify-between sm:gap-4">
@@ -61,15 +53,9 @@ export default function SettingsPage() {
                 </div>
               ))}
             </dl>
-          </CardContent>
-        </Card>
+        </AdminSection>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Your admin account</CardTitle>
-            <CardDescription>The account you are signed in with.</CardDescription>
-          </CardHeader>
-          <CardContent>
+        <AdminSection title="Your admin account" description="The account you are signed in with." contentClassName="px-5 py-2">
             <dl className="divide-y divide-border text-sm">
               <div className="flex flex-col gap-1 py-3 sm:flex-row sm:justify-between sm:gap-4">
                 <dt className="text-muted-foreground">Name</dt>
@@ -80,14 +66,9 @@ export default function SettingsPage() {
                 <dd className="font-medium text-foreground wrap-anywhere sm:text-right">{user?.email || '—'}</dd>
               </div>
             </dl>
-          </CardContent>
-        </Card>
+        </AdminSection>
 
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle>Managed outside the admin panel</CardTitle>
-          </CardHeader>
-          <CardContent>
+        <AdminSection title="Managed outside the admin panel" className="lg:col-span-2" contentClassName="px-5 py-2">
             <dl className="divide-y divide-border text-sm">
               {managedElsewhere.map((item) => (
                 <div key={item.label} className="flex flex-col gap-1 py-3 sm:flex-row sm:gap-4">
@@ -96,9 +77,8 @@ export default function SettingsPage() {
                 </div>
               ))}
             </dl>
-          </CardContent>
-        </Card>
+        </AdminSection>
       </div>
-    </div>
+    </AdminPage>
   );
 }

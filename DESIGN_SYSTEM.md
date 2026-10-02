@@ -619,3 +619,25 @@ Use these before creating anything new (see CLAUDE.md §7).
 | States | `LoadingState`, `EmptyState`, `ErrorState` | `components/academy/states.tsx` |
 | Course display rules | `isCourseUpcoming`, `formatCoursePrice`, `formatCourseDuration`, `getCourseMode` | `lib/course-display.ts` |
 
+---
+
+## 30. Admin
+
+The admin panel (`/admin/*`) uses the same tokens, type and components as the public site, laid out as a dense work tool. Shared building blocks live in [components/admin/admin-ui.tsx](components/admin/admin-ui.tsx); the shell (access check, navy sidebar, mobile menu bar) is [app/admin/layout.tsx](app/admin/layout.tsx).
+
+| Need | Component | Notes |
+|---|---|---|
+| Page container | `AdminPage` | `max-w-7xl`, `px-4 sm:px-6 lg:px-8`, `py-6 lg:py-8`, `space-y-6 lg:space-y-8` |
+| Title row | `AdminPageHeader` | One `h1` (`text-2xl sm:text-3xl font-bold`), one-line description, optional `meta` totals, actions on the right (primary action last) |
+| KPI | `AdminStatCard` inside a `<dl>` | Real counts only; `—` while loading. Optional `href` makes the whole card a link |
+| Search | `AdminSearch` | Always has an accessible label; clear button |
+| Filters | Segmented `role="group"` of buttons with `aria-pressed` and counts | Active = `bg-primary text-primary-foreground` |
+| Tables | `AdminTableCard` + shadcn `Table` | Header `bg-muted`, `h-11 px-4`; cells `px-4 py-3`; sr-only `TableCaption`. Below `md`, the same rows render as stacked cards |
+| Row actions | `DropdownMenu` behind a ghost `icon-sm` button with `aria-label="Actions for …"` | Destructive items use `variant="destructive"` and open an `AlertDialog` |
+| Panels | `AdminSection` | Titled card for dashboard blocks and detail side panels |
+| Status | `StatusBadge` | Maps statuses to §20 colours (active=info, completed/issued/published=success, draft=outline, upcoming/pending=warning, cancelled/revoked=error) |
+| People | `PersonAvatar` | Photo or initials in a `bg-secondary text-primary` circle |
+| Dates | `formatAdminDate` | "16 Jul 2026"; `—` when missing |
+
+Rules: create/edit forms open in a `Dialog` (never inline above a list); every delete/revoke is confirmed with an `AlertDialog` that says what happens to related data; after an action the list refreshes in place (no full-page spinner); success toasts only after the write succeeds; empty, loading and error states use `EmptyState` / `LoadingState` / `ErrorState`.
+

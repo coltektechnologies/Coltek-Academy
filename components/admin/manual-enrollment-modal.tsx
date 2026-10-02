@@ -42,16 +42,6 @@ export function ManualEnrollmentModal({ isOpen, onClose, onSuccess }: ManualEnro
   
   const { toast } = useToast();
 
-  useEffect(() => {
-    if (isOpen) {
-      loadData();
-      // Reset state
-      setSelectedUserId("");
-      setSelectedCourseId("");
-      setMarkCompleted(false);
-    }
-  }, [isOpen]);
-
   const loadData = async () => {
     setLoading(true);
     try {
@@ -100,6 +90,17 @@ export function ManualEnrollmentModal({ isOpen, onClose, onSuccess }: ManualEnro
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (isOpen) {
+      loadData();
+      // Reset state
+      setSelectedUserId("");
+      setSelectedCourseId("");
+      setMarkCompleted(false);
+    }
+  }, [isOpen]);
+
 
   const handleSubmit = async () => {
     if (!selectedUserId || !selectedCourseId) {

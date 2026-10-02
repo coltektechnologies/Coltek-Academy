@@ -6,12 +6,12 @@ import { useRouter } from 'next/navigation';
 import { signOut } from 'firebase/auth';
 import { ShieldAlert } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { LoadingState } from '@/components/academy/states';
+import { ErrorState, LoadingState } from '@/components/academy/states';
 import { useAuth } from '@/hooks/use-auth';
 import { firebase } from '@/lib/firebase';
 import { isAdminUser } from '@/lib/admin-access'
 
-type Access = 'checking' | 'admin' | 'denied';
+type Access = 'checking' | 'admin' | 'denied' | 'error';
 
 /**
  * Renders admin pages only for admins. An admin is a signed-in user with the `admin`
@@ -24,6 +24,8 @@ export function AdminGuard({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
   const router = useRouter();
   const [access, setAccess] = useState<Access>('checking');
+  // Bumped by "Try again" to re-run the check
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     if (loading) return;
@@ -39,18 +41,32 @@ export function AdminGuard({ children }: { children: React.ReactNode }) {
         const isAdmin = await isAdminUser(user);
         if (!cancelled) setAccess(isAdmin ? 'admin' : 'denied');
       } catch (error) {
+        // A network/offline error is not a "no": let the admin retry instead of showing "access denied"
         console.error('[AdminGuard] Could not verify admin access', error);
-        if (!cancelled) setAccess('denied');
+        if (!cancelled) setAccess('error');
       }
     })();
 
     return () => {
       cancelled = true;
     };
-  }, [loading, user, router]);
+  }, [loading, user, router, attempt]);
 
   if (loading || !user || access === 'checking') {
     return <LoadingState size="page" label="Checking admin access…" />;
+  }
+
+  if (access === 'error') {
+    return (
+      <main id="main" className="flex min-h-screen items-center justify-center bg-muted px-4">
+        <ErrorState
+          className="w-full max-w-md"
+          title="Couldn't check your admin access"
+          description="Check your internet connection and try again."
+          onRetry={() => setAttempt((n) => n + 1)}
+        />
+      </main>
+    );
   }
 
   if (access === 'denied') {

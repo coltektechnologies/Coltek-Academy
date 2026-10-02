@@ -1,184 +1,348 @@
-'use client';
+"use client"
 
-import { useEffect, useState, Suspense } from 'react';
-import dynamic from 'next/dynamic';
-import Link from 'next/link';
-import { collection, getDocs, query, orderBy } from 'firebase/firestore';
-import { format } from 'date-fns';
-import { Loader2 } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useState } from "react"
+import Link from "next/link"
+import { collection, getDocs, orderBy, query } from "firebase/firestore"
+import { Award, Ban, Download, Eye, MoreHorizontal, RotateCcw } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+import { IssueCertificate } from "@/components/admin/issue-certificate"
+import {
+  AdminPage,
+  AdminPageHeader,
+  AdminSearch,
+  AdminTableCard,
+  AdminToolbar,
+  PersonAvatar,
+  StatusBadge,
+  formatAdminDate,
+} from "@/components/admin/admin-ui"
+import { EmptyState, ErrorState, LoadingState } from "@/components/academy/states"
+import { useToast } from "@/hooks/use-toast"
+import { firebase } from "@/lib/firebase"
+import { CertificateService } from "@/lib/certificate-service"
+import { downloadCertificateFile } from "@/lib/certificate-files"
+import { cn } from "@/lib/utils"
 
-import { firebase } from '@/lib/firebase';
-import type { Certificate } from '@/types/certificate';
-
-/**
- * Normalize a certificate URL to always be a relative path.
- */
-function normalizeCertUrl(url: string | undefined): string {
-  if (!url) return ''
-  try {
-    if (url.startsWith('http')) {
-      return new URL(url).pathname
-    }
-  } catch {
-    // Not a valid URL, return as-is
-  }
-  return url
+interface CertificateRow {
+  id: string
+  recipientName: string
+  recipientEmail: string
+  courseTitle: string
+  issueDate: Date | null
+  status: string
+  fileUrl: string
+  certificateNumber: string
 }
 
-// Lazy load components
-const Card = dynamic(() => import('@/components/ui/card').then(mod => mod.Card), { ssr: false });
-const CardContent = dynamic(() => import('@/components/ui/card').then(mod => mod.CardContent), { ssr: false });
-const CardHeader = dynamic(() => import('@/components/ui/card').then(mod => mod.CardHeader), { ssr: false });
-const CardTitle = dynamic(() => import('@/components/ui/card').then(mod => mod.CardTitle), { ssr: false });
-const Button = dynamic(() => import('@/components/ui/button').then(mod => mod.Button), { ssr: false });
+const FILTERS = ["all", "issued", "revoked"] as const
+type Filter = (typeof FILTERS)[number]
 
-const LoadingFallback = () => (
-  <div className="flex items-center justify-center h-48">
-    <Loader2 className="h-8 w-8 animate-spin text-primary" />
-  </div>
-);
+function toDate(value: unknown): Date | null {
+  if (!value) return null
+  if (typeof value === "object" && value && "toDate" in value) return (value as { toDate: () => Date }).toDate()
+  const date = new Date(value as string)
+  return Number.isNaN(date.getTime()) ? null : date
+}
 
-export default function CertificatesPage() {
-  const [certificates, setCertificates] = useState<Certificate[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+export default function AdminCertificatesPage() {
+  const { toast } = useToast()
+  const [rows, setRows] = useState<CertificateRow[]>([])
+  const [users, setUsers] = useState<{ id: string; email: string; displayName: string; role?: string }[]>([])
+  const [courses, setCourses] = useState<{ id: string; title: string }[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(false)
+  const [search, setSearch] = useState("")
+  const [filter, setFilter] = useState<Filter>("all")
+  const [confirm, setConfirm] = useState<{ row: CertificateRow; action: "revoke" | "restore" } | null>(null)
+  const [updating, setUpdating] = useState(false)
+
+  const load = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true)
+    setError(false)
+    try {
+      const db = firebase.db
+      const [certSnap, usersSnap, coursesSnap] = await Promise.all([
+        getDocs(query(collection(db, "certificates"), orderBy("issueDate", "desc"))),
+        getDocs(collection(db, "users")),
+        getDocs(collection(db, "courses")),
+      ])
+      setRows(
+        certSnap.docs.map((d) => {
+          const data = d.data()
+          const email = data.recipientEmail || data.userEmail || data.email || ""
+          return {
+            id: d.id,
+            recipientName: data.recipientName || data.userName || data.displayName || email.split("@")[0] || "Certificate holder",
+            recipientEmail: email,
+            courseTitle: data.courseTitle || data.courseName || "Course",
+            issueDate: toDate(data.issueDate),
+            status: String(data.status || "issued"),
+            fileUrl: data.certificateUrl || data.fileUrl || data.previewUrl || "",
+            certificateNumber: data.certificateNumber || data.verificationCode || data.metadata?.verificationCode || "",
+          }
+        }),
+      )
+      setUsers(usersSnap.docs.map((d) => ({ id: d.id, email: d.data().email || "", displayName: d.data().displayName || "", role: d.data().role })))
+      setCourses(coursesSnap.docs.map((d) => ({ id: d.id, title: String(d.data().title || "Untitled course") })))
+    } catch (loadError) {
+      console.error("Error loading certificates:", loadError)
+      setError(true)
+    } finally {
+      setLoading(false)
+    }
+  }, [])
 
   useEffect(() => {
-    const fetchCertificates = async () => {
-      try {
-        setIsLoading(true);
-        // Fetch all certificates (admin view)
-        const q = query(collection(firebase.db, 'certificates'), orderBy('issueDate', 'desc'));
-        const querySnapshot = await getDocs(q);
-        
-        const certs = querySnapshot.docs.map(doc => {
-          const data = doc.data();
-          return {
-            ...data,
-            id: doc.id,
-            issueDate: data.issueDate?.toDate ? data.issueDate.toDate() : new Date(data.issueDate || Date.now()),
-            completionDate: data.completionDate?.toDate ? data.completionDate.toDate() : new Date(data.completionDate || Date.now()),
-            certificateUrl: data.certificateUrl || data.fileUrl || '',
-            previewUrl: data.previewUrl || data.fileUrl || '',
-          } as Certificate;
-        });
-        
-        setCertificates(certs);
-      } catch (err) {
-        console.error('Error fetching certificates:', err);
-        setError('Failed to load certificates');
-      } finally {
-        setIsLoading(false);
-      }
-    };
+    void load()
+  }, [load])
 
-    fetchCertificates();
-  }, []);
+  const counts = useMemo(
+    () => ({
+      all: rows.length,
+      issued: rows.filter((r) => r.status.toLowerCase() === "issued").length,
+      revoked: rows.filter((r) => r.status.toLowerCase() === "revoked").length,
+    }),
+    [rows],
+  )
 
-  const handleDownload = async (certificateUrl: string, fileName: string) => {
-    const url = normalizeCertUrl(certificateUrl);
-    if (!url) return;
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase()
+    return rows.filter((r) => {
+      if (filter !== "all" && r.status.toLowerCase() !== filter) return false
+      if (!q) return true
+      return [r.recipientName, r.recipientEmail, r.courseTitle, r.certificateNumber, r.id].some((v) => v.toLowerCase().includes(q))
+    })
+  }, [rows, search, filter])
+
+  const applyStatusChange = async () => {
+    if (!confirm) return
+    setUpdating(true)
     try {
-      const downloadUrl = url.includes('?') ? `${url}&download=1` : `${url}?download=1`;
-      const response = await fetch(downloadUrl);
-      if (!response.ok) throw new Error('Failed to download');
-      const blob = await response.blob();
-      const blobUrl = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = blobUrl;
-      link.download = fileName || 'certificate.pdf';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(blobUrl);
-    } catch {
-      window.open(url, '_blank');
+      if (confirm.action === "revoke") await CertificateService.revokeCertificate(confirm.row.id)
+      else await CertificateService.updateCertificate(confirm.row.id, { status: "issued" })
+      toast({
+        title: confirm.action === "revoke" ? "Certificate revoked" : "Certificate restored",
+        description: `${confirm.row.recipientName} · ${confirm.row.courseTitle}`,
+      })
+      setConfirm(null)
+      await load(true)
+    } catch (updateError) {
+      console.error(updateError)
+      toast({ title: "Couldn't update the certificate", description: "Please try again.", variant: "destructive" })
+    } finally {
+      setUpdating(false)
     }
-  };
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-[50vh]">
-        <Loader2 className="w-8 h-8 animate-spin" />
-      </div>
-    );
   }
 
-  if (error) {
-    return (
-      <div className="p-4 text-destructive">
-        <p>{error}</p>
-      </div>
-    );
-  }
+  const rowActions = (row: CertificateRow) => (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" size="icon-sm" aria-label={`Actions for ${row.recipientName}'s certificate`}>
+          <MoreHorizontal aria-hidden="true" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-48">
+        <DropdownMenuItem asChild>
+          <Link href={`/admin/certificates/${row.id}`}>
+            <Eye aria-hidden="true" />
+            View details
+          </Link>
+        </DropdownMenuItem>
+        {row.fileUrl && (
+          <DropdownMenuItem onSelect={() => void downloadCertificateFile(row.fileUrl, `certificate-${row.id}${row.fileUrl.toLowerCase().endsWith(".pdf") ? ".pdf" : ""}`)}>
+            <Download aria-hidden="true" />
+            Download
+          </DropdownMenuItem>
+        )}
+        <DropdownMenuSeparator />
+        {row.status.toLowerCase() === "revoked" ? (
+          <DropdownMenuItem onSelect={() => setConfirm({ row, action: "restore" })}>
+            <RotateCcw aria-hidden="true" />
+            Restore
+          </DropdownMenuItem>
+        ) : (
+          <DropdownMenuItem variant="destructive" onSelect={() => setConfirm({ row, action: "revoke" })}>
+            <Ban aria-hidden="true" />
+            Revoke
+          </DropdownMenuItem>
+        )}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  )
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold">Issued Certificates</h1>
-      </div>
+    <AdminPage>
+      <AdminPageHeader
+        title="Certificates"
+        description="Every certificate issued to students. Revoked certificates are hidden from the student's account."
+        meta={
+          !loading && !error ? (
+            <>
+              <span>
+                <strong className="font-semibold text-foreground tabular-nums">{counts.issued}</strong> issued
+              </span>
+              {counts.revoked > 0 && (
+                <span>
+                  <strong className="font-semibold text-foreground tabular-nums">{counts.revoked}</strong> revoked
+                </span>
+              )}
+            </>
+          ) : undefined
+        }
+        actions={
+          <IssueCertificate users={users} courses={courses}>
+            <Button disabled={loading}>
+              <Award aria-hidden="true" />
+              Issue certificate
+            </Button>
+          </IssueCertificate>
+        }
+      />
 
-      {certificates.length === 0 ? (
-        <div className="text-center py-12">
-          <p className="text-muted-foreground">No certificates have been issued yet.</p>
-        </div>
+      {loading ? (
+        <LoadingState size="page" label="Loading certificates…" />
+      ) : error ? (
+        <ErrorState title="Couldn't load certificates" description="Check your connection and try again." onRetry={() => void load()} />
       ) : (
-        <div className="grid gap-6">
-          {certificates.map((cert) => (
-            <Card key={cert.id}>
-              <CardHeader className="flex flex-row justify-between items-start space-y-0">
-                <div>
-                  <CardTitle className="text-lg">
-                    {cert.recipientName || 'Certificate'}
-                  </CardTitle>
-                  <p className="text-sm text-muted-foreground">
-                    {cert.courseName || 'Course Certificate'}
-                  </p>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    asChild
-                    size="sm"
-                    variant="outline"
-                  >
-                    <Link href={`/admin/certificates/${cert.id}`}>
-                      View
-                    </Link>
-                  </Button>
-                  {(cert.certificateUrl || cert.previewUrl) && (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleDownload(cert.certificateUrl || cert.previewUrl || '', `certificate-${cert.id}.pdf`)}
-                    >
-                      Download
-                    </Button>
+        <>
+          <AdminToolbar>
+            <AdminSearch value={search} onChange={setSearch} placeholder="Search student, course or certificate no." label="Search certificates" />
+            <div role="group" aria-label="Filter by status" className="flex gap-1 rounded-lg border border-border bg-card p-1">
+              {FILTERS.map((key) => (
+                <button
+                  key={key}
+                  type="button"
+                  aria-pressed={filter === key}
+                  onClick={() => setFilter(key)}
+                  className={cn(
+                    "inline-flex h-8 items-center gap-1.5 rounded-md px-3 text-sm font-medium transition-colors outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50",
+                    filter === key ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground",
                   )}
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                  <div>
-                    <p className="text-muted-foreground">Issued on</p>
-                    <p>{format(cert.issueDate, 'MMM d, yyyy')}</p>
-                  </div>
-                  <div>
-                    <p className="text-muted-foreground">Status</p>
-                    <div className="flex items-center">
-                      <span className="h-2 w-2 rounded-full bg-success mr-2"></span>
-                      <span className="capitalize">{cert.status || 'issued'}</span>
+                >
+                  {key.charAt(0).toUpperCase() + key.slice(1)}
+                  <span className={cn("tabular-nums", filter === key ? "text-primary-foreground/80" : "text-muted-foreground")}>{counts[key]}</span>
+                </button>
+              ))}
+            </div>
+          </AdminToolbar>
+
+          {filtered.length === 0 ? (
+            <EmptyState
+              icon={Award}
+              title={rows.length === 0 ? "No certificates yet" : "No certificates match"}
+              description={rows.length === 0 ? "Issue a certificate when a student completes a course." : "Try a different search or filter."}
+            />
+          ) : (
+            <>
+              <AdminTableCard className="hidden md:block">
+                <Table>
+                  <TableCaption className="sr-only">Issued certificates</TableCaption>
+                  <TableHeader className="bg-muted">
+                    <TableRow>
+                      <TableHead className="h-11 px-4">Student</TableHead>
+                      <TableHead className="h-11 px-4">Course</TableHead>
+                      <TableHead className="h-11 px-4">Issued</TableHead>
+                      <TableHead className="h-11 px-4">Status</TableHead>
+                      <TableHead className="h-11 px-4 text-right">
+                        <span className="sr-only">Actions</span>
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filtered.map((row) => (
+                      <TableRow key={row.id}>
+                        <TableCell className="px-4 py-3">
+                          <div className="flex items-center gap-3">
+                            <PersonAvatar name={row.recipientName} email={row.recipientEmail} />
+                            <div className="min-w-0">
+                              <Link
+                                href={`/admin/certificates/${row.id}`}
+                                className="font-medium text-foreground underline-offset-4 hover:underline outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 rounded-sm"
+                              >
+                                {row.recipientName}
+                              </Link>
+                              <p className="text-muted-foreground">{row.recipientEmail || "—"}</p>
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell className="max-w-64 px-4 py-3 whitespace-normal text-foreground">{row.courseTitle}</TableCell>
+                        <TableCell className="px-4 py-3 text-muted-foreground tabular-nums">{formatAdminDate(row.issueDate)}</TableCell>
+                        <TableCell className="px-4 py-3">
+                          <StatusBadge status={row.status} />
+                        </TableCell>
+                        <TableCell className="px-4 py-3 text-right">{rowActions(row)}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </AdminTableCard>
+
+              <ul className="space-y-3 md:hidden" aria-label="Issued certificates">
+                {filtered.map((row) => (
+                  <li key={row.id} className="rounded-xl border border-border bg-card p-4 shadow-sm">
+                    <div className="flex items-start gap-3">
+                      <PersonAvatar name={row.recipientName} email={row.recipientEmail} />
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate font-medium text-foreground">{row.recipientName}</p>
+                        <p className="text-sm text-muted-foreground">{row.courseTitle}</p>
+                        <p className="mt-1 text-sm text-muted-foreground tabular-nums">Issued {formatAdminDate(row.issueDate)}</p>
+                      </div>
+                      {rowActions(row)}
                     </div>
-                  </div>
-                  <div>
-                    <p className="text-muted-foreground">Certificate ID</p>
-                    <p className="font-mono text-sm">{cert.id}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+                    <div className="mt-3">
+                      <StatusBadge status={row.status} />
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+        </>
       )}
-    </div>
-  );
+
+      <AlertDialog open={!!confirm} onOpenChange={(open) => !open && !updating && setConfirm(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{confirm?.action === "revoke" ? "Revoke this certificate?" : "Restore this certificate?"}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {confirm?.action === "revoke"
+                ? `${confirm?.row.recipientName}'s certificate for ${confirm?.row.courseTitle} will no longer appear in their account. You can restore it later.`
+                : `${confirm?.row.recipientName}'s certificate for ${confirm?.row.courseTitle} will appear in their account again.`}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={updating}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(event) => {
+                event.preventDefault()
+                void applyStatusChange()
+              }}
+              disabled={updating}
+              className={confirm?.action === "revoke" ? "bg-destructive text-destructive-foreground hover:bg-destructive/90" : undefined}
+            >
+              {updating ? "Saving…" : confirm?.action === "revoke" ? "Revoke certificate" : "Restore certificate"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </AdminPage>
+  )
 }

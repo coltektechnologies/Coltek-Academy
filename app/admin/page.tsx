@@ -1,730 +1,306 @@
 "use client"
 
-import { useCallback, useEffect, useState, Suspense } from 'react';
-import { useAuth } from '@/hooks/use-auth';
-import { useRouter } from 'next/navigation';
-import dynamic from 'next/dynamic';
-import { Loader2 } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useState } from "react"
+import Link from "next/link"
+import { collection, getCountFromServer, getDocs, query, where } from "firebase/firestore"
+import {
+  ArrowRight,
+  Award,
+  BookOpen,
+  FolderKanban,
+  GraduationCap,
+  MessageSquareQuote,
+  UserPlus,
+  Users,
+} from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { IssueCertificate } from "@/components/admin/issue-certificate"
+import { ManualEnrollmentModal } from "@/components/admin/manual-enrollment-modal"
+import { ActivityItem } from "@/components/activity/activity-item"
+import {
+  AdminPage,
+  AdminPageHeader,
+  AdminSection,
+  AdminStatCard,
+  PersonAvatar,
+  StatusBadge,
+  formatAdminDate,
+} from "@/components/admin/admin-ui"
+import { EmptyState, ErrorState, LoadingState } from "@/components/academy/states"
+import { useAuth } from "@/hooks/use-auth"
+import { useToast } from "@/hooks/use-toast"
+import { firebase } from "@/lib/firebase"
+import { getAllEnrollments } from "@/lib/enrollment"
+import { getRecentActivities } from "@/lib/activity-service"
+import type { UserEnrollment } from "@/lib/types"
+import type { Activity } from "@/types/activity"
 
-// Lazy load components
-const AdminLayout = dynamic<{ children: React.ReactNode }>(
-  () => import('@/components/admin/AdminLayout').then(mod => mod.AdminLayout), 
-  { 
-    ssr: false,
-    loading: () => <LoadingFallback />
-  }
-);
-
-const AdminHeader = dynamic<{
-  title: string;
-  description?: string;
-  searchQuery?: string;
-  onSearchChange?: (query: string) => void;
-  onSearchSubmit?: (query: string) => void;
-  placeholder?: string;
-  className?: string;
-}>(() => import('@/components/admin/AdminHeader').then(mod => mod.AdminHeader), { 
-  ssr: false,
-  loading: () => <LoadingFallback />
-});
-
-const IssueCertificate = dynamic<{
-  users: Array<{
-    id: string;
-    email: string;
-    displayName: string;  // Made displayName required to match the User interface
-    role?: string;
-    photoURL?: string;
-    enrolledCourses?: string[];
-  }>;
-  courses: Array<{
-    id: string;
-    title: string;
-    description?: string;
-    duration?: string;
-    level?: string;
-    enrolledStudents?: string[];
-  }>;
-  children?: React.ReactNode;
-}>(() => import('@/components/admin/issue-certificate').then(mod => mod.IssueCertificate), { 
-  ssr: false,
-  loading: () => <LoadingFallback />
-});
-
-const ActivityItem = dynamic<{ activity: Activity }>(() => import('@/components/activity/activity-item').then(mod => mod.ActivityItem), { 
-  ssr: false,
-  loading: () => <LoadingFallback />
-});
-
-// Lazy load UI components
-const Card = dynamic<React.ComponentProps<typeof import('@/components/ui/card').Card>>(
-  () => import('@/components/ui/card').then(mod => mod.Card), 
-  { ssr: false }
-);
-
-const CardContent = dynamic<React.ComponentProps<typeof import('@/components/ui/card').CardContent>>(
-  () => import('@/components/ui/card').then(mod => mod.CardContent), 
-  { ssr: false }
-);
-
-const CardDescription = dynamic<React.ComponentProps<typeof import('@/components/ui/card').CardDescription>>(
-  () => import('@/components/ui/card').then(mod => mod.CardDescription), 
-  { ssr: false }
-);
-
-const CardHeader = dynamic<React.ComponentProps<typeof import('@/components/ui/card').CardHeader>>(
-  () => import('@/components/ui/card').then(mod => mod.CardHeader), 
-  { ssr: false }
-);
-
-const CardTitle = dynamic<React.ComponentProps<typeof import('@/components/ui/card').CardTitle>>(
-  () => import('@/components/ui/card').then(mod => mod.CardTitle), 
-  { ssr: false }
-);
-
-const Button = dynamic<React.ComponentProps<typeof import('@/components/ui/button').Button>>(
-  () => import('@/components/ui/button').then(mod => mod.Button), 
-  { ssr: false }
-);
-
-// Lazy load icons
-const Users = dynamic(
-  () => import('lucide-react').then(mod => mod.Users), 
-  { ssr: false, loading: () => <span className="w-6 h-6" /> }
-);
-
-const BookOpen = dynamic(
-  () => import('lucide-react').then(mod => mod.BookOpen), 
-  { ssr: false, loading: () => <span className="w-6 h-6" /> }
-);
-
-const FileText = dynamic(
-  () => import('lucide-react').then(mod => mod.FileText), 
-  { ssr: false, loading: () => <span className="w-6 h-6" /> }
-);
-const BarChart2 = dynamic(
-  () => import('lucide-react').then(mod => mod.BarChart2), 
-  { ssr: false, loading: () => <span className="w-6 h-6" /> }
-);
-
-const Upload = dynamic(
-  () => import('lucide-react').then(mod => mod.Upload), 
-  { ssr: false, loading: () => <span className="w-6 h-6" /> }
-);
-
-const Award = dynamic(
-  () => import('lucide-react').then(mod => mod.Award), 
-  { ssr: false, loading: () => <span className="w-6 h-6" /> }
-);
-
-const Clock = dynamic(
-  () => import('lucide-react').then(mod => mod.Clock), 
-  { ssr: false, loading: () => <span className="w-6 h-6" /> }
-);
-
-const MessageSquareQuote = dynamic(
-  () => import('lucide-react').then(mod => mod.MessageSquareQuote),
-  { ssr: false, loading: () => <span className="w-6 h-6" /> }
-);
-
-const FolderKanban = dynamic(
-  () => import('lucide-react').then(mod => mod.FolderKanban),
-  { ssr: false, loading: () => <span className="w-6 h-6" /> }
-);
-
-import { firebase } from '@/lib/firebase';
-import { 
-  doc, 
-  getDoc, 
-  collection, 
-  query, 
-  where, 
-  getCountFromServer, 
-  getDocs, 
-  onSnapshot, 
-  DocumentData, 
-  DocumentSnapshot, 
-  QuerySnapshot,
-  QueryDocumentSnapshot,
-  Timestamp,
-  orderBy,
-  limit
-} from 'firebase/firestore';
-import { useToast } from '@/hooks/use-toast';
-import { Activity } from '@/types/activity';
-import { subscribeToActivities, getRecentActivities } from '@/lib/activity-service';
-import { isAdminUser } from '@/lib/admin-access'
-
-const LoadingFallback = () => (
-  <div className="flex items-center justify-center min-h-[200px]">
-    <Loader2 className="h-8 w-8 animate-spin text-primary" />
-  </div>
-);
-
-interface UserData {
-  id: string;
-  email: string;
-  displayName: string;
-  role?: string;
-  photoURL?: string;
-  createdAt?: string;
+interface StudentRow {
+  id: string
+  email: string
+  displayName: string
+  role?: string
+  photoURL?: string
+  createdAt?: string
 }
 
-interface Certificate {
-  userId: string;
-  certificateId: string;
-  issueDate: string;
+interface CourseOption {
+  id: string
+  title: string
+  isPublished: boolean
 }
 
-interface Course {
-  id: string;
-  title: string;
-  description?: string;
-  students?: number;
-  duration?: string;
-  level?: string;
-  enrolledStudents?: string[];
-  issuedCertificates?: Certificate[];
+interface Stats {
+  students: number
+  activeEnrollments: number
+  certificatesIssued: number
+  publishedCourses: number
+  totalCourses: number
 }
 
-export default function AdminPage() {
-  const { toast } = useToast();
-  const router = useRouter();
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [adminLoading, setAdminLoading] = useState(true);
-  const [stats, setStats] = useState({
-    totalUsers: 0,
-    totalCourses: 0,
-    certificatesIssued: 0,
-    activeStudents: 0,
-    activeUsers: 0
-  });
-  const [activeTab, setActiveTab] = useState('certificates');
-  const [users, setUsers] = useState<UserData[]>([]);
-  const [filteredUsers, setFilteredUsers] = useState<UserData[]>([]);
-  const [courses, setCourses] = useState<Course[]>([]);
-  const [filteredCourses, setFilteredCourses] = useState<Course[]>([]);
-  const [activities, setActivities] = useState<Activity[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState('');
+const QUICK_LINKS = [
+  { label: "Courses", description: "Create, edit and publish courses", href: "/admin/courses", icon: BookOpen },
+  { label: "Testimonials", description: "Manage student testimonials", href: "/admin/testimonials", icon: MessageSquareQuote },
+  { label: "Student projects", description: "Showcase student work", href: "/admin/projects", icon: FolderKanban },
+  { label: "Users", description: "Student and admin accounts", href: "/admin/users", icon: Users },
+]
 
-  // Get current user from auth context
-  const { user: currentUser, loading: authLoading } = useAuth();
+export default function AdminDashboardPage() {
+  const { user } = useAuth()
+  const { toast } = useToast()
+  const [stats, setStats] = useState<Stats | null>(null)
+  const [users, setUsers] = useState<StudentRow[]>([])
+  const [courses, setCourses] = useState<CourseOption[]>([])
+  const [enrollments, setEnrollments] = useState<UserEnrollment[]>([])
+  const [activities, setActivities] = useState<Activity[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(false)
+  const [enrollOpen, setEnrollOpen] = useState(false)
 
-  // Check if current user is admin
-  useEffect(() => {
-    const checkAdminStatus = async () => {
-      if (!currentUser) {
-        if (!authLoading) {
-          // If not authenticated and auth is done loading, redirect to login
-          router.push('/admin/login');
-        }
-        return;
-      }
-
-      try {
-        if (await isAdminUser(currentUser)) {
-          setIsAdmin(true);
-        } else {
-          setError('You do not have permission to access this page');
-          setIsLoading(false);
-        }
-      } catch (err) {
-        console.error('Error checking admin status:', err);
-        setError('Error verifying permissions. Please try again later.');
-        setIsLoading(false);
-      } finally {
-        setAdminLoading(false);
-      }
-    };
-
-    checkAdminStatus();
-  }, [currentUser, authLoading, router]);
-
-  // Fetch activities
-  useEffect(() => {
-    // Only fetch activities if user is admin
-    if (!isAdmin) {
-      return;
-    }
-
-    setIsLoading(true);
-
-    // Initial load of activities
-    const loadActivities = async () => {
-      try {
-        setError(null);
-        setIsLoading(true);
-        const recentActivities = await getRecentActivities(10);
-        setActivities(recentActivities);
-      } catch (error) {
-        console.error('Error loading activities:', error);
-        setError('Failed to load activities. Please check your connection and try again.');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    loadActivities();
-
-    // Set up real-time subscription
-    let unsubscribe: (() => void) | null = null;
+  const load = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true)
+    setError(false)
     try {
-      const q = query(
-        collection(firebase.db, 'activities'),
-        orderBy('timestamp', 'desc'),
-        limit(10)
-      );
-      
-      unsubscribe = onSnapshot(q, 
-        (snapshot) => {
-          const newActivities = snapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data()
-          })) as Activity[];
-          setActivities(newActivities);
-          setError(null);
-        },
-        (error) => {
-          console.error('Error in real-time subscription:', error);
-          if (error.code === 'permission-denied') {
-            setError('You do not have permission to view activities. Please contact an administrator.');
-          } else {
-            setError('Real-time updates are not available. Page will refresh to show new activities.');
-          }
+      const db = firebase.db
+      const [usersSnap, coursesSnap, enrollmentList, studentCount, certificateCount] = await Promise.all([
+        getDocs(collection(db, "users")),
+        getDocs(collection(db, "courses")),
+        getAllEnrollments(),
+        getCountFromServer(query(collection(db, "users"), where("role", "==", "student"))),
+        getCountFromServer(query(collection(db, "certificates"), where("status", "==", "issued"))),
+      ])
+
+      const userRows = usersSnap.docs.map((d) => {
+        const data = d.data()
+        return {
+          id: d.id,
+          email: data.email || "",
+          displayName: data.displayName || "",
+          role: data.role || "student",
+          photoURL: data.photoURL || "",
+          createdAt: typeof data.createdAt === "string" ? data.createdAt : undefined,
         }
-      );
-    } catch (error) {
-      console.error('Error setting up real-time updates:', error);
-      setError('Failed to set up real-time updates. Page will refresh to show new activities.');
-    }
+      })
+      const courseRows = coursesSnap.docs.map((d) => ({
+        id: d.id,
+        title: String(d.data().title || "Untitled course"),
+        isPublished: d.data().isPublished === true,
+      }))
 
-      // Clean up subscription on unmount
-    return () => {
-      if (unsubscribe) {
-        unsubscribe();
-      }
-    };
-  }, [isAdmin]); // Only re-run if admin status changes
-
-  const filterUsers = useCallback((query: string, usersList: UserData[]) => {
-    if (!query.trim()) return usersList;
-    const lowerQuery = query.toLowerCase();
-    return usersList.filter(user => 
-      user.displayName?.toLowerCase().includes(lowerQuery) ||
-      user.email?.toLowerCase().includes(lowerQuery) ||
-      user.role?.toLowerCase().includes(lowerQuery)
-    );
-  }, []);
-
-  const filterCourses = useCallback((query: string, coursesList: Course[]) => {
-    if (!query.trim()) return coursesList;
-    const lowerQuery = query.toLowerCase();
-    return coursesList.filter(course => 
-      course.title?.toLowerCase().includes(lowerQuery) ||
-      course.description?.toLowerCase().includes(lowerQuery) ||
-      course.level?.toLowerCase().includes(lowerQuery)
-    );
-  }, []);
-
-  const handleSearchChange = (query: string) => {
-    setSearchQuery(query);
-    setFilteredUsers(filterUsers(query, users));
-    setFilteredCourses(filterCourses(query, courses));
-  };
-
-  const handleSearchSubmit = (query: string) => {
-    // We're already filtering on change, but you could add additional logic here
-  };
-
-  // Fetch all users
-  const fetchUsers = async () => {
-    try {
-      const usersRef = collection(firebase.db, 'users');
-      const usersSnapshot = await getDocs(usersRef);
-      
-      const usersData = usersSnapshot.docs.map(docItem => ({
-        id: docItem.id,
-        email: docItem.data().email || '',
-        displayName: docItem.data().displayName || '',
-        role: docItem.data().role || 'student',
-        photoURL: docItem.data().photoURL || '',
-        enrolledCourses: docItem.data().enrolledCourses || [],
-        createdAt: typeof docItem.data().createdAt === 'string' ? docItem.data().createdAt : undefined,
-      })) as UserData[];
-      
-      setUsers(usersData);
-      setFilteredUsers(usersData); // Initialize filtered users with all users
-      // The stat cards come from fetchStats; this list only feeds the newest-students card
-    } catch (error) {
-      console.error('Error fetching users:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to load users',
-        variant: 'destructive',
-      });
-    }
-  };
-
-  // Fetch courses with detailed debugging
-  const fetchCourses = async () => {
-    try {
-      const coursesRef = collection(firebase.db, 'courses');
-      
-      // First, try to get the documents directly
-      const coursesSnapshot = await getDocs(coursesRef);
-      
-      // Log collection metadata
-      
-      // Log snapshot details
-      
-      // Log each document in the collection
-      const coursesData: Course[] = [];
-      coursesSnapshot.forEach((doc) => {
-        const data = doc.data();
-        coursesData.push({
-          id: doc.id,
-          title: data.title || 'Untitled Course',
-          description: data.description,
-          duration: data.duration,
-          level: data.level,
-          enrolledStudents: data.enrolledStudents || []
-        });
-      });
-      
-      setCourses(coursesData);
-      setFilteredCourses(coursesData); // Initialize filtered courses with all courses
-      
-      // Set up a real-time listener for changes
-      const unsubscribe = onSnapshot(coursesRef, 
-        (snapshot) => {
-          const updatedCourses = snapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data()
-          })) as Course[];
-          setCourses(updatedCourses);
-          setFilteredCourses(updatedCourses);
-        },
-        (error) => {
-          console.error('Error in courses listener:', error);
-        }
-      );
-      
-      // Return the unsubscribe function to clean up the listener
-      return () => unsubscribe();
-      
-      // Update stats
-      setStats(prev => ({
-        ...prev,
-        totalCourses: coursesData.length,
-        certificatesIssued: coursesData.reduce((acc, course) => 
-          acc + (course.issuedCertificates?.length || 0), 0)
-      }));
-    } catch (error) {
-      console.error('Error fetching courses:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to load courses',
-        variant: 'destructive',
-      });
-    }
-  };
-
-  // Check admin status on mount and when user/auth changes
-  useEffect(() => {
-    const initializeAdminPage = async () => {
-      if (authLoading) return;
-
-      // Redirect to login if not authenticated
-      if (!currentUser) {
-        router.push('/admin/login');
-        return;
-      }
-
-      try {
-        // Same admin markers as the rules: claim, users.role or adminUsers.role
-        const isUserAdmin = await isAdminUser(currentUser);
-        setIsAdmin(isUserAdmin);
-
-        if (!isUserAdmin) {
-          toast({
-            title: 'Access Denied',
-            description: 'You do not have admin privileges',
-            variant: 'destructive',
-          });
-          router.push('/');
-          return;
-        }
-
-        // Fetch data if user is admin
-        await Promise.all([fetchUsers(), fetchCourses()]);
-        
-        // Update admin status in UI
-        setAdminLoading(false);
-      } catch (error) {
-        console.error('Error initializing admin page:', error);
-        toast({
-          title: 'Error',
-          description: 'Failed to initialize admin dashboard',
-          variant: 'destructive',
-        });
-        router.push('/admin/login');
-      } finally {
-        setAdminLoading(false);
-      }
-    };
-
-    initializeAdminPage();
-  }, [currentUser, authLoading, router, toast]);
-
-  // Fetch statistics function
-  const fetchStats = useCallback(async () => {
-    if (!isAdmin || authLoading || adminLoading) return;
-
-    try {
-      // Fetch total students (users with role 'student')
-      const usersQuery = query(collection(firebase.db, 'users'), where('role', '==', 'student'));
-      const usersSnapshot = await getCountFromServer(usersQuery);
-      const totalStudents = usersSnapshot.data().count;
-
-      // Fetch courses from Firestore
-      const coursesQuery = collection(firebase.db, 'courses');
-      const coursesSnapshot = await getCountFromServer(coursesQuery);
-      const totalCourses = coursesSnapshot.data().count;
-
-      // Fetch total certificates issued
-      // Revoked certificates are not counted as issued
-      const certsQuery = query(collection(firebase.db, 'certificates'), where('status', '==', 'issued'));
-      const certsSnapshot = await getCountFromServer(certsQuery);
-      const totalCertificates = certsSnapshot.data().count;
-
-      // Calculate active users (users who logged in the last 30 days)
-      const thirtyDaysAgo = new Date();
-      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-      const activeUsersQuery = query(
-        collection(firebase.db, 'users'),
-        where('lastLogin', '>=', thirtyDaysAgo)
-      );
-      const activeUsersSnapshot = await getCountFromServer(activeUsersQuery);
-      const activeUsers = activeUsersSnapshot.data().count;
-
+      setUsers(userRows)
+      setCourses(courseRows)
+      setEnrollments(enrollmentList)
       setStats({
-        totalUsers: totalStudents,
-        totalCourses: totalCourses,
-        certificatesIssued: totalCertificates,
-        activeStudents: activeUsers,
-        activeUsers: activeUsers
-      });
-    } catch (error) {
-      console.error('Error fetching stats:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to load dashboard statistics',
-        variant: 'destructive',
-      });
+        students: studentCount.data().count,
+        activeEnrollments: enrollmentList.filter((e) => String(e.status).toLowerCase() === "active").length,
+        certificatesIssued: certificateCount.data().count,
+        publishedCourses: courseRows.filter((c) => c.isPublished).length,
+        totalCourses: courseRows.length,
+      })
+
+      // Activity is optional: the dashboard still works if it fails
+      getRecentActivities(6)
+        .then(setActivities)
+        .catch((activityError) => console.error("Error loading activity:", activityError))
+    } catch (loadError) {
+      console.error("Error loading dashboard:", loadError)
+      setError(true)
+      toast({ title: "Couldn't load the dashboard", description: "Please try again.", variant: "destructive" })
+    } finally {
+      setLoading(false)
     }
-  }, [isAdmin, authLoading, adminLoading, toast]);
+  }, [toast])
 
   useEffect(() => {
-    fetchStats();
-  }, [fetchStats]);
+    void load()
+  }, [load])
 
-  if (authLoading || adminLoading) {
-    return (
-      <AdminLayout>
-        <div className="flex items-center justify-center min-h-screen">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
-        </div>
-      </AdminLayout>
-    );
-  }
+  // Newest student accounts first (admins excluded)
+  const newestStudents = useMemo(
+    () =>
+      users
+        .filter((u) => u.role !== "admin")
+        .sort((a, b) => (b.createdAt || "").localeCompare(a.createdAt || ""))
+        .slice(0, 5),
+    [users],
+  )
 
-  if (error) {
-    return (
-      <AdminLayout>
-        <div className="flex items-center justify-center min-h-screen">
-          <div className="text-center p-6 max-w-md">
-            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-destructive-subtle mb-4">
-              <svg className="h-6 w-6 text-destructive" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" clipRule="evenodd" />
-              </svg>
-            </div>
-            <h3 className="text-lg font-medium text-foreground mb-2">Access Denied</h3>
-            <p className="text-muted-foreground mb-4">{error}</p>
-            <Button onClick={() => router.push('/')}>
-              Back to Home
-            </Button>
-          </div>
-        </div>
-      </AdminLayout>
-    );
-  }
-
-  const students = users
-    .filter((user) => user.role !== 'admin')
-    .sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
+  const firstName = (user?.displayName || "").trim().split(/\s+/)[0]
 
   return (
-    <AdminLayout>
-      <AdminHeader 
-        title="Admin Dashboard" 
-        description="Welcome to the admin dashboard"
+    <AdminPage>
+      <AdminPageHeader
+        title="Dashboard"
+        description={firstName ? `Welcome back, ${firstName}. Here's what's happening at Coltek Academy.` : "Here's what's happening at Coltek Academy."}
+        actions={
+          <>
+            <Button variant="outline" onClick={() => setEnrollOpen(true)}>
+              <UserPlus aria-hidden="true" />
+              Enroll a student
+            </Button>
+            <IssueCertificate users={users} courses={courses}>
+              <Button>
+                <Award aria-hidden="true" />
+                Issue certificate
+              </Button>
+            </IssueCertificate>
+          </>
+        }
       />
-      <div className="p-6">
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mb-8">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Student accounts</CardTitle>
-              <Users className="h-4 w-4 text-accent" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.totalUsers}</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Courses</CardTitle>
-              <BookOpen className="h-4 w-4 text-accent" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{courses.length}</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Certificates Issued</CardTitle>
-              <Award className="h-4 w-4 text-accent" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.certificatesIssued}</div>
-            </CardContent>
-          </Card>
-        </div>
 
-        {/* Quick Actions */}
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 mb-8">
-          <Card className="border-primary/20">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg">Quick Actions</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <IssueCertificate users={users} courses={courses}>
-                <Button variant="outline" className="w-full justify-start">
-                  <Upload className="mr-2 h-4 w-4" />
-                  Issue Certificate
+      {error ? (
+        <ErrorState title="Couldn't load the dashboard" description="Check your connection and try again." onRetry={() => void load()} />
+      ) : (
+        <>
+          <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            <AdminStatCard label="Student accounts" value={stats?.students} icon={Users} href="/admin/users" />
+            <AdminStatCard label="Active enrollments" value={stats?.activeEnrollments} icon={GraduationCap} href="/admin/enrollments" />
+            <AdminStatCard label="Certificates issued" value={stats?.certificatesIssued} icon={Award} href="/admin/certificates" />
+            <AdminStatCard
+              label="Published courses"
+              value={stats?.publishedCourses}
+              icon={BookOpen}
+              href="/admin/courses"
+              hint={stats ? `${stats.totalCourses} course${stats.totalCourses === 1 ? "" : "s"} in total` : undefined}
+            />
+          </dl>
+
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+            <AdminSection
+              title="Recent enrollments"
+              description="The latest students to join a course"
+              className="lg:col-span-2"
+              contentClassName="p-0"
+              action={
+                <Button asChild variant="ghost" size="sm">
+                  <Link href="/admin/enrollments">
+                    View all
+                    <ArrowRight aria-hidden="true" />
+                  </Link>
                 </Button>
-              </IssueCertificate>
-              <Button variant="outline" className="w-full justify-start" onClick={() => router.push('/admin/users')}>
-                <Users className="mr-2 h-4 w-4" />
-                Add New User
-              </Button>
-              <Button variant="outline" className="w-full justify-start" onClick={() => router.push('/admin/courses')}>
-                <BookOpen className="mr-2 h-4 w-4" />
-                Create Course
-              </Button>
-              <Button variant="outline" className="w-full justify-start" onClick={() => router.push('/admin/testimonials')}>
-                <MessageSquareQuote className="mr-2 h-4 w-4" />
-                Add Testimonial
-              </Button>
-              <Button variant="outline" className="w-full justify-start" onClick={() => router.push('/admin/projects')}>
-                <FolderKanban className="mr-2 h-4 w-4" />
-                Add Student Project
-              </Button>
-            </CardContent>
-          </Card>
-
-          {/* Recent Activity */}
-          <Card className="md:col-span-1 lg:col-span-2">
-            <CardHeader>
-              <CardTitle>Recent Activity</CardTitle>
-              <CardDescription>Latest actions in the system</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="text-xl font-bold tracking-tight">Recent Activity</h2>
-                  <p className="text-sm text-muted-foreground">
-                    Latest actions in the system
-                  </p>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <IssueCertificate users={users} courses={courses}>
-                    <Button size="sm">
-                      <Award className="mr-2 h-4 w-4" />
-                      Issue Certificate
-                    </Button>
-                  </IssueCertificate>
-                </div>
-              </div>
-              
-              {error && (
-                <div className="bg-destructive-subtle p-4 rounded-md">
-                  <div className="flex">
-                    <div className="flex-shrink-0">
-                      <svg className="h-5 w-5 text-destructive" viewBox="0 0 20 20" fill="currentColor">
-                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                      </svg>
-                    </div>
-                    <div className="ml-3">
-                      <p className="text-sm text-destructive">{error}</p>
-                    </div>
-                  </div>
-                </div>
+              }
+            >
+              {loading ? (
+                <LoadingState label="Loading enrollments…" />
+              ) : enrollments.length === 0 ? (
+                <EmptyState title="No enrollments yet" description="New enrollments appear here as students join courses." className="m-5" />
+              ) : (
+                <ul className="divide-y divide-border">
+                  {enrollments.slice(0, 6).map((enrollment) => {
+                    const name = `${enrollment.personalInfo?.firstName || ""} ${enrollment.personalInfo?.lastName || ""}`.trim()
+                    return (
+                      <li key={enrollment.id} className="flex items-center gap-3 px-5 py-3">
+                        <PersonAvatar name={name} email={enrollment.userEmail} />
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-medium text-foreground">{name || enrollment.userEmail || "Student"}</p>
+                          <p className="truncate text-sm text-muted-foreground">{enrollment.courseTitle || "Course"}</p>
+                        </div>
+                        <div className="hidden shrink-0 text-right sm:block">
+                          <p className="text-sm text-muted-foreground tabular-nums">{formatAdminDate(enrollment.enrollmentDate)}</p>
+                        </div>
+                        <StatusBadge status={String(enrollment.status || "active")} />
+                      </li>
+                    )
+                  })}
+                </ul>
               )}
-              
-              <div className="space-y-4">
-                {activities.length > 0 ? (
-                  activities.map((activity) => (
+            </AdminSection>
+
+            <AdminSection title="Manage" description="Jump to a section" contentClassName="p-2">
+              <ul>
+                {QUICK_LINKS.map((link) => (
+                  <li key={link.href}>
+                    <Link
+                      href={link.href}
+                      className="group flex items-center gap-3 rounded-lg px-3 py-3 transition-colors hover:bg-muted outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                    >
+                      <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-secondary text-primary">
+                        <link.icon className="size-5" aria-hidden="true" />
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-sm font-medium text-foreground">{link.label}</span>
+                        <span className="block truncate text-sm text-muted-foreground">{link.description}</span>
+                      </span>
+                      <ArrowRight className="size-4 text-muted-foreground transition-transform group-hover:translate-x-0.5 motion-reduce:transition-none" aria-hidden="true" />
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </AdminSection>
+          </div>
+
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+            <AdminSection
+              title="Newest students"
+              description="Most recent sign-ups"
+              contentClassName="p-0"
+              action={
+                <Button asChild variant="ghost" size="sm">
+                  <Link href="/admin/users">
+                    All users
+                    <ArrowRight aria-hidden="true" />
+                  </Link>
+                </Button>
+              }
+            >
+              {loading ? (
+                <LoadingState label="Loading students…" />
+              ) : newestStudents.length === 0 ? (
+                <EmptyState title="No student accounts yet" className="m-5" />
+              ) : (
+                <ul className="divide-y divide-border">
+                  {newestStudents.map((student) => (
+                    <li key={student.id} className="flex items-center gap-3 px-5 py-3">
+                      <PersonAvatar name={student.displayName} email={student.email} photoURL={student.photoURL} />
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-medium text-foreground">{student.displayName || "No name"}</p>
+                        <p className="truncate text-sm text-muted-foreground">{student.email}</p>
+                      </div>
+                      <span className="shrink-0 text-sm text-muted-foreground tabular-nums">{formatAdminDate(student.createdAt)}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </AdminSection>
+
+            <AdminSection title="Recent activity" description="Certificates and other admin actions" contentClassName="p-2">
+              {loading ? (
+                <LoadingState label="Loading activity…" />
+              ) : activities.length === 0 ? (
+                <EmptyState title="No activity yet" description="Issued certificates will show up here." className="m-3" />
+              ) : (
+                <div className="space-y-1">
+                  {activities.map((activity) => (
                     <ActivityItem key={activity.id} activity={activity} />
-                  ))
-                ) : !isLoading ? (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <p>No activities found</p>
-                  </div>
-                ) : null}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Newest student accounts (admins excluded; newest first when a sign-up date is recorded) */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Newest students</CardTitle>
-            <CardDescription>
-              {students.length} student account{students.length === 1 ? '' : 's'} in total
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {students.slice(0, 5).map((user) => (
-                <div key={user.id} className="flex items-center justify-between">
-                  <div className="flex items-center space-x-4">
-                    <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-medium">
-                      {user.displayName?.[0] || user.email?.[0] || 'U'}
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium">
-                        {user.displayName || 'New User'}
-                      </p>
-                      <p className="text-xs text-muted-foreground">{user.email}</p>
-                    </div>
-                  </div>
-                  <span className="inline-flex items-center rounded-full bg-secondary px-2 py-1 text-xs font-medium text-secondary-foreground ring-1 ring-inset ring-accent/20">
-                    {user.role || 'Student'}
-                  </span>
-                </div>
-              ))}
-              {students.length === 0 && (
-                <div className="text-center py-8 text-muted-foreground">
-                  No student accounts yet
+                  ))}
                 </div>
               )}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    </AdminLayout>
-  );
+            </AdminSection>
+          </div>
+        </>
+      )}
+
+      <ManualEnrollmentModal isOpen={enrollOpen} onClose={() => setEnrollOpen(false)} onSuccess={() => void load(true)} />
+    </AdminPage>
+  )
 }

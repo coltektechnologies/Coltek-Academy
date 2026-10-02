@@ -8,15 +8,36 @@ import { firebase } from '@/lib/firebase';
 import { getAllEnrollments } from '@/lib/enrollment';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useToast } from '@/components/ui/use-toast';
-import { Plus, Pencil, Trash2, Eye } from 'lucide-react';
+import { BookOpen, ExternalLink, MoreHorizontal, Plus, Pencil, Trash2 } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { AdminPage, AdminPageHeader, AdminSearch, AdminTableCard, AdminToolbar, StatusBadge, formatAdminDate } from '@/components/admin/admin-ui';
+import { EmptyState } from '@/components/academy/states';
+import { isCourseUpcoming } from '@/lib/course-display';
+import { cn } from '@/lib/utils';
 import { CourseForm } from '@/components/admin/CourseForm';
 import { Course as CourseType, CourseFormData } from '@/types/course';
 import { deleteObject, ref } from 'firebase/storage';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 interface Instructor {
   id?: string;
@@ -154,15 +175,16 @@ function AdminCoursesPageContent() {
   const { toast } = useToast();
   const [isFormOpen, setIsFormOpen] = useState(false);
   
-  // Debug authentication state
-  const [authState, setAuthState] = useState<any>(null);
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'published' | 'draft'>('all');
 
-  const fetchCourses = useCallback(async () => {
+  const fetchCourses = useCallback(async (silent = false) => {
     try {
-      setLoading(true);
+      if (!silent) setLoading(true);
       const coursesRef = collection(firebase.db, 'courses');
       
-      const querySnapshot = await getDocs(query(coursesRef, orderBy('createdAt', 'desc')));
+      // No Firestore orderBy: it would silently drop courses that have no createdAt field
+      const querySnapshot = await getDocs(coursesRef);
       const coursesData: CourseType[] = [];
       
       
@@ -251,6 +273,7 @@ function AdminCoursesPageContent() {
       if (coursesData.length === 0) {
         console.warn('No courses found in the database');
       }
+      coursesData.sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')));
       setCourses(coursesData);
       setLoading(false);
 
@@ -279,42 +302,10 @@ function AdminCoursesPageContent() {
     }
   }, [toast]);
 
+  // Admin access is enforced by app/admin/layout.tsx (AdminGuard)
   useEffect(() => {
-    if (!authState) {
-      return;
-    }
-    
-    if (authState.isAuthenticated) {
-      fetchCourses().catch(error => {
-        console.error('Error in fetchCourses:', error);
-        setLoading(false);
-      });
-    } else {
-      setCourses([]);
-      setLoading(false);
-    }
-  }, [fetchCourses, authState]);
-
-  useEffect(() => {
-    let unsubscribe: (() => void) | undefined;
-    import('firebase/auth').then(({ onAuthStateChanged }) => {
-      unsubscribe = onAuthStateChanged(firebase.auth, (user) => {
-        setAuthState({
-          isAuthenticated: !!user,
-          user: user ? {
-            uid: user.uid,
-            email: user.email,
-            emailVerified: user.emailVerified,
-            isAnonymous: user.isAnonymous,
-            providerData: user.providerData
-          } : null
-        });
-      });
-    }).catch(console.error);
-    return () => {
-      unsubscribe?.();
-    };
-  }, []);
+    void fetchCourses();
+  }, [fetchCourses]);
 
   const handleEditCourse = (course: CourseType) => {
     setEditingCourse(course);
@@ -341,7 +332,7 @@ function AdminCoursesPageContent() {
         }
       }
       
-      await fetchCourses();
+      await fetchCourses(true);
       toast({
         title: 'Success',
         description: 'Course deleted successfully',
@@ -395,7 +386,7 @@ function AdminCoursesPageContent() {
       }
 
       // Refresh the courses list and close the form
-      await fetchCourses();
+      await fetchCourses(true);
       setIsFormOpen(false);
       setEditingCourse(null);
     } catch (error) {
@@ -410,56 +401,228 @@ function AdminCoursesPageContent() {
     }
   };
 
-  // Show loading state while checking auth
-  if (authState === null) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-      </div>
-    );
-  }
+  const counts = {
+    all: courses.length,
+    published: courses.filter((c) => c.isPublished).length,
+    draft: courses.filter((c) => !c.isPublished).length,
+  };
+  const q = search.trim().toLowerCase();
+  const visibleCourses = courses.filter((c) => {
+    if (statusFilter === 'published' && !c.isPublished) return false;
+    if (statusFilter === 'draft' && c.isPublished) return false;
+    return !q || [c.title, c.category, c.level].some((v) => String(v || '').toLowerCase().includes(q));
+  });
 
-  // Show login prompt if not authenticated
-  if (!authState.isAuthenticated) {
-    return (
-      <div className="container mx-auto py-8 text-center">
-        <h1 className="text-2xl font-bold mb-4">Access Denied</h1>
-        <p className="mb-6">You need to be logged in to view this page.</p>
-        <Button onClick={() => router.push('/admin/login')}>
-          Go to Login
+  const priceLabel = (course: CourseType) => {
+    if (isCourseUpcoming(course as any)) return 'Coming soon';
+    if (course.isFree || !course.price) return 'Free';
+    return `GH₵${Number(course.price).toLocaleString()}`;
+  };
+
+  const openCreate = () => {
+    setEditingCourse(null);
+    setIsFormOpen(true);
+  };
+
+  const rowActions = (course: CourseType) => (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" size="icon-sm" aria-label={`Actions for ${course.title}`}>
+          <MoreHorizontal aria-hidden="true" />
         </Button>
-      </div>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-48">
+        <DropdownMenuItem onSelect={() => handleEditCourse(course)}>
+          <Pencil aria-hidden="true" />
+          Edit
+        </DropdownMenuItem>
+        {course.isPublished && (
+          <DropdownMenuItem asChild>
+            <a href={`/courses/${course.slug || course.id}`} target="_blank" rel="noopener noreferrer">
+              <ExternalLink aria-hidden="true" />
+              View on website
+            </a>
+          </DropdownMenuItem>
+        )}
+        <DropdownMenuSeparator />
+        <DropdownMenuItem variant="destructive" onSelect={() => setCourseToDelete(course)}>
+          <Trash2 aria-hidden="true" />
+          Delete
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+
+  const thumbnail = (course: CourseType, className: string) =>
+    course.image ? (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img src={course.image} alt="" className={cn('shrink-0 rounded-md border border-border object-cover', className)} loading="lazy" />
+    ) : (
+      <span className={cn('flex shrink-0 items-center justify-center rounded-md bg-secondary text-primary', className)} aria-hidden="true">
+        <BookOpen className="size-5" />
+      </span>
     );
-  }
 
   return (
-    <div className="container mx-auto py-8">
-      <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold">Courses</h1>
-        <Button onClick={() => {
-          setEditingCourse(null);
-          setIsFormOpen(true);
-        }}>
-          <Plus className="mr-2 h-4 w-4" />
-          Add Course
-        </Button>
-      </div>
-
-      {/* Course Form Dialog */}
-      <Dialog open={isFormOpen} onOpenChange={(open) => {
-        if (!open) {
-          setEditingCourse(null);
+    <AdminPage>
+      <AdminPageHeader
+        title="Courses"
+        description="Create and edit courses. Only published courses appear on the website."
+        meta={
+          !loading ? (
+            <>
+              <span>
+                <strong className="font-semibold text-foreground tabular-nums">{counts.published}</strong> published
+              </span>
+              <span>
+                <strong className="font-semibold text-foreground tabular-nums">{counts.draft}</strong> drafts
+              </span>
+            </>
+          ) : undefined
         }
-        setIsFormOpen(open);
-      }}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        actions={
+          <Button onClick={openCreate}>
+            <Plus aria-hidden="true" />
+            Add course
+          </Button>
+        }
+      />
+
+      {loading ? (
+        <LoadingState size="page" label="Loading courses…" />
+      ) : (
+        <>
+          <AdminToolbar>
+            <AdminSearch value={search} onChange={setSearch} placeholder="Search title, category or level" label="Search courses" />
+            <div role="group" aria-label="Filter by status" className="flex gap-1 rounded-lg border border-border bg-card p-1">
+              {(['all', 'published', 'draft'] as const).map((key) => (
+                <button
+                  key={key}
+                  type="button"
+                  aria-pressed={statusFilter === key}
+                  onClick={() => setStatusFilter(key)}
+                  className={cn(
+                    'inline-flex h-8 items-center gap-1.5 rounded-md px-3 text-sm font-medium transition-colors outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50',
+                    statusFilter === key ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+                  )}
+                >
+                  {key === 'all' ? 'All' : key === 'published' ? 'Published' : 'Drafts'}
+                  <span className={cn('tabular-nums', statusFilter === key ? 'text-primary-foreground/80' : 'text-muted-foreground')}>{counts[key]}</span>
+                </button>
+              ))}
+            </div>
+          </AdminToolbar>
+
+          {visibleCourses.length === 0 ? (
+            <EmptyState
+              icon={BookOpen}
+              title={courses.length === 0 ? 'No courses yet' : 'No courses match'}
+              description={courses.length === 0 ? 'Create your first course to get started.' : 'Try a different search or filter.'}
+              action={
+                courses.length === 0 ? (
+                  <Button onClick={openCreate}>
+                    <Plus aria-hidden="true" />
+                    Add course
+                  </Button>
+                ) : undefined
+              }
+            />
+          ) : (
+            <>
+              <AdminTableCard className="hidden md:block">
+                <Table>
+                  <TableCaption className="sr-only">Courses</TableCaption>
+                  <TableHeader className="bg-muted">
+                    <TableRow>
+                      <TableHead className="h-11 px-4">Course</TableHead>
+                      <TableHead className="h-11 px-4">Status</TableHead>
+                      <TableHead className="h-11 px-4 text-right">Price</TableHead>
+                      <TableHead className="h-11 px-4 text-right">Students</TableHead>
+                      <TableHead className="h-11 px-4">Created</TableHead>
+                      <TableHead className="h-11 px-4 text-right">
+                        <span className="sr-only">Actions</span>
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {visibleCourses.map((course) => (
+                      <TableRow key={course.id}>
+                        <TableCell className="px-4 py-3">
+                          <div className="flex items-center gap-3">
+                            {thumbnail(course, 'h-10 w-16')}
+                            <div className="min-w-0">
+                              <button
+                                type="button"
+                                onClick={() => handleEditCourse(course)}
+                                className="max-w-80 truncate rounded-sm text-left font-medium text-foreground underline-offset-4 hover:underline outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                              >
+                                {course.title}
+                              </button>
+                              <p className="text-muted-foreground">
+                                {[course.category, course.level].filter(Boolean).join(' · ') || '—'}
+                              </p>
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell className="px-4 py-3">
+                          <div className="flex flex-wrap gap-1.5">
+                            <StatusBadge status={course.isPublished ? 'published' : 'draft'} />
+                            {isCourseUpcoming(course as any) && <StatusBadge status="upcoming" />}
+                          </div>
+                        </TableCell>
+                        <TableCell className="px-4 py-3 text-right font-medium text-foreground tabular-nums">{priceLabel(course)}</TableCell>
+                        <TableCell className="px-4 py-3 text-right text-foreground tabular-nums">{enrollmentCounts ? enrollmentCounts.get(course.id) ?? 0 : '…'}</TableCell>
+                        <TableCell className="px-4 py-3 text-muted-foreground tabular-nums">{formatAdminDate(course.createdAt)}</TableCell>
+                        <TableCell className="px-4 py-3 text-right">{rowActions(course)}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </AdminTableCard>
+
+              <ul className="space-y-3 md:hidden" aria-label="Courses">
+                {visibleCourses.map((course) => (
+                  <li key={course.id} className="rounded-xl border border-border bg-card p-4 shadow-sm">
+                    <div className="flex items-start gap-3">
+                      {thumbnail(course, 'h-12 w-16')}
+                      <div className="min-w-0 flex-1">
+                        <p className="font-medium text-foreground">{course.title}</p>
+                        <p className="text-sm text-muted-foreground">{[course.category, course.level].filter(Boolean).join(' · ')}</p>
+                      </div>
+                      {rowActions(course)}
+                    </div>
+                    <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
+                      <StatusBadge status={course.isPublished ? 'published' : 'draft'} />
+                      {isCourseUpcoming(course as any) && <StatusBadge status="upcoming" />}
+                      <span className="font-medium text-foreground tabular-nums">{priceLabel(course)}</span>
+                      <span className="text-muted-foreground tabular-nums">
+                        {enrollmentCounts ? enrollmentCounts.get(course.id) ?? 0 : '…'} students
+                      </span>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+        </>
+      )}
+
+      {/* Course form */}
+      <Dialog
+        open={isFormOpen}
+        onOpenChange={(open) => {
+          if (!open) setEditingCourse(null);
+          setIsFormOpen(open);
+        }}
+      >
+        <DialogContent className="max-h-[90vh] max-w-4xl overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{editingCourse ? 'Edit' : 'Add New'} Course</DialogTitle>
+            <DialogTitle>{editingCourse ? `Edit ${editingCourse.title}` : 'Add course'}</DialogTitle>
             <DialogDescription>
-              {editingCourse ? 'Update the course details below.' : 'Fill in the details to create a new course.'}
+              {editingCourse ? 'Update the course details below.' : 'Fill in the details to create a new course. It stays a draft until you publish it.'}
             </DialogDescription>
           </DialogHeader>
-          <CourseForm 
+          <CourseForm
             key={editingCourse?.id ?? 'new'}
             initialData={editingCourse || undefined}
             onSubmit={handleSubmitCourse}
@@ -469,155 +632,31 @@ function AdminCoursesPageContent() {
         </DialogContent>
       </Dialog>
 
-      {/* Courses Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle>All Courses</CardTitle>
-          <CardDescription>Manage your courses and their content</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {loading ? (
-            <div className="flex justify-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-            </div>
-          ) : courses.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              No courses found. Create your first course to get started.
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Title</TableHead>
-                    <TableHead>Category</TableHead>
-                    <TableHead>Level</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Price</TableHead>
-                    <TableHead>Students</TableHead>
-                    <TableHead>Created</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {courses.map((course) => (
-                    <TableRow key={course.id}>
-                      <TableCell className="font-medium">
-                        <div className="flex items-center space-x-3">
-                          {course.image && (
-                            <img 
-                              src={course.image} 
-                              alt={course.title} 
-                              className="h-10 w-16 object-cover rounded-md"
-                            />
-                          )}
-                          <span>{course.title}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell>{course.category}</TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className="capitalize">
-                          {course.level?.toLowerCase()}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={course.isPublished ? 'default' : 'secondary'}>
-                          {course.isPublished ? 'Published' : 'Draft'}
-                        </Badge>
-                        {course.isFeatured && (
-                          <Badge variant="secondary" className="ml-2">
-                            Featured
-                          </Badge>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {course.isFree ? (
-                          <span className="font-medium text-success">Free</span>
-                        ) : (
-                          <>
-                            GH₵{course.price?.toFixed(2)}
-                            {course.hasDiscount && course.originalPrice && (
-                              <span className="ml-2 text-sm text-muted-foreground line-through">
-                                GH₵{course.originalPrice.toFixed(2)}
-                              </span>
-                            )}
-                          </>
-                        )}
-                      </TableCell>
-                      <TableCell>{enrollmentCounts ? enrollmentCounts.get(course.id) ?? 0 : '…'}</TableCell>
-                      <TableCell>
-                        {course.createdAt ? new Date(course.createdAt).toLocaleDateString() : 'N/A'}
-                      </TableCell>
-                      <TableCell className="text-right space-x-1">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => router.push(`/courses/${course.slug || course.id}`)}
-                          title="View"
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleEditCourse(course)}
-                          title="Edit"
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="text-destructive hover:text-destructive"
-                          onClick={() => {
-                            setCourseToDelete(course);
-                          }}
-                          title="Delete"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Delete Confirmation Dialog */}
-      <Dialog open={!!courseToDelete} onOpenChange={(open) => {
-        if (!open) {
-          setCourseToDelete(null);
-        }
-      }}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Delete Course</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to delete "{courseToDelete?.title}"? This action cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button 
-              variant="outline" 
-              onClick={() => setCourseToDelete(null)}
+      {/* Delete confirmation */}
+      <AlertDialog open={!!courseToDelete} onOpenChange={(open) => !open && !isDeleting && setCourseToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this course?</AlertDialogTitle>
+            <AlertDialogDescription>
+              &ldquo;{courseToDelete?.title}&rdquo; will be permanently deleted and removed from the website. Existing enrollment and certificate records are kept. This can&apos;t be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(event) => {
+                event.preventDefault();
+                void handleDeleteCourse();
+              }}
               disabled={isDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              Cancel
-            </Button>
-            <Button 
-              variant="destructive" 
-              onClick={handleDeleteCourse}
-              disabled={isDeleting}
-            >
-              {isDeleting ? 'Deleting...' : 'Delete'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </div>
+              {isDeleting ? 'Deleting…' : 'Delete course'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </AdminPage>
   );
 }
 

@@ -35,6 +35,14 @@ const nextConfig = {
   compiler: {
     styledComponents: true,
   },
+  // Certificate files stay shareable by their unguessable link, but must never be indexed by search engines
+  async headers() {
+    const noIndex = [{ key: 'X-Robots-Tag', value: 'noindex, nofollow, noarchive' }]
+    return [
+      { source: '/uploads/:path*', headers: noIndex },
+      { source: '/api/files/:path*', headers: noIndex },
+    ]
+  },
 }
 
 export default nextConfig

@@ -1,12 +1,13 @@
 import { initializeApp, getApps, getApp, FirebaseApp } from "firebase/app";
 import {
   getAuth,
+  connectAuthEmulator,
   setPersistence,
   browserSessionPersistence,
   inMemoryPersistence,
   Auth,
 } from "firebase/auth";
-import { initializeFirestore, Firestore } from "firebase/firestore";
+import { initializeFirestore, connectFirestoreEmulator, Firestore } from "firebase/firestore";
 import { getAnalytics, isSupported, Analytics } from "firebase/analytics";
 import { getStorage, FirebaseStorage } from "firebase/storage";
 
@@ -64,6 +65,13 @@ class Firebase {
 
     // Initialize Storage
     this.storage = getStorage(this.app);
+
+    // Local development/testing only: talk to the Firebase emulators instead of the real project.
+    // Never set NEXT_PUBLIC_USE_FIREBASE_EMULATORS in production.
+    if (process.env.NEXT_PUBLIC_USE_FIREBASE_EMULATORS === "true") {
+      connectAuthEmulator(this.auth, "http://127.0.0.1:9099", { disableWarnings: true });
+      connectFirestoreEmulator(this.db, "127.0.0.1", 8181);
+    }
 
     // Initialize Analytics if in browser
     if (typeof window !== "undefined") {

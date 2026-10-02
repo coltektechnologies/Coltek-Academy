@@ -1,32 +1,16 @@
-"use client";
+"use client"
 
-import { useEffect, useState, useCallback, useMemo } from 'react';
-import { collection, getDocs, doc, deleteDoc, setDoc } from 'firebase/firestore';
-import { firebase } from '@/lib/firebase';
-import { AdminLayout } from '@/components/admin/AdminLayout';
-import { getUserEnrollments } from '@/lib/enrollment';
-import type { UserEnrollment } from '@/lib/types';
-import { useAuth } from '@/hooks/use-auth';
-import type { AuthUserRow } from '@/lib/types';
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetDescription,
-} from '@/components/ui/sheet';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { useCallback, useEffect, useMemo, useState } from "react"
+import { collection, doc, getDocs, setDoc } from "firebase/firestore"
+import { BookOpen, Eye, MoreHorizontal, Pencil, Trash2, Users } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -36,540 +20,488 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
+} from "@/components/ui/alert-dialog"
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from '@/components/ui/dialog';
-import { useToast } from '@/hooks/use-toast';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Loader2, User, BookOpen, Calendar, CreditCard, Plus, Pencil, Trash2 } from 'lucide-react';
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import {
+  AdminPage,
+  AdminPageHeader,
+  AdminSearch,
+  AdminTableCard,
+  AdminToolbar,
+  PersonAvatar,
+  StatusBadge,
+  formatAdminDate,
+} from "@/components/admin/admin-ui"
+import { EmptyState, ErrorState, LoadingState } from "@/components/academy/states"
+import { useAuth } from "@/hooks/use-auth"
+import { useToast } from "@/hooks/use-toast"
+import { firebase } from "@/lib/firebase"
+import { getUserEnrollments } from "@/lib/enrollment"
+import type { AuthUserRow, UserEnrollment } from "@/lib/types"
+import { cn } from "@/lib/utils"
 
-interface UserData {
-  id: string;
-  email: string;
-  displayName: string;
-  role?: string;
-  photoURL?: string;
+/** One row per person: their sign-in account (if any) merged with their users/{uid} profile (if any). */
+interface UserRow {
+  id: string
+  displayName: string
+  email: string
+  photoURL: string
+  role: string
+  providers: string[]
+  createdAt: string | null
+  lastSignIn: string | null
+  hasSignIn: boolean
+  hasProfile: boolean
 }
 
-const ROLES = ['student', 'admin', 'instructor'] as const;
+const ROLE_FILTERS = ["all", "student", "admin"] as const
+type RoleFilter = (typeof ROLE_FILTERS)[number]
 
 function providerLabel(id: string): string {
-  if (id === 'password') return 'Email';
-  if (id === 'google.com') return 'Google';
-  if (id === 'github.com') return 'GitHub';
-  return id.replace('.com', '');
+  if (id === "password") return "Email"
+  if (id === "google.com") return "Google"
+  if (id === "github.com") return "GitHub"
+  return id.replace(".com", "")
 }
 
-export default function UsersPage() {
-  const { user: sessionUser, loading: sessionLoading } = useAuth();
-  const [firestoreProfiles, setFirestoreProfiles] = useState<UserData[]>([]);
-  const [authUsers, setAuthUsers] = useState<AuthUserRow[]>([]);
-  const [authListError, setAuthListError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [selectedUser, setSelectedUser] = useState<UserData | null>(null);
-  const [enrollments, setEnrollments] = useState<UserEnrollment[]>([]);
-  const [loadingDetails, setLoadingDetails] = useState(false);
-  const [createOpen, setCreateOpen] = useState(false);
-  const [editUser, setEditUser] = useState<UserData | null>(null);
-  const [deleteUser, setDeleteUser] = useState<UserData | null>(null);
-  const [createForm, setCreateForm] = useState({ displayName: '', email: '', role: 'student' as const });
-  const [editForm, setEditForm] = useState({ displayName: '', email: '', role: 'student' as const });
-  const [submitting, setSubmitting] = useState(false);
-  const { toast } = useToast();
+export default function AdminUsersPage() {
+  const { user: sessionUser } = useAuth()
+  const { toast } = useToast()
+  const [rows, setRows] = useState<UserRow[]>([])
+  const [authListError, setAuthListError] = useState<string | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(false)
+  const [search, setSearch] = useState("")
+  const [roleFilter, setRoleFilter] = useState<RoleFilter>("all")
 
-  const profileByUid = useMemo(() => {
-    const m = new Map<string, UserData>();
-    for (const p of firestoreProfiles) m.set(p.id, p);
-    return m;
-  }, [firestoreProfiles]);
+  const [selected, setSelected] = useState<UserRow | null>(null)
+  const [enrollments, setEnrollments] = useState<UserEnrollment[]>([])
+  const [loadingDetails, setLoadingDetails] = useState(false)
 
-  const authUidSet = useMemo(() => new Set(authUsers.map((u) => u.uid)), [authUsers]);
+  const [editUser, setEditUser] = useState<UserRow | null>(null)
+  const [editForm, setEditForm] = useState({ displayName: "", role: "student" })
+  const [deleteUser, setDeleteUser] = useState<UserRow | null>(null)
+  const [submitting, setSubmitting] = useState(false)
 
-  const firestoreOnlyProfiles = useMemo(
-    () => firestoreProfiles.filter((p) => !authUidSet.has(p.id)),
-    [firestoreProfiles, authUidSet]
-  );
-
-  const loadData = useCallback(async () => {
-    if (!sessionUser) {
-      setLoading(false);
-      return;
-    }
-    setLoading(true);
-    setError(null);
-    setAuthListError(null);
+  const load = useCallback(async (silent = false) => {
+    if (!sessionUser) return
+    if (!silent) setLoading(true)
+    setError(false)
+    setAuthListError(null)
     try {
-      const usersRef = collection(firebase.db, 'users');
-      const usersSnapshot = await getDocs(usersRef);
-      const profiles: UserData[] = usersSnapshot.docs.map((docSnap) => ({
-        id: docSnap.id,
-        email: docSnap.data().email || '',
-        displayName: docSnap.data().displayName || '',
-        role: docSnap.data().role || 'student',
-        photoURL: docSnap.data().photoURL || '',
-      }));
-      setFirestoreProfiles(profiles);
+      const profilesSnap = await getDocs(collection(firebase.db, "users"))
+      const profiles = new Map(profilesSnap.docs.map((d) => [d.id, d.data()]))
 
-      const token = await sessionUser.getIdToken(true);
-      const res = await fetch('/api/admin/auth-users', {
-        headers: { Authorization: `Bearer ${token}` },
-        cache: 'no-store',
-      });
-      const body = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        setAuthUsers([]);
-        setAuthListError(
-          [body.error, body.detail].filter(Boolean).join(' — ') ||
-            `Could not load Auth users (${res.status}).`
-        );
-        return;
+      let authUsers: AuthUserRow[] = []
+      const token = await sessionUser.getIdToken()
+      const res = await fetch("/api/admin/auth-users", { headers: { Authorization: `Bearer ${token}` }, cache: "no-store" })
+      const body = await res.json().catch(() => ({}))
+      if (res.ok && Array.isArray(body.users)) authUsers = body.users
+      else setAuthListError([body.error, body.detail].filter(Boolean).join(" — ") || `Sign-in accounts could not be loaded (${res.status}).`)
+
+      const merged: UserRow[] = authUsers.map((a) => {
+        const p = profiles.get(a.uid)
+        return {
+          id: a.uid,
+          displayName: p?.displayName || a.displayName || "",
+          email: a.email || p?.email || "",
+          photoURL: p?.photoURL || a.photoURL || "",
+          role: p?.role || "student",
+          providers: a.providers,
+          createdAt: a.creationTime,
+          lastSignIn: a.lastSignInTime,
+          hasSignIn: true,
+          hasProfile: !!p,
+        }
+      })
+      // Profiles without a sign-in account (e.g. created by the old "add user" form)
+      const authIds = new Set(authUsers.map((a) => a.uid))
+      profilesSnap.docs
+        .filter((d) => !authIds.has(d.id) && authUsers.length > 0)
+        .forEach((d) => {
+          const p = d.data()
+          merged.push({
+            id: d.id,
+            displayName: p.displayName || "",
+            email: p.email || "",
+            photoURL: p.photoURL || "",
+            role: p.role || "student",
+            providers: [],
+            createdAt: typeof p.createdAt === "string" ? p.createdAt : null,
+            lastSignIn: null,
+            hasSignIn: false,
+            hasProfile: true,
+          })
+        })
+      // When the sign-in list is unavailable, fall back to profiles only
+      if (authUsers.length === 0) {
+        profilesSnap.docs.forEach((d) => {
+          const p = d.data()
+          merged.push({
+            id: d.id,
+            displayName: p.displayName || "",
+            email: p.email || "",
+            photoURL: p.photoURL || "",
+            role: p.role || "student",
+            providers: [],
+            createdAt: typeof p.createdAt === "string" ? p.createdAt : null,
+            lastSignIn: null,
+            hasSignIn: true,
+            hasProfile: true,
+          })
+        })
       }
-      setAuthUsers(Array.isArray(body.users) ? body.users : []);
-    } catch (err) {
-      console.error(err);
-      setError('Failed to load users.');
+
+      merged.sort((a, b) => (b.createdAt ? new Date(b.createdAt).getTime() : 0) - (a.createdAt ? new Date(a.createdAt).getTime() : 0))
+      setRows(merged)
+    } catch (loadError) {
+      console.error("Error loading users:", loadError)
+      setError(true)
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  }, [sessionUser]);
+  }, [sessionUser])
 
   useEffect(() => {
-    if (sessionLoading) return;
-    void loadData();
-  }, [sessionLoading, loadData]);
+    void load()
+  }, [load])
 
-  const mergedForEdit = useCallback(
-    (auth: AuthUserRow): UserData => {
-      const p = profileByUid.get(auth.uid);
-      return {
-        id: auth.uid,
-        email: p?.email || auth.email || '',
-        displayName: p?.displayName || auth.displayName || '',
-        role: (p?.role || 'student') as UserData['role'],
-        photoURL: p?.photoURL || auth.photoURL || '',
-      };
-    },
-    [profileByUid]
-  );
+  const counts = useMemo(
+    () => ({
+      all: rows.length,
+      student: rows.filter((r) => r.role !== "admin").length,
+      admin: rows.filter((r) => r.role === "admin").length,
+    }),
+    [rows],
+  )
 
-  const handleCreate = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!createForm.displayName.trim() || !createForm.email.trim()) {
-      toast({ title: 'Validation error', description: 'Name and email are required.', variant: 'destructive' });
-      return;
-    }
-    setSubmitting(true);
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase()
+    return rows.filter((r) => {
+      if (roleFilter === "admin" && r.role !== "admin") return false
+      if (roleFilter === "student" && r.role === "admin") return false
+      return !q || r.displayName.toLowerCase().includes(q) || r.email.toLowerCase().includes(q)
+    })
+  }, [rows, search, roleFilter])
+
+  const openDetails = async (row: UserRow) => {
+    setSelected(row)
+    setLoadingDetails(true)
+    setEnrollments([])
     try {
-      const newId = crypto.randomUUID();
-      const userRef = doc(firebase.db, 'users', newId);
-      await setDoc(userRef, {
-        uid: newId,
-        displayName: createForm.displayName.trim(),
-        email: createForm.email.trim(),
-        role: createForm.role,
-        photoURL: '',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      });
-      toast({ title: 'User created', description: `${createForm.displayName} has been added (Firestore only — no Auth login).` });
-      setCreateOpen(false);
-      setCreateForm({ displayName: '', email: '', role: 'student' });
-      await loadData();
-    } catch (err) {
-      toast({ title: 'Error', description: 'Failed to create user.', variant: 'destructive' });
+      setEnrollments(await getUserEnrollments(row.id))
+    } catch (detailError) {
+      console.error(detailError)
     } finally {
-      setSubmitting(false);
+      setLoadingDetails(false)
     }
-  };
+  }
 
-  const handleUpdate = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!editUser || !editForm.displayName.trim() || !editForm.email.trim()) return;
-    setSubmitting(true);
+  const openEdit = (row: UserRow) => {
+    setEditUser(row)
+    setEditForm({ displayName: row.displayName, role: row.role === "admin" ? "admin" : "student" })
+  }
+
+  const saveEdit = async (event: React.FormEvent) => {
+    event.preventDefault()
+    if (!editUser) return
+    if (!editForm.displayName.trim()) {
+      toast({ title: "Name is required", variant: "destructive" })
+      return
+    }
+    if (editUser.id === sessionUser?.uid && editForm.role !== "admin") {
+      toast({ title: "You can't remove your own admin access", variant: "destructive" })
+      return
+    }
+    setSubmitting(true)
     try {
-      const userRef = doc(firebase.db, 'users', editUser.id);
       await setDoc(
-        userRef,
+        doc(firebase.db, "users", editUser.id),
         {
           uid: editUser.id,
           displayName: editForm.displayName.trim(),
-          email: editForm.email.trim(),
+          email: editUser.email,
           role: editForm.role,
-          photoURL: editUser.photoURL || '',
           updatedAt: new Date().toISOString(),
-          ...(profileByUid.has(editUser.id) ? {} : { createdAt: new Date().toISOString() }),
+          ...(editUser.hasProfile ? {} : { createdAt: new Date().toISOString() }),
         },
-        { merge: true }
-      );
+        { merge: true },
+      )
+      toast({ title: "User updated", description: editForm.displayName.trim() })
+      setEditUser(null)
+      await load(true)
+    } catch (saveError) {
+      console.error(saveError)
+      toast({ title: "Couldn't save the user", description: "Please try again.", variant: "destructive" })
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const confirmDelete = async () => {
+    if (!deleteUser || !sessionUser) return
+    setSubmitting(true)
+    try {
+      const token = await sessionUser.getIdToken()
+      const res = await fetch(`/api/admin/users/${encodeURIComponent(deleteUser.id)}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      const body = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(body.error || "The user could not be deleted.")
+      toast({ title: "User deleted", description: deleteUser.displayName || deleteUser.email })
+      setDeleteUser(null)
+      if (selected?.id === deleteUser.id) setSelected(null)
+      await load(true)
+    } catch (deleteError) {
       toast({
-        title: profileByUid.has(editUser.id) ? 'User updated' : 'Firestore profile created',
-        description: `${editForm.displayName} saved under users/${editUser.id}.`,
-      });
-      setEditUser(null);
-      await loadData();
-      if (selectedUser?.id === editUser.id) {
-        setSelectedUser({
-          ...editUser,
-          displayName: editForm.displayName.trim(),
-          email: editForm.email.trim(),
-          role: editForm.role,
-        });
-      }
-    } catch (err) {
-      toast({ title: 'Error', description: 'Failed to save user.', variant: 'destructive' });
+        title: "Couldn't delete the user",
+        description: deleteError instanceof Error ? deleteError.message : "Please try again.",
+        variant: "destructive",
+      })
     } finally {
-      setSubmitting(false);
+      setSubmitting(false)
     }
-  };
-
-  const handleDelete = async () => {
-    if (!deleteUser) return;
-    setSubmitting(true);
-    try {
-      const userRef = doc(firebase.db, 'users', deleteUser.id);
-      await deleteDoc(userRef);
-      toast({ title: 'User deleted', description: `${deleteUser.displayName || deleteUser.email} removed from Firestore.` });
-      setDeleteUser(null);
-      if (selectedUser?.id === deleteUser.id) setSelectedUser(null);
-      await loadData();
-    } catch (err) {
-      toast({ title: 'Error', description: 'Failed to delete user.', variant: 'destructive' });
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const openEdit = (user: UserData) => {
-    setEditUser(user);
-    setEditForm({
-      displayName: user.displayName || '',
-      email: user.email || '',
-      role: (user.role || 'student') as typeof editForm.role,
-    });
-  };
-
-  const handleUserClick = useCallback(async (user: UserData) => {
-    setSelectedUser(user);
-    setLoadingDetails(true);
-    setEnrollments([]);
-    try {
-      const list = await getUserEnrollments(user.id);
-      const byCourse = new Map<string, UserEnrollment>();
-      for (const e of list) {
-        const existing = byCourse.get(e.courseId);
-        const date = e.enrollmentDate instanceof Date ? e.enrollmentDate.getTime() : new Date(e.enrollmentDate as string).getTime();
-        const existingDate = existing
-          ? (existing.enrollmentDate instanceof Date ? existing.enrollmentDate.getTime() : new Date(existing.enrollmentDate as string).getTime())
-          : 0;
-        if (!existing || date > existingDate) byCourse.set(e.courseId, e);
-      }
-      setEnrollments(Array.from(byCourse.values()));
-    } catch (err) {
-      setEnrollments([]);
-    } finally {
-      setLoadingDetails(false);
-    }
-  }, []);
-
-  if (sessionLoading || loading) {
-    return (
-      <AdminLayout>
-        <div className="p-6 flex items-center gap-2 text-muted-foreground">
-          <Loader2 className="h-5 w-5 animate-spin" />
-          Loading users…
-        </div>
-      </AdminLayout>
-    );
   }
 
-  if (!sessionUser) {
-    return (
-      <AdminLayout>
-        <div className="p-6 text-muted-foreground">
-          Sign in with Firebase (e.g. main site or admin login) to view users.
-        </div>
-      </AdminLayout>
-    );
-  }
+  const rowActions = (row: UserRow) => (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" size="icon-sm" aria-label={`Actions for ${row.displayName || row.email}`}>
+          <MoreHorizontal aria-hidden="true" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-44">
+        <DropdownMenuItem onSelect={() => void openDetails(row)}>
+          <Eye aria-hidden="true" />
+          View courses
+        </DropdownMenuItem>
+        <DropdownMenuItem onSelect={() => openEdit(row)}>
+          <Pencil aria-hidden="true" />
+          Edit
+        </DropdownMenuItem>
+        {row.id !== sessionUser?.uid && row.role !== "admin" && (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem variant="destructive" onSelect={() => setDeleteUser(row)}>
+              <Trash2 aria-hidden="true" />
+              Delete
+            </DropdownMenuItem>
+          </>
+        )}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  )
 
-  if (error) {
-    return (
-      <AdminLayout>
-        <div className="p-6 text-destructive">{error}</div>
-      </AdminLayout>
-    );
-  }
+  const signInLabel = (row: UserRow) => (row.hasSignIn ? (row.providers.length ? row.providers.map(providerLabel).join(", ") : "—") : "No sign-in account")
 
   return (
-    <AdminLayout>
-      <div className="p-6">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-2xl font-bold">Users</h1>
-            <p className="text-muted-foreground text-sm mt-1">
-              Firebase Authentication accounts. Firestore column shows app profile at <code className="text-xs bg-muted px-1 rounded">users/{"{uid}"}</code>.
-            </p>
-          </div>
-          <Button
-            onClick={() => {
-              setCreateOpen(true);
-              setCreateForm({ displayName: '', email: '', role: 'student' });
-            }}
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Add Firestore-only row
-          </Button>
-        </div>
-
-        {authListError && (
-          <Alert variant="destructive" className="mb-4">
-            <AlertTitle>Auth user list unavailable</AlertTitle>
-            <AlertDescription>{authListError}</AlertDescription>
-          </Alert>
-        )}
-
-        <div className="overflow-x-auto rounded-lg border border-border mb-10">
-          <table className="min-w-full divide-y divide-border text-sm">
-            <thead className="bg-muted/50">
-              <tr>
-                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Name</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Email</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Sign-in</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Firestore</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Role</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Created</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Last sign-in</th>
-                <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="bg-card divide-y divide-border">
-              {authUsers.length === 0 && !authListError ? (
-                <tr>
-                  <td colSpan={8} className="px-4 py-8 text-center text-muted-foreground">
-                    No Firebase Authentication users found.
-                  </td>
-                </tr>
-              ) : authUsers.length === 0 && authListError ? (
-                <tr>
-                  <td colSpan={8} className="px-4 py-8 text-center text-muted-foreground">
-                    Fix the configuration above to load Auth users. Firestore-only rows are listed below.
-                  </td>
-                </tr>
-              ) : (
-                authUsers.map((a) => {
-                  const profile = profileByUid.get(a.uid);
-                  const rowUser = mergedForEdit(a);
-                  const hasProfile = !!profile;
-                  return (
-                    <tr
-                      key={a.uid}
-                      onClick={() => handleUserClick(rowUser)}
-                      className="cursor-pointer transition-colors hover:bg-muted/50"
-                    >
-                      <td className="px-4 py-3 font-medium text-foreground whitespace-nowrap">
-                        {rowUser.displayName || '—'}
-                      </td>
-                      <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">{a.email || '—'}</td>
-                      <td className="px-4 py-3 text-muted-foreground">
-                        {a.providers.length ? a.providers.map(providerLabel).join(', ') : '—'}
-                      </td>
-                      <td className="px-4 py-3">
-                        {hasProfile ? (
-                          <Badge variant="default" className="text-xs">Yes</Badge>
-                        ) : (
-                          <Badge variant="outline" className="text-xs">No</Badge>
-                        )}
-                      </td>
-                      <td className="px-4 py-3">
-                        <Badge variant="secondary">{profile?.role || '—'}</Badge>
-                      </td>
-                      <td className="px-4 py-3 text-muted-foreground whitespace-nowrap text-xs">
-                        {a.creationTime ? new Date(a.creationTime).toLocaleString() : '—'}
-                      </td>
-                      <td className="px-4 py-3 text-muted-foreground whitespace-nowrap text-xs">
-                        {a.lastSignInTime ? new Date(a.lastSignInTime).toLocaleString() : '—'}
-                      </td>
-                      <td className="px-4 py-3 text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
-                        <div className="flex items-center justify-end gap-2">
-                          <Button variant="ghost" size="icon-sm" onClick={() => openEdit(rowUser)} title="Edit / create Firestore profile">
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon-sm"
-                            onClick={() => hasProfile && setDeleteUser(rowUser)}
-                            title={hasProfile ? 'Delete Firestore profile' : 'No Firestore doc to delete'}
-                            disabled={!hasProfile}
-                            className={!hasProfile ? 'opacity-40' : 'text-destructive hover:text-destructive'}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        {firestoreOnlyProfiles.length > 0 && (
-          <div>
-            <h2 className="text-lg font-semibold mb-2">Firestore only (no Auth account)</h2>
-            <p className="text-sm text-muted-foreground mb-3">
-              Manual rows or legacy IDs that do not match a Firebase Auth UID.
-            </p>
-            <div className="overflow-x-auto rounded-lg border border-border">
-              <table className="min-w-full divide-y divide-border text-sm">
-                <thead className="bg-muted/50">
-                  <tr>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Name</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Email</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Doc ID</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Role</th>
-                    <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="bg-card divide-y divide-border">
-                  {firestoreOnlyProfiles.map((user) => (
-                    <tr
-                      key={user.id}
-                      onClick={() => handleUserClick(user)}
-                      className="cursor-pointer hover:bg-muted/50"
-                    >
-                      <td className="px-4 py-3 font-medium">{user.displayName || '—'}</td>
-                      <td className="px-4 py-3 text-muted-foreground">{user.email}</td>
-                      <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{user.id}</td>
-                      <td className="px-4 py-3">
-                        <Badge variant="secondary">{user.role}</Badge>
-                      </td>
-                      <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
-                        <div className="flex justify-end gap-2">
-                          <Button variant="ghost" size="icon-sm" onClick={() => openEdit(user)}>
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                          <Button variant="ghost" size="icon-sm" onClick={() => setDeleteUser(user)} className="text-destructive">
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
-      </div>
-
-      <Sheet open={!!selectedUser} onOpenChange={(open) => !open && setSelectedUser(null)}>
-        <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
-          {selectedUser && (
+    <AdminPage>
+      <AdminPageHeader
+        title="Users"
+        description="Student and admin accounts. Students create their own accounts when they sign up."
+        meta={
+          !loading && !error ? (
             <>
-              <SheetHeader className="border-b border-border pb-4">
-                <div className="flex items-center justify-between gap-4">
-                  <div className="flex items-center gap-4 min-w-0">
-                    <Avatar className="h-16 w-16 shrink-0">
-                      <AvatarImage src={selectedUser.photoURL} alt={selectedUser.displayName} />
-                      <AvatarFallback className="bg-primary/10 text-primary text-xl">
-                        {(selectedUser.displayName || selectedUser.email || 'U').charAt(0).toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="min-w-0">
-                      <SheetTitle className="text-xl">{selectedUser.displayName || 'User'}</SheetTitle>
-                      <SheetDescription>{selectedUser.email}</SheetDescription>
-                      <p className="text-xs text-muted-foreground mt-1 font-mono break-all">UID: {selectedUser.id}</p>
-                      <Badge variant="secondary" className="mt-2">{selectedUser.role}</Badge>
+              <span>
+                <strong className="font-semibold text-foreground tabular-nums">{counts.student}</strong> students
+              </span>
+              <span>
+                <strong className="font-semibold text-foreground tabular-nums">{counts.admin}</strong> admins
+              </span>
+            </>
+          ) : undefined
+        }
+      />
+
+      {authListError && (
+        <Alert variant="warning">
+          <AlertTitle>Sign-in details unavailable</AlertTitle>
+          <AlertDescription>{authListError} Showing profiles only.</AlertDescription>
+        </Alert>
+      )}
+
+      {loading ? (
+        <LoadingState size="page" label="Loading users…" />
+      ) : error ? (
+        <ErrorState title="Couldn't load users" description="Check your connection and try again." onRetry={() => void load()} />
+      ) : (
+        <>
+          <AdminToolbar>
+            <AdminSearch value={search} onChange={setSearch} placeholder="Search name or email" label="Search users" />
+            <div role="group" aria-label="Filter by role" className="flex gap-1 rounded-lg border border-border bg-card p-1">
+              {ROLE_FILTERS.map((key) => (
+                <button
+                  key={key}
+                  type="button"
+                  aria-pressed={roleFilter === key}
+                  onClick={() => setRoleFilter(key)}
+                  className={cn(
+                    "inline-flex h-8 items-center gap-1.5 rounded-md px-3 text-sm font-medium transition-colors outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50",
+                    roleFilter === key ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                  )}
+                >
+                  {key === "all" ? "All" : key === "student" ? "Students" : "Admins"}
+                  <span className={cn("tabular-nums", roleFilter === key ? "text-primary-foreground/80" : "text-muted-foreground")}>{counts[key]}</span>
+                </button>
+              ))}
+            </div>
+          </AdminToolbar>
+
+          {filtered.length === 0 ? (
+            <EmptyState icon={Users} title={rows.length === 0 ? "No users yet" : "No users match"} description={rows.length === 0 ? undefined : "Try a different search or filter."} />
+          ) : (
+            <>
+              <AdminTableCard className="hidden md:block">
+                <Table>
+                  <TableCaption className="sr-only">User accounts</TableCaption>
+                  <TableHeader className="bg-muted">
+                    <TableRow>
+                      <TableHead className="h-11 px-4">User</TableHead>
+                      <TableHead className="h-11 px-4">Role</TableHead>
+                      <TableHead className="h-11 px-4">Signs in with</TableHead>
+                      <TableHead className="h-11 px-4">Joined</TableHead>
+                      <TableHead className="h-11 px-4">Last sign-in</TableHead>
+                      <TableHead className="h-11 px-4 text-right">
+                        <span className="sr-only">Actions</span>
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filtered.map((row) => (
+                      <TableRow key={row.id}>
+                        <TableCell className="px-4 py-3">
+                          <div className="flex items-center gap-3">
+                            <PersonAvatar name={row.displayName} email={row.email} photoURL={row.photoURL} />
+                            <div className="min-w-0">
+                              <button
+                                type="button"
+                                onClick={() => void openDetails(row)}
+                                className="rounded-sm text-left font-medium text-foreground underline-offset-4 hover:underline outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                              >
+                                {row.displayName || "No name"}
+                                {row.id === sessionUser?.uid && <span className="ml-1.5 text-xs font-normal text-muted-foreground">(you)</span>}
+                              </button>
+                              <p className="text-muted-foreground">{row.email || "—"}</p>
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell className="px-4 py-3">
+                          <StatusBadge status={row.role} />
+                        </TableCell>
+                        <TableCell className={cn("px-4 py-3", row.hasSignIn ? "text-muted-foreground" : "text-warning")}>{signInLabel(row)}</TableCell>
+                        <TableCell className="px-4 py-3 text-muted-foreground tabular-nums">{formatAdminDate(row.createdAt)}</TableCell>
+                        <TableCell className="px-4 py-3 text-muted-foreground tabular-nums">{formatAdminDate(row.lastSignIn)}</TableCell>
+                        <TableCell className="px-4 py-3 text-right">{rowActions(row)}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </AdminTableCard>
+
+              <ul className="space-y-3 md:hidden" aria-label="User accounts">
+                {filtered.map((row) => (
+                  <li key={row.id} className="rounded-xl border border-border bg-card p-4 shadow-sm">
+                    <div className="flex items-start gap-3">
+                      <PersonAvatar name={row.displayName} email={row.email} photoURL={row.photoURL} />
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate font-medium text-foreground">
+                          {row.displayName || "No name"}
+                          {row.id === sessionUser?.uid && <span className="ml-1.5 text-xs font-normal text-muted-foreground">(you)</span>}
+                        </p>
+                        <p className="truncate text-sm text-muted-foreground">{row.email}</p>
+                        <p className={cn("mt-1 text-sm", row.hasSignIn ? "text-muted-foreground" : "text-warning")}>
+                          {signInLabel(row)} · joined {formatAdminDate(row.createdAt)}
+                        </p>
+                      </div>
+                      {rowActions(row)}
                     </div>
-                  </div>
-                  <div className="flex gap-2 shrink-0">
-                    <Button variant="outline" size="icon" onClick={(e) => { e.stopPropagation(); openEdit(selectedUser); }} title="Edit">
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (profileByUid.has(selectedUser.id)) setDeleteUser(selectedUser);
-                      }}
-                      disabled={!profileByUid.has(selectedUser.id)}
-                      title="Delete Firestore profile"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    <div className="mt-3">
+                      <StatusBadge status={row.role} />
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+        </>
+      )}
+
+      {/* User details */}
+      <Sheet open={!!selected} onOpenChange={(open) => !open && setSelected(null)}>
+        <SheetContent side="right" className="flex w-full flex-col gap-0 p-0 sm:max-w-md">
+          {selected && (
+            <>
+              <SheetHeader className="border-b border-border px-6 py-5">
+                <div className="flex items-center gap-3 pr-10">
+                  <PersonAvatar name={selected.displayName} email={selected.email} photoURL={selected.photoURL} className="size-12 text-sm" />
+                  <div className="min-w-0">
+                    <SheetTitle className="truncate text-lg">{selected.displayName || "No name"}</SheetTitle>
+                    <SheetDescription className="truncate">{selected.email}</SheetDescription>
                   </div>
                 </div>
               </SheetHeader>
-              <div className="py-6 space-y-6">
-                {loadingDetails ? (
-                  <div className="flex items-center justify-center py-12">
-                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              <div className="flex-1 space-y-6 overflow-y-auto px-6 py-5">
+                <dl className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <dt className="text-muted-foreground">Role</dt>
+                    <dd className="mt-1">
+                      <StatusBadge status={selected.role} />
+                    </dd>
                   </div>
-                ) : (
-                  <>
-                    {enrollments.length > 0 && (
-                      <div>
-                        <h4 className="font-semibold text-foreground mb-3 flex items-center gap-2">
-                          <BookOpen className="h-4 w-4" />
-                          Enrolled courses ({enrollments.length})
-                        </h4>
-                        <div className="space-y-3">
-                          {enrollments.map((e) => (
-                            <div key={e.id} className="rounded-lg border border-border bg-muted/30 p-4">
-                              <p className="font-medium text-foreground">{e.courseTitle}</p>
-                              <div className="mt-2 flex flex-wrap gap-3 text-sm text-muted-foreground">
-                                <span className="flex items-center gap-1">
-                                  <Calendar className="h-3.5 w-3.5" />
-                                  {e.enrollmentDate instanceof Date
-                                    ? e.enrollmentDate.toLocaleDateString()
-                                    : new Date(e.enrollmentDate as string).toLocaleDateString()}
-                                </span>
-                                <span className="flex items-center gap-1">
-                                  <CreditCard className="h-3.5 w-3.5" />
-                                  {e.paymentMethod} • GH₵{e.paymentAmount}
-                                </span>
-                              </div>
-                              <Badge variant="outline" className="mt-2 text-xs">{e.status}</Badge>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                    {enrollments.length === 0 && !loadingDetails && (
-                      <p className="text-sm text-muted-foreground">No enrollments yet.</p>
-                    )}
-                    {enrollments.length > 0 && enrollments[0]?.personalInfo && (
-                      <div>
-                        <h4 className="font-semibold text-foreground mb-3 flex items-center gap-2">
-                          <User className="h-4 w-4" />
-                          Registration info
-                        </h4>
-                        <div className="rounded-lg border border-border bg-muted/30 p-4 space-y-2 text-sm">
-                          <p><span className="text-muted-foreground">Name:</span> {enrollments[0].personalInfo.firstName} {enrollments[0].personalInfo.lastName}</p>
-                          <p><span className="text-muted-foreground">Email:</span> {enrollments[0].personalInfo.email}</p>
-                          {enrollments[0].personalInfo.phone && (
-                            <p><span className="text-muted-foreground">Phone:</span> {enrollments[0].personalInfo.phone}</p>
-                          )}
-                          {enrollments[0].education?.highestEducation && (
-                            <p><span className="text-muted-foreground">Education:</span> {enrollments[0].education.highestEducation}</p>
-                          )}
-                          {enrollments[0].education?.fieldOfStudy && (
-                            <p><span className="text-muted-foreground">Field:</span> {enrollments[0].education.fieldOfStudy}</p>
-                          )}
-                        </div>
-                      </div>
-                    )}
-                  </>
+                  <div>
+                    <dt className="text-muted-foreground">Signs in with</dt>
+                    <dd className="mt-1 font-medium text-foreground">{signInLabel(selected)}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-muted-foreground">Joined</dt>
+                    <dd className="mt-1 font-medium text-foreground tabular-nums">{formatAdminDate(selected.createdAt)}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-muted-foreground">Last sign-in</dt>
+                    <dd className="mt-1 font-medium text-foreground tabular-nums">{formatAdminDate(selected.lastSignIn)}</dd>
+                  </div>
+                </dl>
+
+                <section aria-labelledby="user-courses-heading">
+                  <h3 id="user-courses-heading" className="text-sm font-semibold text-foreground">
+                    Courses
+                  </h3>
+                  {loadingDetails ? (
+                    <LoadingState label="Loading courses…" />
+                  ) : enrollments.length === 0 ? (
+                    <EmptyState icon={BookOpen} title="Not enrolled in any course" className="mt-3" />
+                  ) : (
+                    <ul className="mt-3 divide-y divide-border rounded-lg border border-border">
+                      {enrollments.map((e) => (
+                        <li key={e.id} className="flex items-start justify-between gap-3 p-3">
+                          <div className="min-w-0">
+                            <p className="font-medium text-foreground">{e.courseTitle || e.courseId}</p>
+                            <p className="text-sm text-muted-foreground tabular-nums">Enrolled {formatAdminDate(e.enrollmentDate)}</p>
+                          </div>
+                          <StatusBadge status={String(e.status || "active")} />
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </section>
+              </div>
+              <div className="flex gap-3 border-t border-border px-6 py-4">
+                <Button variant="outline" className="flex-1" onClick={() => openEdit(selected)}>
+                  <Pencil aria-hidden="true" />
+                  Edit
+                </Button>
+                {selected.id !== sessionUser?.uid && selected.role !== "admin" && (
+                  <Button variant="outline" className="flex-1 text-destructive hover:text-destructive" onClick={() => setDeleteUser(selected)}>
+                    <Trash2 aria-hidden="true" />
+                    Delete
+                  </Button>
                 )}
               </div>
             </>
@@ -577,130 +509,71 @@ export default function UsersPage() {
         </SheetContent>
       </Sheet>
 
-      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Add Firestore-only row</DialogTitle>
-            <DialogDescription>
-              Creates <code className="text-xs">users/{"{random-id}"}</code> with no Firebase login. To manage real members, use Auth users above and Edit to create <code className="text-xs">users/{"{uid}"}</code>.
-            </DialogDescription>
-          </DialogHeader>
-          <form onSubmit={handleCreate} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="create-name">Display Name</Label>
-              <Input
-                id="create-name"
-                value={createForm.displayName}
-                onChange={(e) => setCreateForm((f) => ({ ...f, displayName: e.target.value }))}
-                placeholder="John Doe"
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="create-email">Email</Label>
-              <Input
-                id="create-email"
-                type="email"
-                value={createForm.email}
-                onChange={(e) => setCreateForm((f) => ({ ...f, email: e.target.value }))}
-                placeholder="john@example.com"
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="create-role">Role</Label>
-              <Select value={createForm.role} onValueChange={(v) => setCreateForm((f) => ({ ...f, role: v as typeof createForm.role }))}>
-                <SelectTrigger id="create-role">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {ROLES.map((r) => (
-                    <SelectItem key={r} value={r}>{r}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+      {/* Edit */}
+      <Dialog open={!!editUser} onOpenChange={(open) => !open && !submitting && setEditUser(null)}>
+        <DialogContent className="sm:max-w-md">
+          <form onSubmit={saveEdit}>
+            <DialogHeader>
+              <DialogTitle>Edit user</DialogTitle>
+              <DialogDescription>{editUser?.email}</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-5 py-6">
+              <div className="space-y-2">
+                <Label htmlFor="edit-name">Name</Label>
+                <Input id="edit-name" value={editForm.displayName} onChange={(e) => setEditForm((f) => ({ ...f, displayName: e.target.value }))} required />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-role">Role</Label>
+                <Select value={editForm.role} onValueChange={(role) => setEditForm((f) => ({ ...f, role }))}>
+                  <SelectTrigger id="edit-role" className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="student">Student</SelectItem>
+                    <SelectItem value="admin">Admin — full access to this admin panel</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-sm text-muted-foreground">The email address is the account&apos;s sign-in and can&apos;t be changed here.</p>
+              </div>
             </div>
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setCreateOpen(false)}>Cancel</Button>
-              <Button type="submit" disabled={submitting}>{submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Create'}</Button>
+              <Button type="button" variant="outline" onClick={() => setEditUser(null)} disabled={submitting}>
+                Cancel
+              </Button>
+              <Button type="submit" loading={submitting}>
+                Save changes
+              </Button>
             </DialogFooter>
           </form>
         </DialogContent>
       </Dialog>
 
-      <Dialog open={!!editUser} onOpenChange={(open) => !open && setEditUser(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Edit Firestore profile</DialogTitle>
-            <DialogDescription>
-              Saves to <code className="text-xs">users/{editUser?.id}</code>. Use this to add a missing profile for an Auth user or update role/name.
-            </DialogDescription>
-          </DialogHeader>
-          {editUser && (
-            <form onSubmit={handleUpdate} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="edit-name">Display Name</Label>
-                <Input
-                  id="edit-name"
-                  value={editForm.displayName}
-                  onChange={(e) => setEditForm((f) => ({ ...f, displayName: e.target.value }))}
-                  placeholder="John Doe"
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit-email">Email</Label>
-                <Input
-                  id="edit-email"
-                  type="email"
-                  value={editForm.email}
-                  onChange={(e) => setEditForm((f) => ({ ...f, email: e.target.value }))}
-                  placeholder="john@example.com"
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit-role">Role</Label>
-                <Select value={editForm.role} onValueChange={(v) => setEditForm((f) => ({ ...f, role: v as typeof editForm.role }))}>
-                  <SelectTrigger id="edit-role">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {ROLES.map((r) => (
-                      <SelectItem key={r} value={r}>{r}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setEditUser(null)}>Cancel</Button>
-                <Button type="submit" disabled={submitting}>{submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Save'}</Button>
-              </DialogFooter>
-            </form>
-          )}
-        </DialogContent>
-      </Dialog>
-
-      <AlertDialog open={!!deleteUser} onOpenChange={(open) => !open && setDeleteUser(null)}>
+      {/* Delete */}
+      <AlertDialog open={!!deleteUser} onOpenChange={(open) => !open && !submitting && setDeleteUser(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Firestore profile</AlertDialogTitle>
+            <AlertDialogTitle>Delete {deleteUser?.displayName || deleteUser?.email}?</AlertDialogTitle>
             <AlertDialogDescription>
-              Remove <strong>{deleteUser?.displayName || deleteUser?.email}</strong> from Firestore only. Their Firebase Authentication account (if any) is unchanged.
+              {deleteUser?.hasSignIn
+                ? "Their sign-in account and profile will be permanently deleted, so they can no longer log in. Their enrollment and certificate records are kept."
+                : "This profile has no sign-in account. The profile will be permanently deleted."}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={submitting}>Cancel</AlertDialogCancel>
             <AlertDialogAction
-              onClick={handleDelete}
+              onClick={(event) => {
+                event.preventDefault()
+                void confirmDelete()
+              }}
               disabled={submitting}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Delete'}
+              {submitting ? "Deleting…" : "Delete user"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </AdminLayout>
-  );
+    </AdminPage>
+  )
 }

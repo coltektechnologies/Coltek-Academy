@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { BookOpen, Home, LogOut, Settings, FileText, Users, GraduationCap, MessageSquareQuote, FolderKanban, Menu } from 'lucide-react';
+import { BookOpen, Home, LogOut, Settings, FileText, Users, GraduationCap, MessageSquareQuote, FolderKanban, Menu, ExternalLink } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
@@ -9,6 +9,7 @@ import { signOut } from 'firebase/auth';
 import { Button } from '../ui/button';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from '../ui/sheet';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/use-auth';
 import { firebase, isFirebaseConfigured } from '@/lib/firebase';
 import { cn } from '@/lib/utils';
 
@@ -45,6 +46,7 @@ function useAdminLogout() {
 function AdminNav({ tone, onNavigate }: { tone: 'dark' | 'light'; onNavigate?: () => void }) {
   const pathname = usePathname() || '/admin';
   const logout = useAdminLogout();
+  const { user } = useAuth();
   const dark = tone === 'dark';
   const focusRing = dark
     ? 'outline-none focus-visible:ring-[3px] focus-visible:ring-primary-foreground/60'
@@ -85,7 +87,38 @@ function AdminNav({ tone, onNavigate }: { tone: 'dark' | 'light'; onNavigate?: (
           })}
         </ul>
       </nav>
-      <div className={cn('border-t p-4', dark ? 'border-primary-foreground/15' : 'border-border')}>
+      <div className={cn('space-y-1 border-t p-4', dark ? 'border-primary-foreground/15' : 'border-border')}>
+        {user && (
+          <div className="mb-2 flex items-center gap-3 px-2 py-1">
+            <span
+              className={cn(
+                'flex size-9 shrink-0 items-center justify-center rounded-full text-xs font-semibold',
+                dark ? 'bg-primary-foreground/15 text-primary-foreground' : 'bg-secondary text-primary',
+              )}
+              aria-hidden="true"
+            >
+              {(user.displayName || user.email || '?').trim().charAt(0).toUpperCase()}
+            </span>
+            <div className="min-w-0">
+              <p className={cn('truncate text-sm font-medium', dark ? 'text-primary-foreground' : 'text-foreground')}>{user.displayName || 'Admin'}</p>
+              <p className={cn('truncate text-xs', dark ? 'text-primary-foreground/70' : 'text-muted-foreground')}>{user.email}</p>
+            </div>
+          </div>
+        )}
+        <a
+          href="/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className={cn(
+            'flex min-h-11 items-center rounded-lg px-4 text-sm font-medium transition-colors',
+            focusRing,
+            dark ? 'text-primary-foreground/80 hover:bg-primary-foreground/10 hover:text-primary-foreground' : 'text-foreground hover:bg-secondary/60',
+          )}
+        >
+          <ExternalLink className="mr-3 size-5" aria-hidden="true" />
+          View website
+          <span className="sr-only"> (opens in a new tab)</span>
+        </a>
         <Button
           variant="ghost"
           onClick={logout}

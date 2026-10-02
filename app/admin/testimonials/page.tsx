@@ -1,21 +1,36 @@
 "use client"
 
-import { FormEvent, useCallback, useEffect, useState } from "react"
-import { useRouter } from "next/navigation"
-import { addDoc, collection, deleteDoc, doc, getDoc, getDocs, serverTimestamp, updateDoc } from "firebase/firestore"
-import { isAdminUser } from '@/lib/admin-access'
-import { Edit, Loader2, MessageSquareQuote, Plus, Star, Trash2, Upload } from "lucide-react"
-
-import { firebase } from "@/lib/firebase"
-import { useAuth } from "@/hooks/use-auth"
-import { useToast } from "@/hooks/use-toast"
-import { Badge } from "@/components/ui/badge"
+import { FormEvent, useCallback, useEffect, useMemo, useState } from "react"
+import { addDoc, collection, deleteDoc, doc, getDocs, serverTimestamp, updateDoc } from "firebase/firestore"
+import { Eye, EyeOff, MessageSquareQuote, MoreHorizontal, Pencil, Plus, Star, Trash2, Upload } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { AdminPage, AdminPageHeader, AdminSearch, AdminToolbar, PersonAvatar, StatusBadge } from "@/components/admin/admin-ui"
+import { EmptyState, ErrorState, LoadingState } from "@/components/academy/states"
+import { useToast } from "@/hooks/use-toast"
+import { firebase } from "@/lib/firebase"
+import { cn } from "@/lib/utils"
 
 interface Testimonial {
   id: string
@@ -26,180 +41,143 @@ interface Testimonial {
   avatarUrl: string
   isPublished: boolean
   order: number
-  createdAt?: unknown
 }
 
-interface TestimonialForm {
-  name: string
-  role: string
-  content: string
-  rating: number
-  avatarUrl: string
-  isPublished: boolean
-  order: number
-}
+type TestimonialForm = Omit<Testimonial, "id">
 
-const emptyForm: TestimonialForm = {
-  name: "",
-  role: "",
-  content: "",
-  rating: 5,
-  avatarUrl: "",
-  isPublished: true,
-  order: 0,
-}
+const emptyForm: TestimonialForm = { name: "", role: "", content: "", rating: 5, avatarUrl: "", isPublished: true, order: 0 }
 
+const FILTERS = ["all", "published", "draft"] as const
+type Filter = (typeof FILTERS)[number]
+
+/** Square-crops and compresses an avatar to a 256 px JPEG data URL (stored on the testimonial). */
 async function fileToAvatarDataUrl(file: File): Promise<string> {
-  if (!file.type.startsWith("image/")) {
-    throw new Error("Please select an image file for the avatar.")
-  }
-
-  if (file.size > 5 * 1024 * 1024) {
-    throw new Error("Avatar image must be 5MB or smaller.")
-  }
-
+  if (!file.type.startsWith("image/")) throw new Error("Please choose an image file for the photo.")
+  if (file.size > 5 * 1024 * 1024) throw new Error("The photo must be 5 MB or smaller.")
   const bitmap = await createImageBitmap(file)
   const canvas = document.createElement("canvas")
   const size = 256
   canvas.width = size
   canvas.height = size
-
   const context = canvas.getContext("2d")
-  if (!context) {
-    throw new Error("Could not prepare avatar image.")
-  }
-
+  if (!context) throw new Error("Could not prepare the photo.")
   const scale = Math.max(size / bitmap.width, size / bitmap.height)
   const width = bitmap.width * scale
   const height = bitmap.height * scale
-  const x = (size - width) / 2
-  const y = (size - height) / 2
-
   context.fillStyle = "#ffffff"
   context.fillRect(0, 0, size, size)
-  context.drawImage(bitmap, x, y, width, height)
+  context.drawImage(bitmap, (size - width) / 2, (size - height) / 2, width, height)
   bitmap.close()
-
   return canvas.toDataURL("image/jpeg", 0.82)
 }
 
+function Stars({ rating }: { rating: number }) {
+  return (
+    <div className="flex items-center gap-0.5">
+      <span className="sr-only">Rated {rating} out of 5</span>
+      {Array.from({ length: 5 }).map((_, index) => (
+        <Star key={index} aria-hidden="true" className={cn("size-4", index < rating ? "fill-warning text-warning" : "text-border")} />
+      ))}
+    </div>
+  )
+}
+
 export default function AdminTestimonialsPage() {
-  const router = useRouter()
-  const { user, loading } = useAuth()
   const { toast } = useToast()
-  const [isAdmin, setIsAdmin] = useState(false)
-  const [isCheckingAdmin, setIsCheckingAdmin] = useState(true)
-  const [isLoading, setIsLoading] = useState(true)
-  const [isSaving, setIsSaving] = useState(false)
-  const [editingId, setEditingId] = useState<string | null>(null)
-  const [avatarFile, setAvatarFile] = useState<File | null>(null)
   const [testimonials, setTestimonials] = useState<Testimonial[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(false)
+  const [search, setSearch] = useState("")
+  const [filter, setFilter] = useState<Filter>("all")
+
+  const [formOpen, setFormOpen] = useState(false)
+  const [editingId, setEditingId] = useState<string | null>(null)
   const [form, setForm] = useState<TestimonialForm>(emptyForm)
+  const [avatarFile, setAvatarFile] = useState<File | null>(null)
+  const [avatarPreview, setAvatarPreview] = useState("")
+  const [formError, setFormError] = useState<string | null>(null)
+  const [saving, setSaving] = useState(false)
+  const [toDelete, setToDelete] = useState<Testimonial | null>(null)
+  const [deleting, setDeleting] = useState(false)
 
-  useEffect(() => {
-    const checkAdmin = async () => {
-      if (loading) return
-
-      if (!user) {
-        router.push("/admin/login")
-        return
-      }
-
-      try {
-        setIsAdmin(await isAdminUser(user))
-      } catch (error) {
-        console.error("Failed to verify admin access:", error)
-        setIsAdmin(false)
-      } finally {
-        setIsCheckingAdmin(false)
-      }
-    }
-
-    checkAdmin()
-  }, [loading, router, user])
-
-  const fetchTestimonials = useCallback(async () => {
+  // Admin access is enforced by app/admin/layout.tsx (AdminGuard)
+  const load = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true)
+    setError(false)
     try {
-      setIsLoading(true)
       const snapshot = await getDocs(collection(firebase.db, "testimonials"))
-      const rows = snapshot.docs
-        .map((item) => {
-          const data = item.data()
-          return {
-            id: item.id,
-            name: data.name || "",
-            role: data.role || "",
-            content: data.content || "",
-            rating: Number(data.rating) || 5,
-            avatarUrl: data.avatarUrl || "",
-            isPublished: data.isPublished === true,
-            order: Number.isFinite(Number(data.order)) ? Number(data.order) : 999,
-            createdAt: data.createdAt,
-          } as Testimonial
-        })
-        .sort((a, b) => a.order - b.order)
-
-      setTestimonials(rows)
-    } catch (error) {
-      console.error("Failed to load testimonials:", error)
-      toast({
-        title: "Error",
-        description: "Failed to load testimonials",
-        variant: "destructive",
-      })
+      setTestimonials(
+        snapshot.docs
+          .map((item) => {
+            const data = item.data()
+            return {
+              id: item.id,
+              name: data.name || "",
+              role: data.role || "",
+              content: data.content || "",
+              rating: Math.min(5, Math.max(1, Number(data.rating) || 5)),
+              avatarUrl: data.avatarUrl || "",
+              isPublished: data.isPublished === true,
+              order: Number.isFinite(Number(data.order)) ? Number(data.order) : 999,
+            }
+          })
+          .sort((a, b) => a.order - b.order),
+      )
+    } catch (loadError) {
+      console.error("Failed to load testimonials:", loadError)
+      setError(true)
     } finally {
-      setIsLoading(false)
+      setLoading(false)
     }
-  }, [toast])
+  }, [])
 
   useEffect(() => {
-    if (isAdmin) {
-      fetchTestimonials()
-    }
-  }, [fetchTestimonials, isAdmin])
+    void load()
+  }, [load])
 
-  const resetForm = () => {
-    setForm(emptyForm)
-    setAvatarFile(null)
-    setEditingId(null)
-  }
+  const counts = useMemo(
+    () => ({ all: testimonials.length, published: testimonials.filter((t) => t.isPublished).length, draft: testimonials.filter((t) => !t.isPublished).length }),
+    [testimonials],
+  )
 
-  const handleEdit = (testimonial: Testimonial) => {
-    setEditingId(testimonial.id)
-    setAvatarFile(null)
-    setForm({
-      name: testimonial.name,
-      role: testimonial.role,
-      content: testimonial.content,
-      rating: testimonial.rating,
-      avatarUrl: testimonial.avatarUrl,
-      isPublished: testimonial.isPublished,
-      order: testimonial.order,
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase()
+    return testimonials.filter((t) => {
+      if (filter === "published" && !t.isPublished) return false
+      if (filter === "draft" && t.isPublished) return false
+      return !q || [t.name, t.role, t.content].some((v) => v.toLowerCase().includes(q))
     })
+  }, [testimonials, search, filter])
+
+  const openCreate = () => {
+    setEditingId(null)
+    setForm({ ...emptyForm, order: testimonials.length ? Math.max(...testimonials.map((t) => t.order)) + 1 : 0 })
+    setAvatarFile(null)
+    setAvatarPreview("")
+    setFormError(null)
+    setFormOpen(true)
   }
 
-  const getAvatarUrl = async () => {
-    if (!avatarFile) return form.avatarUrl
-
-    return fileToAvatarDataUrl(avatarFile)
+  const openEdit = (t: Testimonial) => {
+    setEditingId(t.id)
+    setForm({ name: t.name, role: t.role, content: t.content, rating: t.rating, avatarUrl: t.avatarUrl, isPublished: t.isPublished, order: t.order })
+    setAvatarFile(null)
+    setAvatarPreview(t.avatarUrl)
+    setFormError(null)
+    setFormOpen(true)
   }
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-
     if (!form.name.trim() || !form.role.trim() || !form.content.trim()) {
-      toast({
-        title: "Missing details",
-        description: "Name, role, and testimonial are required.",
-        variant: "destructive",
-      })
+      setFormError("Name, role and testimonial are required.")
       return
     }
-
+    setSaving(true)
+    setFormError(null)
     try {
-      setIsSaving(true)
-      const avatarUrl = await getAvatarUrl()
-      const testimonialData = {
+      const avatarUrl = avatarFile ? await fileToAvatarDataUrl(avatarFile) : form.avatarUrl
+      const data = {
         name: form.name.trim(),
         role: form.role.trim(),
         content: form.content.trim(),
@@ -209,271 +187,285 @@ export default function AdminTestimonialsPage() {
         order: Number(form.order) || 0,
         updatedAt: serverTimestamp(),
       }
-
-      if (editingId) {
-        await updateDoc(doc(firebase.db, "testimonials", editingId), testimonialData)
-      } else {
-        await addDoc(collection(firebase.db, "testimonials"), {
-          ...testimonialData,
-          createdAt: serverTimestamp(),
-        })
-      }
-
-      toast({
-        title: "Saved",
-        description: "Testimonial saved successfully.",
-      })
-      resetForm()
-      await fetchTestimonials()
-    } catch (error) {
-      console.error("Failed to save testimonial:", error)
-      toast({
-        title: "Error",
-        description: "Failed to save testimonial.",
-        variant: "destructive",
-      })
+      if (editingId) await updateDoc(doc(firebase.db, "testimonials", editingId), data)
+      else await addDoc(collection(firebase.db, "testimonials"), { ...data, createdAt: serverTimestamp() })
+      toast({ title: editingId ? "Testimonial updated" : "Testimonial added", description: data.name })
+      setFormOpen(false)
+      await load(true)
+    } catch (saveError) {
+      console.error("Failed to save testimonial:", saveError)
+      setFormError(saveError instanceof Error && saveError.message.includes("photo") ? saveError.message : "The testimonial couldn't be saved. Please try again.")
     } finally {
-      setIsSaving(false)
+      setSaving(false)
     }
   }
 
-  const handleDelete = async (testimonial: Testimonial) => {
-    const confirmed = window.confirm(`Delete testimonial from ${testimonial.name}?`)
-    if (!confirmed) return
-
+  const togglePublished = async (t: Testimonial) => {
     try {
-      await deleteDoc(doc(firebase.db, "testimonials", testimonial.id))
-      toast({
-        title: "Deleted",
-        description: "Testimonial removed.",
-      })
-      await fetchTestimonials()
-      if (editingId === testimonial.id) resetForm()
-    } catch (error) {
-      console.error("Failed to delete testimonial:", error)
-      toast({
-        title: "Error",
-        description: "Failed to delete testimonial.",
-        variant: "destructive",
-      })
+      await updateDoc(doc(firebase.db, "testimonials", t.id), { isPublished: !t.isPublished, updatedAt: serverTimestamp() })
+      toast({ title: t.isPublished ? "Moved to drafts" : "Published", description: t.name })
+      await load(true)
+    } catch (toggleError) {
+      console.error(toggleError)
+      toast({ title: "Couldn't update the testimonial", variant: "destructive" })
     }
   }
 
-  if (loading || isCheckingAdmin) {
-    return (
-      <div className="flex min-h-[50vh] items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    )
-  }
-
-  if (!isAdmin) {
-    return (
-      <div className="container mx-auto px-4 py-10">
-        <Card>
-          <CardHeader>
-            <CardTitle>Access denied</CardTitle>
-            <CardDescription>You need admin privileges to manage testimonials.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button onClick={() => router.push("/admin")}>Back to dashboard</Button>
-          </CardContent>
-        </Card>
-      </div>
-    )
+  const confirmDelete = async () => {
+    if (!toDelete) return
+    setDeleting(true)
+    try {
+      await deleteDoc(doc(firebase.db, "testimonials", toDelete.id))
+      toast({ title: "Testimonial deleted", description: toDelete.name })
+      setToDelete(null)
+      await load(true)
+    } catch (deleteError) {
+      console.error(deleteError)
+      toast({ title: "Couldn't delete the testimonial", variant: "destructive" })
+    } finally {
+      setDeleting(false)
+    }
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="mb-8 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Testimonials</h1>
-          <p className="text-muted-foreground">Upload and publish student testimonials on the homepage.</p>
-        </div>
-        <Button onClick={resetForm} variant="outline">
-          <Plus className="mr-2 h-4 w-4" />
-          New Testimonial
-        </Button>
-      </div>
+    <AdminPage>
+      <AdminPageHeader
+        title="Testimonials"
+        description="Published testimonials appear on the homepage, in display order. Only add testimonials from real students."
+        meta={
+          !loading && !error ? (
+            <>
+              <span>
+                <strong className="font-semibold text-foreground tabular-nums">{counts.published}</strong> published
+              </span>
+              <span>
+                <strong className="font-semibold text-foreground tabular-nums">{counts.draft}</strong> drafts
+              </span>
+            </>
+          ) : undefined
+        }
+        actions={
+          <Button onClick={openCreate}>
+            <Plus aria-hidden="true" />
+            Add testimonial
+          </Button>
+        }
+      />
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(320px,420px)_1fr]">
-        <Card>
-          <CardHeader>
-            <CardTitle>{editingId ? "Edit testimonial" : "Add testimonial"}</CardTitle>
-            <CardDescription>Published testimonials appear on the homepage automatically.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-1">
-                <div className="space-y-2">
-                  <Label htmlFor="name">Student name</Label>
-                  <Input
-                    id="name"
-                    value={form.name}
-                    onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))}
-                    placeholder="Ama Mensah"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="role">Role or course</Label>
-                  <Input
-                    id="role"
-                    value={form.role}
-                    onChange={(event) => setForm((prev) => ({ ...prev, role: event.target.value }))}
-                    placeholder="Web Development Student"
-                  />
-                </div>
-              </div>
+      {loading ? (
+        <LoadingState size="page" label="Loading testimonials…" />
+      ) : error ? (
+        <ErrorState title="Couldn't load testimonials" description="Check your connection and try again." onRetry={() => void load()} />
+      ) : (
+        <>
+          <AdminToolbar>
+            <AdminSearch value={search} onChange={setSearch} placeholder="Search name, role or text" label="Search testimonials" />
+            <div role="group" aria-label="Filter by status" className="flex gap-1 rounded-lg border border-border bg-card p-1">
+              {FILTERS.map((key) => (
+                <button
+                  key={key}
+                  type="button"
+                  aria-pressed={filter === key}
+                  onClick={() => setFilter(key)}
+                  className={cn(
+                    "inline-flex h-8 items-center gap-1.5 rounded-md px-3 text-sm font-medium transition-colors outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50",
+                    filter === key ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                  )}
+                >
+                  {key === "all" ? "All" : key === "published" ? "Published" : "Drafts"}
+                  <span className={cn("tabular-nums", filter === key ? "text-primary-foreground/80" : "text-muted-foreground")}>{counts[key]}</span>
+                </button>
+              ))}
+            </div>
+          </AdminToolbar>
 
-              <div className="space-y-2">
-                <Label htmlFor="content">Testimonial</Label>
-                <Textarea
-                  id="content"
-                  value={form.content}
-                  onChange={(event) => setForm((prev) => ({ ...prev, content: event.target.value }))}
-                  placeholder="Share what the student said..."
-                  className="min-h-32 resize-none"
-                />
-              </div>
-
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="rating">Rating</Label>
-                  <Input
-                    id="rating"
-                    type="number"
-                    min={1}
-                    max={5}
-                    value={form.rating}
-                    onChange={(event) => setForm((prev) => ({ ...prev, rating: Number(event.target.value) }))}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="order">Display order</Label>
-                  <Input
-                    id="order"
-                    type="number"
-                    value={form.order}
-                    onChange={(event) => setForm((prev) => ({ ...prev, order: Number(event.target.value) }))}
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="avatarUrl">Avatar URL</Label>
-                <Input
-                  id="avatarUrl"
-                  value={form.avatarUrl}
-                  onChange={(event) => setForm((prev) => ({ ...prev, avatarUrl: event.target.value }))}
-                  placeholder="https://..."
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="avatarFile">Upload avatar</Label>
-                <Input
-                  id="avatarFile"
-                  type="file"
-                  accept="image/*"
-                  onChange={(event) => setAvatarFile(event.target.files?.[0] || null)}
-                />
-                {avatarFile && (
-                  <p className="text-xs text-muted-foreground">
-                    <Upload className="mr-1 inline h-3 w-3" />
-                    {avatarFile.name}
-                  </p>
-                )}
-              </div>
-
-              <div className="flex items-center justify-between rounded-lg border p-3">
-                <div>
-                  <Label htmlFor="published">Published</Label>
-                  <p className="text-sm text-muted-foreground">Show this testimonial on the homepage.</p>
-                </div>
-                <Switch
-                  id="published"
-                  checked={form.isPublished}
-                  onCheckedChange={(checked) => setForm((prev) => ({ ...prev, isPublished: checked }))}
-                />
-              </div>
-
-              <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-                {editingId && (
-                  <Button type="button" variant="outline" onClick={resetForm}>
-                    Cancel
+          {filtered.length === 0 ? (
+            <EmptyState
+              icon={MessageSquareQuote}
+              title={testimonials.length === 0 ? "No testimonials yet" : "No testimonials match"}
+              description={testimonials.length === 0 ? "Add a testimonial from a real student to show it on the homepage." : "Try a different search or filter."}
+              action={
+                testimonials.length === 0 ? (
+                  <Button onClick={openCreate}>
+                    <Plus aria-hidden="true" />
+                    Add testimonial
                   </Button>
-                )}
-                <Button type="submit" disabled={isSaving}>
-                  {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  {editingId ? "Update" : "Publish"} Testimonial
-                </Button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>All testimonials</CardTitle>
-            <CardDescription>{testimonials.length} testimonial{testimonials.length === 1 ? "" : "s"} saved</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <div className="flex min-h-40 items-center justify-center">
-                <Loader2 className="h-7 w-7 animate-spin text-primary" />
-              </div>
-            ) : testimonials.length === 0 ? (
-              <div className="rounded-lg border border-dashed p-8 text-center">
-                <MessageSquareQuote className="mx-auto mb-3 h-8 w-8 text-muted-foreground" />
-                <p className="font-medium">No testimonials yet</p>
-                <p className="text-sm text-muted-foreground">Add the first student story from the form.</p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {testimonials.map((testimonial) => (
-                  <article key={testimonial.id} className="rounded-lg border p-4">
-                    <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                ) : undefined
+              }
+            />
+          ) : (
+            <ul className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+              {filtered.map((t) => (
+                <li key={t.id} className={cn("flex flex-col rounded-xl border border-border bg-card p-5 shadow-sm", !t.isPublished && "border-dashed")}>
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex min-w-0 items-center gap-3">
+                      <PersonAvatar name={t.name} photoURL={t.avatarUrl} className="size-11 text-sm" />
                       <div className="min-w-0">
-                        <div className="mb-2 flex flex-wrap items-center gap-2">
-                          <h3 className="font-semibold">{testimonial.name}</h3>
-                          <Badge variant={testimonial.isPublished ? "default" : "secondary"}>
-                            {testimonial.isPublished ? "Published" : "Draft"}
-                          </Badge>
-                          <span className="text-xs text-muted-foreground">Order {testimonial.order}</span>
-                        </div>
-                        <p className="text-sm text-muted-foreground">{testimonial.role}</p>
-                        <div className="mt-2 flex items-center gap-1">
-                          {Array.from({ length: 5 }).map((_, index) => (
-                            <Star
-                              key={index}
-                              className={`h-4 w-4 ${
-                                index < testimonial.rating
-                                  ? "fill-warning text-warning"
-                                  : "text-muted-foreground/30"
-                              }`}
-                            />
-                          ))}
-                        </div>
-                        <p className="mt-3 text-sm leading-relaxed text-foreground">{testimonial.content}</p>
-                      </div>
-                      <div className="flex shrink-0 gap-2">
-                        <Button size="sm" variant="outline" onClick={() => handleEdit(testimonial)}>
-                          <Edit className="mr-2 h-4 w-4" />
-                          Edit
-                        </Button>
-                        <Button size="sm" variant="destructive" onClick={() => handleDelete(testimonial)}>
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          Delete
-                        </Button>
+                        <p className="truncate font-semibold text-foreground">{t.name}</p>
+                        <p className="truncate text-sm text-muted-foreground">{t.role}</p>
                       </div>
                     </div>
-                  </article>
-                ))}
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon-sm" aria-label={`Actions for ${t.name}'s testimonial`}>
+                          <MoreHorizontal aria-hidden="true" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-44">
+                        <DropdownMenuItem onSelect={() => openEdit(t)}>
+                          <Pencil aria-hidden="true" />
+                          Edit
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onSelect={() => void togglePublished(t)}>
+                          {t.isPublished ? <EyeOff aria-hidden="true" /> : <Eye aria-hidden="true" />}
+                          {t.isPublished ? "Unpublish" : "Publish"}
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem variant="destructive" onSelect={() => setToDelete(t)}>
+                          <Trash2 aria-hidden="true" />
+                          Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                  <div className="mt-4">
+                    <Stars rating={t.rating} />
+                  </div>
+                  <blockquote className="mt-3 line-clamp-5 flex-1 text-sm leading-relaxed text-muted-foreground">{t.content}</blockquote>
+                  <div className="mt-4 flex items-center justify-between border-t border-border pt-4">
+                    <StatusBadge status={t.isPublished ? "published" : "draft"} />
+                    <span className="text-xs text-muted-foreground tabular-nums">Order {t.order}</span>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </>
+      )}
+
+      {/* Add / edit */}
+      <Dialog open={formOpen} onOpenChange={(open) => !saving && setFormOpen(open)}>
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
+          <form onSubmit={handleSubmit} noValidate>
+            <DialogHeader>
+              <DialogTitle>{editingId ? "Edit testimonial" : "Add testimonial"}</DialogTitle>
+              <DialogDescription>Use the student&apos;s own words and only with their permission.</DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-5 py-6">
+              <div className="flex items-center gap-4">
+                <PersonAvatar name={form.name} photoURL={avatarPreview} className="size-16 text-base" />
+                <div className="space-y-1">
+                  <Label htmlFor="t-avatar" className="inline-flex h-9 cursor-pointer items-center gap-2 rounded-md border border-input bg-background px-3 text-sm font-medium shadow-xs hover:bg-muted has-focus-visible:ring-[3px] has-focus-visible:ring-ring/50">
+                    <Upload className="size-4" aria-hidden="true" />
+                    {avatarPreview ? "Change photo" : "Upload photo"}
+                    <input
+                      id="t-avatar"
+                      type="file"
+                      accept="image/*"
+                      className="sr-only"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0] || null
+                        setAvatarFile(file)
+                        if (file) setAvatarPreview(URL.createObjectURL(file))
+                      }}
+                    />
+                  </Label>
+                  <p className="text-xs text-muted-foreground">Optional · square photo, up to 5 MB</p>
+                </div>
               </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-    </div>
+
+              <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="t-name">Name *</Label>
+                  <Input id="t-name" value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} required aria-required="true" />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="t-role">Role *</Label>
+                  <Input id="t-role" value={form.role} onChange={(e) => setForm((f) => ({ ...f, role: e.target.value }))} placeholder="e.g. Web Development graduate" required aria-required="true" />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="t-content">Testimonial *</Label>
+                <Textarea id="t-content" rows={5} value={form.content} onChange={(e) => setForm((f) => ({ ...f, content: e.target.value }))} required aria-required="true" />
+              </div>
+
+              <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+                <fieldset className="space-y-2">
+                  <legend className="text-sm font-medium leading-none">Rating</legend>
+                  <div className="flex gap-1 pt-1" role="radiogroup" aria-label="Rating">
+                    {[1, 2, 3, 4, 5].map((value) => (
+                      <button
+                        key={value}
+                        type="button"
+                        role="radio"
+                        aria-checked={form.rating === value}
+                        aria-label={`${value} star${value === 1 ? "" : "s"}`}
+                        onClick={() => setForm((f) => ({ ...f, rating: value }))}
+                        className="rounded-md p-1 outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                      >
+                        <Star aria-hidden="true" className={cn("size-6", value <= form.rating ? "fill-warning text-warning" : "text-border")} />
+                      </button>
+                    ))}
+                  </div>
+                </fieldset>
+                <div className="space-y-2">
+                  <Label htmlFor="t-order">Display order</Label>
+                  <Input id="t-order" type="number" min={0} value={form.order} onChange={(e) => setForm((f) => ({ ...f, order: Number(e.target.value) }))} />
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between gap-4 rounded-lg border border-border p-4">
+                <div>
+                  <Label htmlFor="t-published">Show on the website</Label>
+                  <p className="mt-1 text-sm text-muted-foreground">Turn off to keep it as a draft.</p>
+                </div>
+                <Switch id="t-published" checked={form.isPublished} onCheckedChange={(checked) => setForm((f) => ({ ...f, isPublished: checked }))} />
+              </div>
+
+              {formError && (
+                <p role="alert" className="text-sm text-destructive">
+                  {formError}
+                </p>
+              )}
+            </div>
+
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setFormOpen(false)} disabled={saving}>
+                Cancel
+              </Button>
+              <Button type="submit" loading={saving}>
+                {editingId ? "Save changes" : "Add testimonial"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog open={!!toDelete} onOpenChange={(open) => !open && !deleting && setToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this testimonial?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {toDelete?.name}&apos;s testimonial will be permanently deleted{toDelete?.isPublished ? " and removed from the homepage" : ""}.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(event) => {
+                event.preventDefault()
+                void confirmDelete()
+              }}
+              disabled={deleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleting ? "Deleting…" : "Delete testimonial"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </AdminPage>
   )
 }

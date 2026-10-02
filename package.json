@@ -74,6 +74,8 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "dotenv": "^17.2.3",
+    "eslint": "^9.39.5",
+    "eslint-config-next": "^16.0.10",
     "firebase": "^12.8.0",
     "postcss": "^8.5",
     "tailwindcss": "^4.1.9",

@@ -1,215 +1,250 @@
-"use client";
+"use client"
 
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { AdminLayout } from "@/components/admin/AdminLayout";
-import { getAllEnrollments, updateEnrollmentStatus } from "@/lib/enrollment";
-import type { UserEnrollment } from "@/lib/types";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { useToast } from "@/hooks/use-toast";
-import { Loader2, Search, Plus, CheckCircle } from "lucide-react";
-import { ManualEnrollmentModal } from "@/components/admin/manual-enrollment-modal";
+import { useCallback, useEffect, useMemo, useState } from "react"
+import { CheckCircle2, GraduationCap, Plus } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { ManualEnrollmentModal } from "@/components/admin/manual-enrollment-modal"
+import {
+  AdminPage,
+  AdminPageHeader,
+  AdminSearch,
+  AdminTableCard,
+  AdminToolbar,
+  PersonAvatar,
+  StatusBadge,
+  formatAdminDate,
+} from "@/components/admin/admin-ui"
+import { EmptyState, ErrorState, LoadingState } from "@/components/academy/states"
+import { useToast } from "@/hooks/use-toast"
+import { getAllEnrollments, updateEnrollmentStatus } from "@/lib/enrollment"
+import type { UserEnrollment } from "@/lib/types"
+import { cn } from "@/lib/utils"
 
-function formatDate(d: Date): string {
-  if (!d || Number.isNaN(d.getTime())) return "—";
-  return d.toLocaleString();
+const STATUS_FILTERS = ["all", "active", "completed", "cancelled"] as const
+type StatusFilter = (typeof STATUS_FILTERS)[number]
+
+function studentName(e: UserEnrollment) {
+  return [e.personalInfo?.firstName, e.personalInfo?.lastName].filter(Boolean).join(" ")
+}
+
+function paymentLabel(e: UserEnrollment) {
+  const method = String(e.paymentMethod || "").toLowerCase()
+  if (method === "free" || (!e.paymentAmount && method !== "paystack")) return method === "manual" ? "Manual" : "Free"
+  return `GH₵${Number(e.paymentAmount || 0).toLocaleString()}`
 }
 
 export default function AdminEnrollmentsPage() {
-  const [rows, setRows] = useState<UserEnrollment[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [query, setQuery] = useState("");
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [updatingId, setUpdatingId] = useState<string | null>(null);
-  const { toast } = useToast();
+  const [rows, setRows] = useState<UserEnrollment[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(false)
+  const [search, setSearch] = useState("")
+  const [status, setStatus] = useState<StatusFilter>("all")
+  const [isModalOpen, setIsModalOpen] = useState(false)
+  const [updatingId, setUpdatingId] = useState<string | null>(null)
+  const { toast } = useToast()
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
+  const load = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true)
+    setError(false)
     try {
-      const list = await getAllEnrollments();
-      setRows(list);
-    } catch {
-      setError("Could not load enrollments. Sign in as an admin and check Firestore rules.");
+      setRows(await getAllEnrollments())
+    } catch (loadError) {
+      console.error("Error loading enrollments:", loadError)
+      setError(true)
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  }, []);
+  }, [])
 
   useEffect(() => {
-    void load();
-  }, [load]);
+    void load()
+  }, [load])
+
+  const counts = useMemo(() => {
+    const result: Record<StatusFilter, number> = { all: rows.length, active: 0, completed: 0, cancelled: 0 }
+    rows.forEach((e) => {
+      const key = String(e.status || "active").toLowerCase() as StatusFilter
+      if (key in result) result[key]++
+    })
+    return result
+  }, [rows])
 
   const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (!q) return rows;
+    const q = search.trim().toLowerCase()
     return rows.filter((e) => {
-      const name = `${e.personalInfo?.firstName ?? ""} ${e.personalInfo?.lastName ?? ""}`.toLowerCase();
-      const email = (e.userEmail || e.personalInfo?.email || "").toLowerCase();
-      const course = (e.courseTitle || "").toLowerCase();
-      const ref = (e.paymentReference || "").toLowerCase();
-      return name.includes(q) || email.includes(q) || course.includes(q) || ref.includes(q);
-    });
-  }, [rows, query]);
+      if (status !== "all" && String(e.status || "active").toLowerCase() !== status) return false
+      if (!q) return true
+      return [studentName(e), e.userEmail, e.personalInfo?.email, e.courseTitle, e.paymentReference]
+        .filter(Boolean)
+        .some((value) => String(value).toLowerCase().includes(q))
+    })
+  }, [rows, search, status])
 
-  const handleMarkCompleted = async (enrollmentId: string) => {
-    setUpdatingId(enrollmentId);
+  const uniqueStudents = useMemo(() => new Set(rows.map((e) => e.userId)).size, [rows])
+
+  const handleMarkCompleted = async (enrollment: UserEnrollment) => {
+    setUpdatingId(enrollment.id)
     try {
-      await updateEnrollmentStatus(enrollmentId, 'completed');
-      toast({
-        title: "Success",
-        description: "Enrollment marked as completed.",
-      });
-      load(); // Refresh the list
-    } catch (err) {
-      console.error(err);
-      toast({
-        title: "Error",
-        description: "Failed to update status. Please try again.",
-        variant: "destructive",
-      });
+      await updateEnrollmentStatus(enrollment.id, "completed")
+      toast({ title: "Marked as completed", description: `${studentName(enrollment) || enrollment.userEmail} · ${enrollment.courseTitle}` })
+      await load(true)
+    } catch (updateError) {
+      console.error(updateError)
+      toast({ title: "Couldn't update the enrollment", description: "Please try again.", variant: "destructive" })
     } finally {
-      setUpdatingId(null);
+      setUpdatingId(null)
     }
-  };
-
-  const uniqueStudents = useMemo(() => new Set(rows.map((e) => e.userId)).size, [rows]);
-
-  if (loading) {
-    return (
-      <AdminLayout>
-        <div className="p-6 flex items-center gap-2 text-muted-foreground">
-          <Loader2 className="h-5 w-5 animate-spin" />
-          Loading enrollments…
-        </div>
-      </AdminLayout>
-    );
   }
 
-  if (error) {
-    return (
-      <AdminLayout>
-        <div className="p-6 text-destructive">{error}</div>
-      </AdminLayout>
-    );
-  }
+  const markButton = (e: UserEnrollment) =>
+    String(e.status || "active").toLowerCase() === "active" ? (
+      <Button variant="outline" size="sm" loading={updatingId === e.id} onClick={() => void handleMarkCompleted(e)}>
+        {updatingId !== e.id && <CheckCircle2 aria-hidden="true" />}
+        Mark completed
+      </Button>
+    ) : null
 
   return (
-    <AdminLayout>
-      <div className="p-6">
-        <div className="mb-6 flex flex-col sm:flex-row sm:items-start justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold text-foreground">Course enrollments</h1>
-            <p className="text-sm text-muted-foreground mt-1">
-              Manage student enrollments and track course completion status.
-            </p>
-            <div className="flex flex-wrap gap-4 mt-4 text-sm">
+    <AdminPage>
+      <AdminPageHeader
+        title="Enrollments"
+        description="Every course enrollment, newest first. Mark a student's course as completed when they finish."
+        meta={
+          !loading && !error ? (
+            <>
               <span>
-                <span className="text-muted-foreground">Registrations: </span>
-                <strong>{rows.length}</strong>
+                <strong className="font-semibold text-foreground tabular-nums">{rows.length}</strong> enrollments
               </span>
               <span>
-                <span className="text-muted-foreground">Distinct students: </span>
-                <strong>{uniqueStudents}</strong>
+                <strong className="font-semibold text-foreground tabular-nums">{uniqueStudents}</strong> distinct students
               </span>
-            </div>
-          </div>
-          <Button onClick={() => setIsModalOpen(true)} className="gap-2 shrink-0">
-            <Plus className="h-4 w-4" />
-            Manually Enroll Student
+            </>
+          ) : undefined
+        }
+        actions={
+          <Button onClick={() => setIsModalOpen(true)}>
+            <Plus aria-hidden="true" />
+            Enroll a student
           </Button>
-        </div>
-
-        <div className="relative mb-4 max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search by name, email, course, or payment ref…"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            className="pl-9"
-          />
-        </div>
-
-        <div className="overflow-x-auto rounded-lg border border-border">
-          <table className="min-w-full divide-y divide-border text-sm">
-            <thead className="bg-muted/50">
-              <tr>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Student</th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Email</th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Course</th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Date</th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Payment</th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Status</th>
-                <th className="px-4 py-3 text-right font-medium text-muted-foreground">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="bg-card divide-y divide-border">
-              {filtered.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">
-                    {rows.length === 0
-                      ? "No enrollments yet. Registrations appear here after students pay on the course registration flow."
-                      : "No rows match your search."}
-                  </td>
-                </tr>
-              ) : (
-                filtered.map((e) => (
-                  <tr key={e.id} className="hover:bg-muted/40">
-                    <td className="px-4 py-3 font-medium text-foreground whitespace-nowrap">
-                      {[e.personalInfo?.firstName, e.personalInfo?.lastName].filter(Boolean).join(" ") ||
-                        "—"}
-                    </td>
-                    <td className="px-4 py-3 text-muted-foreground">{e.userEmail || e.personalInfo?.email || "—"}</td>
-                    <td className="px-4 py-3 text-foreground max-w-[220px]">{e.courseTitle || e.courseId}</td>
-                    <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">
-                      {formatDate(e.enrollmentDate instanceof Date ? e.enrollmentDate : new Date(e.enrollmentDate))}
-                    </td>
-                    <td className="px-4 py-3 text-muted-foreground">
-                      <span className="font-mono text-xs">{e.paymentReference || "—"}</span>
-                      {e.paymentAmount != null && (
-                        <span className="block text-xs mt-0.5">
-                          {e.paymentMethod} · {e.paymentAmount}
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3">
-                      <Badge variant={e.status === "completed" ? "success" : e.status === "active" ? "default" : "secondary"}>
-                        {e.status || "active"}
-                      </Badge>
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      {e.status !== "completed" && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleMarkCompleted(e.id)}
-                          disabled={updatingId === e.id}
-                          className="h-8 gap-1.5 text-xs text-muted-foreground hover:text-foreground"
-                        >
-                          {updatingId === e.id ? (
-                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                          ) : (
-                            <CheckCircle className="h-3.5 w-3.5" />
-                          )}
-                          Mark completed
-                        </Button>
-                      )}
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-      
-      <ManualEnrollmentModal 
-        isOpen={isModalOpen} 
-        onClose={() => setIsModalOpen(false)} 
-        onSuccess={load} 
+        }
       />
-    </AdminLayout>
-  );
+
+      {loading ? (
+        <LoadingState size="page" label="Loading enrollments…" />
+      ) : error ? (
+        <ErrorState title="Couldn't load enrollments" description="Check your connection and try again." onRetry={() => void load()} />
+      ) : (
+        <>
+          <AdminToolbar>
+            <AdminSearch value={search} onChange={setSearch} placeholder="Search name, email, course or reference" label="Search enrollments" />
+            <div role="group" aria-label="Filter by status" className="flex flex-wrap gap-1 rounded-lg border border-border bg-card p-1">
+              {STATUS_FILTERS.map((key) => (
+                <button
+                  key={key}
+                  type="button"
+                  aria-pressed={status === key}
+                  onClick={() => setStatus(key)}
+                  className={cn(
+                    "inline-flex h-8 items-center gap-1.5 rounded-md px-3 text-sm font-medium transition-colors outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50",
+                    status === key ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                  )}
+                >
+                  {key.charAt(0).toUpperCase() + key.slice(1)}
+                  <span className={cn("tabular-nums", status === key ? "text-primary-foreground/80" : "text-muted-foreground")}>{counts[key]}</span>
+                </button>
+              ))}
+            </div>
+          </AdminToolbar>
+
+          {filtered.length === 0 ? (
+            <EmptyState
+              icon={GraduationCap}
+              title={rows.length === 0 ? "No enrollments yet" : "No enrollments match"}
+              description={rows.length === 0 ? "Enrollments appear here when students join a course." : "Try a different search or status."}
+            />
+          ) : (
+            <>
+              {/* Desktop table */}
+              <AdminTableCard className="hidden md:block">
+                <Table>
+                  <TableCaption className="sr-only">Course enrollments</TableCaption>
+                  <TableHeader className="bg-muted">
+                    <TableRow>
+                      <TableHead className="h-11 px-4">Student</TableHead>
+                      <TableHead className="h-11 px-4">Course</TableHead>
+                      <TableHead className="h-11 px-4">Enrolled</TableHead>
+                      <TableHead className="h-11 px-4">Payment</TableHead>
+                      <TableHead className="h-11 px-4">Status</TableHead>
+                      <TableHead className="h-11 px-4 text-right">
+                        <span className="sr-only">Actions</span>
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filtered.map((e) => (
+                      <TableRow key={e.id}>
+                        <TableCell className="px-4 py-3">
+                          <div className="flex items-center gap-3">
+                            <PersonAvatar name={studentName(e)} email={e.userEmail} />
+                            <div className="min-w-0">
+                              <p className="font-medium text-foreground">{studentName(e) || "—"}</p>
+                              <p className="text-muted-foreground">{e.userEmail || e.personalInfo?.email || "—"}</p>
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell className="max-w-64 px-4 py-3 whitespace-normal text-foreground">{e.courseTitle || e.courseId}</TableCell>
+                        <TableCell className="px-4 py-3 text-muted-foreground tabular-nums">{formatAdminDate(e.enrollmentDate)}</TableCell>
+                        <TableCell className="px-4 py-3">
+                          <p className="font-medium text-foreground tabular-nums">{paymentLabel(e)}</p>
+                          {e.paymentReference && <p className="max-w-48 truncate font-mono text-xs text-muted-foreground" title={e.paymentReference}>{e.paymentReference}</p>}
+                        </TableCell>
+                        <TableCell className="px-4 py-3">
+                          <StatusBadge status={String(e.status || "active")} />
+                        </TableCell>
+                        <TableCell className="px-4 py-3 text-right">{markButton(e)}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </AdminTableCard>
+
+              {/* Mobile cards */}
+              <ul className="space-y-3 md:hidden" aria-label="Course enrollments">
+                {filtered.map((e) => (
+                  <li key={e.id} className="rounded-xl border border-border bg-card p-4 shadow-sm">
+                    <div className="flex items-start gap-3">
+                      <PersonAvatar name={studentName(e)} email={e.userEmail} />
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate font-medium text-foreground">{studentName(e) || e.userEmail || "—"}</p>
+                        <p className="truncate text-sm text-muted-foreground">{e.userEmail || e.personalInfo?.email}</p>
+                      </div>
+                      <StatusBadge status={String(e.status || "active")} />
+                    </div>
+                    <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                      <div className="col-span-2">
+                        <dt className="text-muted-foreground">Course</dt>
+                        <dd className="font-medium text-foreground">{e.courseTitle || e.courseId}</dd>
+                      </div>
+                      <div>
+                        <dt className="text-muted-foreground">Enrolled</dt>
+                        <dd className="text-foreground tabular-nums">{formatAdminDate(e.enrollmentDate)}</dd>
+                      </div>
+                      <div>
+                        <dt className="text-muted-foreground">Payment</dt>
+                        <dd className="text-foreground tabular-nums">{paymentLabel(e)}</dd>
+                      </div>
+                    </dl>
+                    {markButton(e) && <div className="mt-4 [&>button]:w-full">{markButton(e)}</div>}
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+        </>
+      )}
+
+      <ManualEnrollmentModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSuccess={() => void load(true)} />
+    </AdminPage>
+  )
 }

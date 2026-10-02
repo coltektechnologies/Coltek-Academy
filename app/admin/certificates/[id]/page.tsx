@@ -1,266 +1,154 @@
 "use client"
 
-import { useEffect, useState } from 'react'
-import { useParams, useRouter } from 'next/navigation'
-import Link from 'next/link'
-import { doc, getDoc } from 'firebase/firestore'
-import { Loader2, ArrowLeft, Download, Eye } from 'lucide-react'
-
-import { AdminLayout } from '@/components/admin/AdminLayout'
-import { isAdminUser } from '@/lib/admin-access'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { firebase } from '@/lib/firebase'
-import { CertificateService } from '@/lib/certificate-service'
-import { useAuth } from '@/hooks/use-auth'
-import type { Certificate } from '@/types/certificate'
-
-function formatDateValue(value: Date | string): string {
-  const date = value instanceof Date ? value : new Date(value)
-  if (!date || Number.isNaN(date.getTime())) return '—'
-  return date.toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  })
-}
-
-function isPdfUrl(url: string): boolean {
-  return url.toLowerCase().endsWith('.pdf') || url.toLowerCase().includes('application/pdf')
-}
-
-/**
- * Normalize a certificate URL to always be a relative path.
- * Old certificates may have stored full URLs with the domain which bypass
- * the Next.js API route and hit static hosting (404).
- */
-function normalizeCertUrl(url: string | undefined): string {
-  if (!url) return ''
-  try {
-    if (url.startsWith('http')) {
-      return new URL(url).pathname
-    }
-  } catch {
-    // Not a valid URL, return as-is
-  }
-  return url
-}
+import { useCallback, useEffect, useState } from "react"
+import Link from "next/link"
+import { useParams } from "next/navigation"
+import { ArrowLeft, Download, ExternalLink, FileText } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { AdminPage, AdminPageHeader, AdminSection, PersonAvatar, StatusBadge, formatAdminDate } from "@/components/admin/admin-ui"
+import { EmptyState, ErrorState, LoadingState } from "@/components/academy/states"
+import { CertificateService } from "@/lib/certificate-service"
+import { downloadCertificateFile, isPdfUrl, normalizeCertUrl } from "@/lib/certificate-files"
+import type { Certificate } from "@/types/certificate"
 
 export default function AdminCertificateDetailPage() {
   const params = useParams() as { id?: string }
-  const router = useRouter()
-  const { user, loading: authLoading } = useAuth()
+  const certificateId = params?.id
   const [certificate, setCertificate] = useState<Certificate | null>(null)
-  const [isAdmin, setIsAdmin] = useState(false)
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<"missing" | "failed" | null>(null)
 
-  useEffect(() => {
-    if (!authLoading && !user) {
-      router.push('/admin/login')
+  // Admin access is enforced by app/admin/layout.tsx (AdminGuard)
+  const load = useCallback(async () => {
+    if (!certificateId) {
+      setError("missing")
+      setLoading(false)
+      return
     }
-  }, [authLoading, user, router])
-
-  useEffect(() => {
-    const fetchCertificate = async () => {
-      if (authLoading || !user) return
-      if (!params?.id) {
-        setError('Certificate ID is missing')
-        setIsLoading(false)
-        return
-      }
-
-      setIsLoading(true)
-      setError(null)
-
-      try {
-        if (!(await isAdminUser(user))) {
-          setError('Admin access required')
-          setIsAdmin(false)
-          return
-        }
-        setIsAdmin(true)
-
-        const cert = await CertificateService.getCertificateById(params.id)
-        if (!cert) {
-          setError('Certificate not found')
-          return
-        }
-
-        setCertificate(cert)
-      } catch (err) {
-        console.error('Failed to load certificate detail:', err)
-        setError('Unable to load certificate details. Please try again.')
-      } finally {
-        setIsLoading(false)
-      }
-    }
-
-    void fetchCertificate()
-  }, [authLoading, user, params?.id])
-
-  const handleDownload = async () => {
-    const url = normalizeCertUrl(certificate?.certificateUrl)
-    if (!url) return
-
+    setLoading(true)
+    setError(null)
     try {
-      // Fetch the file as a blob to trigger a proper download
-      const downloadUrl = url.includes('?') ? `${url}&download=1` : `${url}?download=1`
-      const response = await fetch(downloadUrl)
-      if (!response.ok) throw new Error('Failed to download')
-      
-      const blob = await response.blob()
-      const blobUrl = URL.createObjectURL(blob)
-      
-      const ext = url.toLowerCase().endsWith('.pdf') ? 'pdf' : 'jpg'
-      const link = document.createElement('a')
-      link.href = blobUrl
-      link.download = `certificate-${certificate?.id || params.id}.${ext}`
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
-      URL.revokeObjectURL(blobUrl)
-    } catch (err) {
-      console.error('Download error:', err)
-      // Fallback: open in new tab
-      window.open(url, '_blank')
+      const cert = await CertificateService.getCertificateById(certificateId)
+      if (cert) setCertificate(cert)
+      else setError("missing")
+    } catch (loadError) {
+      console.error("Failed to load certificate detail:", loadError)
+      setError("failed")
+    } finally {
+      setLoading(false)
     }
-  }
+  }, [certificateId])
+
+  useEffect(() => {
+    void load()
+  }, [load])
+
+  const fileUrl = normalizeCertUrl(certificate?.certificateUrl)
+  const previewUrl = normalizeCertUrl(certificate?.previewUrl || certificate?.certificateUrl)
+  const verificationCode = certificate?.verificationCode || certificate?.metadata?.verificationCode
+  const remarks = certificate?.metadata?.remarks
+
+  const details: { label: string; value: React.ReactNode }[] = certificate
+    ? [
+        { label: "Course", value: certificate.courseName || certificate.courseTitle || "—" },
+        { label: "Issued", value: formatAdminDate(certificate.issueDate) },
+        { label: "Completed", value: formatAdminDate(certificate.completionDate) },
+        { label: "Status", value: <StatusBadge status={certificate.status || "issued"} /> },
+        ...(verificationCode ? [{ label: "Verification code", value: <span className="font-mono">{verificationCode}</span> }] : []),
+        { label: "Certificate ID", value: <span className="font-mono text-xs wrap-anywhere">{certificate.id}</span> },
+        ...(remarks ? [{ label: "Remarks", value: remarks }] : []),
+      ]
+    : []
 
   return (
-    <AdminLayout>
-      <div className="p-6">
-        <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-3">
-            <Button variant="outline" size="sm" onClick={() => router.push('/admin/certificates')}>
-              <ArrowLeft className="h-4 w-4" />
-              Back
-            </Button>
-            <div>
-              <p className="text-sm text-muted-foreground">Admin certificate detail</p>
-              <h1 className="text-3xl font-bold">Certificate details</h1>
-            </div>
-          </div>
-          {certificate?.certificateUrl && (
-            <div className="flex flex-wrap gap-2">
-              <Button variant="outline" size="sm" onClick={handleDownload} className="gap-2">
-                <Download className="h-4 w-4" />
-                Download PDF
-              </Button>
-              <Link href={normalizeCertUrl(certificate.certificateUrl)} target="_blank" rel="noopener noreferrer">
-                <Button variant="secondary" size="sm" className="gap-2">
-                  <Eye className="h-4 w-4" />
-                  Open original
-                </Button>
-              </Link>
-            </div>
-          )}
-        </div>
-
-        {isLoading ? (
-          <div className="rounded-2xl border border-border bg-card p-16 text-center">
-            <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
-            <p className="mt-4 text-muted-foreground">Loading certificate details…</p>
-          </div>
-        ) : error ? (
-          <div className="rounded-2xl border border-destructive/30 bg-destructive/5 p-6 text-destructive">
-            <p className="font-medium">{error}</p>
-            {error === 'Certificate not found' && (
-              <p className="mt-2 text-sm text-muted-foreground">Verify the certificate ID or issue a new certificate from the admin dashboard.</p>
-            )}
-          </div>
-        ) : certificate ? (
-          <div className="space-y-6">
-            <div className="grid gap-6 lg:grid-cols-[1.4fr_0.85fr]">
-              <Card>
-                <CardHeader>
-                  <CardTitle>{certificate.recipientName || 'Certificate holder'}</CardTitle>
-                  <p className="text-sm text-muted-foreground">{certificate.courseName || certificate.courseTitle || 'Course certificate'}</p>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid gap-4 text-sm text-foreground">
-                    <div className="rounded-xl bg-muted/60 p-4">
-                      <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Certificate ID</p>
-                      <p className="mt-1 font-mono text-sm text-foreground">{certificate.id}</p>
-                    </div>
-                    <div className="grid gap-3 sm:grid-cols-2">
-                      <div className="space-y-1 rounded-xl bg-muted/60 p-4">
-                        <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Issued on</p>
-                        <p>{formatDateValue(certificate.issueDate)}</p>
-                      </div>
-                      <div className="space-y-1 rounded-xl bg-muted/60 p-4">
-                        <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Status</p>
-                        <Badge variant={certificate.status === 'issued' ? 'default' : 'secondary'}>
-                          {certificate.status || 'issued'}
-                        </Badge>
-                      </div>
-                    </div>
-                    <div className="space-y-1 rounded-xl bg-muted/60 p-4">
-                      <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Recipient email</p>
-                      <p>{certificate.recipientEmail || '—'}</p>
-                    </div>
-                    {certificate.verificationCode && (
-                      <div className="space-y-1 rounded-xl bg-muted/60 p-4">
-                        <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Verification code</p>
-                        <p>{certificate.verificationCode}</p>
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>Certificate preview</CardTitle>
-                  <p className="text-sm text-muted-foreground">Preview and download from the stored document.</p>
-                </CardHeader>
-                <CardContent>
-                  {certificate.previewUrl ? (
-                    isPdfUrl(certificate.previewUrl) ? (
-                      <iframe
-                        title="Certificate preview"
-                        src={normalizeCertUrl(certificate.previewUrl)}
-                        className="h-90 w-full rounded-3xl border border-border"
-                      />
-                    ) : (
-                      <img
-                        src={normalizeCertUrl(certificate.previewUrl)}
-                        alt={`Preview for certificate ${certificate.id}`}
-                        className="h-90 w-full rounded-3xl border border-border object-contain"
-                      />
-                    )
-                  ) : certificate.certificateUrl ? (
-                    <iframe
-                      title="Certificate preview"
-                      src={normalizeCertUrl(certificate.certificateUrl)}
-                      className="h-90 w-full rounded-3xl border border-border"
-                    />
-                  ) : (
-                    <div className="flex min-h-60 items-center justify-center rounded-3xl border border-dashed border-border bg-muted p-6 text-center text-sm text-muted-foreground">
-                      Certificate preview is not available for this record.
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </div>
-
-            <div className="rounded-2xl border border-border bg-card p-6">
-              <h2 className="text-lg font-semibold">Raw certificate metadata</h2>
-              <div className="mt-4 grid gap-4 text-sm text-foreground sm:grid-cols-2">
-                <div className="rounded-xl bg-muted/60 p-4">
-                  <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Course ID</p>
-                  <p>{certificate.courseId || '—'}</p>
-                </div>
-                <div className="rounded-xl bg-muted/60 p-4">
-                  <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Completion date</p>
-                  <p>{formatDateValue(certificate.completionDate)}</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        ) : null}
+    <AdminPage>
+      <div>
+        <Button asChild variant="ghost" size="sm" className="-ml-2">
+          <Link href="/admin/certificates">
+            <ArrowLeft aria-hidden="true" />
+            All certificates
+          </Link>
+        </Button>
       </div>
-    </AdminLayout>
+
+      {loading ? (
+        <LoadingState size="page" label="Loading certificate…" />
+      ) : error === "missing" ? (
+        <EmptyState
+          icon={FileText}
+          title="Certificate not found"
+          description="It may have been deleted, or the link is incorrect."
+          action={
+            <Button asChild variant="outline">
+              <Link href="/admin/certificates">Back to certificates</Link>
+            </Button>
+          }
+        />
+      ) : error || !certificate ? (
+        <ErrorState title="Couldn't load this certificate" description="Check your connection and try again." onRetry={() => void load()} />
+      ) : (
+        <>
+          <AdminPageHeader
+            title={certificate.recipientName || "Certificate holder"}
+            description={certificate.courseName || certificate.courseTitle || "Course certificate"}
+            actions={
+              fileUrl ? (
+                <>
+                  <Button asChild variant="outline">
+                    <a href={fileUrl} target="_blank" rel="noopener noreferrer">
+                      <ExternalLink aria-hidden="true" />
+                      Open file
+                      <span className="sr-only"> (opens in a new tab)</span>
+                    </a>
+                  </Button>
+                  <Button onClick={() => void downloadCertificateFile(fileUrl, `certificate-${certificate.id}${isPdfUrl(fileUrl) ? ".pdf" : ""}`)}>
+                    <Download aria-hidden="true" />
+                    Download
+                  </Button>
+                </>
+              ) : undefined
+            }
+          />
+
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+            <AdminSection title="Preview" className="lg:col-span-2" contentClassName="p-3 sm:p-4">
+              {previewUrl ? (
+                isPdfUrl(previewUrl) ? (
+                  <iframe title={`Certificate for ${certificate.recipientName}`} src={previewUrl} className="h-128 w-full rounded-lg border border-border bg-muted" />
+                ) : (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={previewUrl} alt={`Certificate for ${certificate.recipientName}, ${certificate.courseName || certificate.courseTitle}`} className="max-h-128 w-full rounded-lg border border-border bg-muted object-contain" />
+                )
+              ) : (
+                <EmptyState icon={FileText} title="No preview available" description="This certificate record has no stored file." />
+              )}
+            </AdminSection>
+
+            <div className="space-y-6">
+              <AdminSection title="Recipient">
+                <div className="flex items-center gap-3">
+                  <PersonAvatar name={certificate.recipientName} email={certificate.recipientEmail} className="size-11 text-sm" />
+                  <div className="min-w-0">
+                    <p className="truncate font-medium text-foreground">{certificate.recipientName || "—"}</p>
+                    <p className="truncate text-sm text-muted-foreground">{certificate.recipientEmail || "—"}</p>
+                  </div>
+                </div>
+              </AdminSection>
+
+              <AdminSection title="Details" contentClassName="px-5 py-2">
+                <dl className="divide-y divide-border text-sm">
+                  {details.map((item) => (
+                    <div key={item.label} className="flex items-start justify-between gap-4 py-3">
+                      <dt className="shrink-0 text-muted-foreground">{item.label}</dt>
+                      <dd className="min-w-0 text-right font-medium text-foreground">{item.value}</dd>
+                    </div>
+                  ))}
+                </dl>
+              </AdminSection>
+            </div>
+          </div>
+        </>
+      )}
+    </AdminPage>
   )
 }
