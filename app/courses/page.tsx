@@ -3,7 +3,9 @@
 import { useState, useMemo, useEffect, Suspense } from "react"
 import { useSearchParams } from "next/navigation"
 import dynamic from 'next/dynamic';
-import { Loader2 } from 'lucide-react';
+import { Loader2, AlertTriangle } from 'lucide-react';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
 
 const LoadingFallback = () => (
   <div className="flex items-center justify-center min-h-[300px]">
@@ -325,15 +327,15 @@ export default function CoursesPage() {
             {/* Main content */}
             <div className="flex-1">
               {error && (
-                <div className="mb-6 p-4 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-200 text-sm flex items-center justify-between gap-4">
-                  <span>{error}</span>
-                  <button
-                    onClick={() => window.location.reload()}
-                    className="shrink-0 px-3 py-1.5 rounded-md bg-amber-200/50 dark:bg-amber-800/30 hover:bg-amber-200 dark:hover:bg-amber-800/50 text-sm font-medium"
-                  >
-                    Try again
-                  </button>
-                </div>
+                <Alert variant="warning" className="mb-6">
+                  <AlertTriangle aria-hidden="true" />
+                  <AlertTitle>{error}</AlertTitle>
+                  <AlertDescription>
+                    <Button variant="outline" size="sm" onClick={() => window.location.reload()}>
+                      Try again
+                    </Button>
+                  </AlertDescription>
+                </Alert>
               )}
               <Suspense fallback={<LoadingFallback />}>
                 <div className="mb-6 flex justify-between items-center">

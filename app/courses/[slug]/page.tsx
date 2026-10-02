@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { useToast } from "@/hooks/use-toast"
 import type { Course } from "@/lib/types"
+import { isCourseUpcoming } from "@/lib/course-display"
 
 const LoadingFallback = () => (
   <div className="flex items-center justify-center min-h-[300px]">
@@ -187,8 +188,7 @@ export default function CoursePage() {
     setRetryCount(prev => prev + 1);
   }, []);
 
-  const upcomingSlugs = ['cybersecurity-essentials', 'data-science-machine-learning', 'cloud-computing-aws', 'project-management-professional'];
-  const isUpcoming = course ? (course.upcoming || upcomingSlugs.includes(course.slug || '')) : false;
+  const isUpcoming = course ? isCourseUpcoming(course) : false;
 
   // Show toast once when viewing an upcoming course (no full content)
   useEffect(() => {

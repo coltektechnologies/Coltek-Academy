@@ -49,7 +49,7 @@ export function CourseFilters({
       <div>
         <label className="text-sm font-medium text-foreground mb-2 block">Category</label>
         <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-          <SelectTrigger className="w-full">
+          <SelectTrigger className="w-full" aria-label="Category">
             <SelectValue placeholder="Select category" />
           </SelectTrigger>
           <SelectContent>
@@ -66,7 +66,7 @@ export function CourseFilters({
       <div>
         <label className="text-sm font-medium text-foreground mb-2 block">Level</label>
         <Select value={selectedLevel} onValueChange={setSelectedLevel}>
-          <SelectTrigger className="w-full">
+          <SelectTrigger className="w-full" aria-label="Level">
             <SelectValue placeholder="Select level" />
           </SelectTrigger>
           <SelectContent>
@@ -83,7 +83,7 @@ export function CourseFilters({
       <div>
         <label className="text-sm font-medium text-foreground mb-2 block">Price Range</label>
         <Select value={priceRange} onValueChange={setPriceRange}>
-          <SelectTrigger className="w-full">
+          <SelectTrigger className="w-full" aria-label="Price range">
             <SelectValue placeholder="Select price range" />
           </SelectTrigger>
           <SelectContent>
@@ -100,7 +100,7 @@ export function CourseFilters({
       <div className="lg:hidden">
         <label className="text-sm font-medium text-foreground mb-2 block">Sort By</label>
         <Select value={sortBy} onValueChange={setSortBy}>
-          <SelectTrigger className="w-full">
+          <SelectTrigger className="w-full" aria-label="Sort by">
             <SelectValue placeholder="Sort by" />
           </SelectTrigger>
           <SelectContent>
@@ -126,10 +126,11 @@ export function CourseFilters({
     <div className="space-y-4">
       {/* Search Bar */}
       <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+        <Search aria-hidden="true" className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
         <Input
           type="text"
           placeholder="Search courses..."
+          aria-label="Search courses"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           className="pl-10 h-12"

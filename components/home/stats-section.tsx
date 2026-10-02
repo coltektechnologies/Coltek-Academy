@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { StatCard } from "@/components/academy/stat-card"
 
 interface Stats {
   studentsEnrolled: number
@@ -30,16 +31,11 @@ export function StatsSection() {
   return (
     <section className="py-16 bg-primary">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+        <dl className="grid grid-cols-2 md:grid-cols-4 gap-8">
           {items.map((item) => (
-            <div key={item.label} className="text-center">
-              <div className="text-3xl md:text-4xl lg:text-5xl font-bold text-primary-foreground mb-2">
-                {typeof item.value === "number" ? item.value.toLocaleString() : "—"}
-              </div>
-              <div className="text-primary-foreground/80 text-sm md:text-base">{item.label}</div>
-            </div>
+            <StatCard key={item.label} variant="onPrimary" value={item.value} label={item.label} />
           ))}
-        </div>
+        </dl>
       </div>
     </section>
   )

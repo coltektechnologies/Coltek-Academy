@@ -2,6 +2,8 @@
 
 import { CourseCard } from "@/components/course-card"
 import { CourseCardSkeleton } from "@/components/course-card-skeleton"
+import { EmptyState } from "@/components/academy/states"
+import { SearchX } from "lucide-react"
 import type { Course } from "@/lib/types"
 
 interface CoursesGridProps {
@@ -22,12 +24,11 @@ export function CoursesGrid({ courses, isLoading }: CoursesGridProps) {
 
   if (courses.length === 0) {
     return (
-      <div className="text-center py-16">
-        <div className="text-muted-foreground text-lg mb-2">No courses found</div>
-        <p className="text-muted-foreground/80 text-sm">
-          Try adjusting your filters or search query to find what you&apos;re looking for.
-        </p>
-      </div>
+      <EmptyState
+        icon={SearchX}
+        title="No courses found"
+        description="Try adjusting your filters or search query to find what you're looking for."
+      />
     )
   }
 

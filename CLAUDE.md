@@ -110,7 +110,9 @@ Before creating a component:
 3. If it is close but not right, improve the **shared** component (without breaking other call sites).
 4. Only create a new component when no reusable equivalent exists — and make it reusable.
 
-Known duplication to avoid extending: `hooks/use-toast.ts` ≡ `components/ui/use-toast.ts`; `hooks/use-mobile.ts` ≡ `components/ui/use-mobile.tsx`; the `upcomingSlugs` list (5 files); `levelColors` (2 files); the team/instructor mapping (`course-hero.tsx`, `course-content.tsx`, `team-section.tsx`); `LoadingFallback` (redefined per page). shadcn primitives exist for breadcrumb, pagination, carousel, form, etc. — use them instead of hand-rolling.
+The full component inventory is in [DESIGN_SYSTEM.md §29](DESIGN_SYSTEM.md). Shared academy components live in `components/academy/` (SectionHeader, PageHeader, StatCard, TestimonialCard, CTASection, ProgrammeCard, Loading/Empty/ErrorState); course display rules live in `lib/course-display.ts`.
+
+Known duplication still to retire: the `upcomingSlugs` list in the course API routes and `lib/courses.ts` (frontend uses `lib/course-display.ts`); the team/instructor mapping (`course-hero.tsx`, `course-content.tsx`, `team-section.tsx`); `LoadingFallback` (redefined per page). shadcn primitives exist for pagination, carousel, form, etc. — use them instead of hand-rolling.
 
 ---
 

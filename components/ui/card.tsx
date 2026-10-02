@@ -2,12 +2,19 @@ import * as React from 'react'
 
 import { cn } from '@/lib/utils'
 
-function Card({ className, ...props }: React.ComponentProps<'div'>) {
+// Card system — see DESIGN_SYSTEM.md §10. Use `interactive` only when the whole card is clickable.
+function Card({
+  className,
+  interactive = false,
+  ...props
+}: React.ComponentProps<'div'> & { interactive?: boolean }) {
   return (
     <div
       data-slot="card"
       className={cn(
-        'bg-card text-card-foreground flex flex-col gap-6 rounded-xl border py-6 shadow-sm',
+        'bg-card text-card-foreground flex flex-col gap-6 rounded-xl border border-border py-6 shadow-sm',
+        interactive &&
+          'relative transition-[box-shadow,border-color] duration-200 ease-out hover:shadow-md hover:border-primary/30 focus-within:border-primary/30',
         className,
       )}
       {...props}

@@ -9,8 +9,11 @@ const alertVariants = cva(
     variants: {
       variant: {
         default: 'bg-card text-card-foreground',
+        info: 'border-transparent bg-info-subtle text-info *:data-[slot=alert-description]:text-foreground',
+        success: 'border-transparent bg-success-subtle text-success *:data-[slot=alert-description]:text-foreground',
+        warning: 'border-transparent bg-warning-subtle text-warning *:data-[slot=alert-description]:text-foreground',
         destructive:
-          'text-destructive bg-card [&>svg]:text-current *:data-[slot=alert-description]:text-destructive/90',
+          'border-transparent bg-destructive-subtle text-destructive [&>svg]:text-current *:data-[slot=alert-description]:text-foreground',
       },
     },
     defaultVariants: {
@@ -27,7 +30,8 @@ function Alert({
   return (
     <div
       data-slot="alert"
-      role="alert"
+      // Errors interrupt screen readers; other variants are announced politely
+      role={variant === 'destructive' ? 'alert' : 'status'}
       className={cn(alertVariants({ variant }), className)}
       {...props}
     />

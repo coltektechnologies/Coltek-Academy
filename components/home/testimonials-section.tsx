@@ -1,7 +1,8 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { Quote, Star } from "lucide-react"
+import { TestimonialCard } from "@/components/academy/testimonial-card"
+import { Skeleton } from "@/components/ui/skeleton"
 
 interface Testimonial {
   id: string
@@ -10,15 +11,6 @@ interface Testimonial {
   content: string
   rating: number
   avatarUrl: string
-}
-
-function getInitials(name: string) {
-  return name
-    .split(" ")
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase())
-    .join("")
 }
 
 export function TestimonialsSection() {
@@ -75,56 +67,31 @@ export function TestimonialsSection() {
         <div className="grid md:grid-cols-3 gap-6">
           {isLoading
             ? Array.from({ length: 3 }).map((_, index) => (
-                <div key={index} className="rounded-lg border border-border/50 bg-card p-6">
-                  <div className="h-4 w-24 rounded bg-muted animate-pulse mb-4" />
+                <div key={index} aria-hidden="true" className="rounded-xl border border-border bg-card p-6">
+                  <Skeleton className="h-4 w-24 mb-4" />
                   <div className="space-y-2 mb-6">
-                    <div className="h-4 w-full rounded bg-muted animate-pulse" />
-                    <div className="h-4 w-5/6 rounded bg-muted animate-pulse" />
-                    <div className="h-4 w-2/3 rounded bg-muted animate-pulse" />
+                    <Skeleton className="h-4 w-full" />
+                    <Skeleton className="h-4 w-5/6" />
+                    <Skeleton className="h-4 w-2/3" />
                   </div>
                   <div className="flex items-center gap-3">
-                    <div className="h-12 w-12 rounded-full bg-muted animate-pulse" />
+                    <Skeleton className="size-10 rounded-full" />
                     <div className="space-y-2">
-                      <div className="h-4 w-24 rounded bg-muted animate-pulse" />
-                      <div className="h-3 w-20 rounded bg-muted animate-pulse" />
+                      <Skeleton className="h-4 w-24" />
+                      <Skeleton className="h-3 w-20" />
                     </div>
                   </div>
                 </div>
               ))
             : testimonials.map((testimonial) => (
-                <article key={testimonial.id} className="relative rounded-lg border border-border/50 bg-card p-6 shadow-sm">
-                  <Quote className="absolute right-5 top-5 h-9 w-9 text-primary/10" />
-                  <div className="flex items-center gap-1 mb-4">
-                    {Array.from({ length: 5 }).map((_, index) => (
-                      <Star
-                        key={index}
-                        className={`h-4 w-4 ${
-                          index < testimonial.rating
-                            ? "fill-yellow-400 text-yellow-400"
-                            : "text-muted-foreground/30"
-                        }`}
-                      />
-                    ))}
-                  </div>
-                  <p className="text-muted-foreground mb-6 leading-relaxed">&ldquo;{testimonial.content}&rdquo;</p>
-                  <div className="flex items-center gap-3">
-                    {testimonial.avatarUrl ? (
-                      <img
-                        src={testimonial.avatarUrl}
-                        alt={testimonial.name}
-                        className="h-12 w-12 rounded-full object-cover"
-                      />
-                    ) : (
-                      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
-                        {getInitials(testimonial.name) || "CA"}
-                      </div>
-                    )}
-                    <div className="min-w-0">
-                      <div className="font-semibold text-foreground truncate">{testimonial.name}</div>
-                      <div className="text-sm text-muted-foreground truncate">{testimonial.role}</div>
-                    </div>
-                  </div>
-                </article>
+                <TestimonialCard
+                  key={testimonial.id}
+                  name={testimonial.name}
+                  role={testimonial.role}
+                  content={testimonial.content}
+                  rating={testimonial.rating}
+                  avatarUrl={testimonial.avatarUrl}
+                />
               ))}
         </div>
       </div>

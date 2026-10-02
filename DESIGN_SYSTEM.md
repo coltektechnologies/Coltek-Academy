@@ -81,13 +81,13 @@ The palette is **derived from the logo** (owner decision): navy is the primary, 
 | Input | `border-input` | `oklch(0.86 0.02 230)` | `#C4D4DC` | Form control borders |
 | Ring | `ring-ring` | `oklch(0.533 0.087 220.6)` | `#207890` | Focus rings |
 | Success | `text-success` / `bg-success` | `oklch(0.52 0.13 155)` | `#007E46` | Success text/icons/fills |
-| Success subtle | `bg-success-subtle` | `oklch(0.96 0.03 155)` | `#E3F8E9` | Success panels/badges |
-| Warning | `text-warning` / `bg-warning` | `oklch(0.55 0.13 70)` | `#A16100` | Warnings, "Coming soon" |
-| Warning subtle | `bg-warning-subtle` | `oklch(0.96 0.04 85)` | `#FEF0D4` | Warning panels/badges |
-| Error | `text-destructive` / `bg-destructive` | `oklch(0.577 0.245 27.325)` | `#E7000B` | Errors, destructive actions |
-| Error subtle | `bg-destructive-subtle` | `oklch(0.96 0.02 27)` | `#FFEDEB` | Error panels |
+| Success subtle | `bg-success-subtle` | `oklch(0.97 0.03 155)` | `#E8FAED` | Success panels/badges |
+| Warning | `text-warning` / `bg-warning` | `oklch(0.52 0.12 70)` | `#985B00` | Warnings, "Coming soon" |
+| Warning subtle | `bg-warning-subtle` | `oklch(0.97 0.035 85)` | `#FFF3DD` | Warning panels/badges |
+| Error | `text-destructive` / `bg-destructive` | `oklch(0.52 0.21 27)` | `#C9000C` | Errors, destructive actions |
+| Error subtle | `bg-destructive-subtle` | `oklch(0.97 0.02 27)` | `#FFF1EF` | Error panels |
 | Info | `text-info` / `bg-info` | `oklch(0.5 0.11 235)` | `#006C98` | Informational notices |
-| Info subtle | `bg-info-subtle` | `oklch(0.96 0.02 230)` | — | Info panels |
+| Info subtle | `bg-info-subtle` | `oklch(0.97 0.02 230)` | — | Info panels |
 | Charts 1–5 | `chart-1…5` | navy, deep teal, bright teal, mid navy, pale teal | | Admin charts |
 
 Each status color has a `-foreground` (white) for solid fills.
@@ -111,7 +111,9 @@ Each status color has a `-foreground` (white) for solid fills.
 | **accent on secondary** | **4.41** | ❌ — on pale-teal fills use `text-primary` or `text-secondary-foreground`, not `text-accent` |
 | **brand-teal on primary** | 4.50 | ⚠️ minimum — large text, icons or highlights only |
 | **brand-teal on background** | **2.31** | ❌ — never text on light backgrounds |
-| success / warning / info / destructive on background | 5.0 / 4.9 / 5.7 / 4.7 | ✅ |
+| success / warning / info / destructive on background | 5.0 / 5.5 / 5.7 / 6.0 | ✅ |
+| success / warning / info / destructive on their `-subtle` fill | 4.8 / 5.2 / 5.4 / 5.6 | ✅ (verified with axe) |
+| white on success / warning / info / destructive | 5.2 / 5.7 / 5.9 / 6.2 | ✅ |
 | primary-foreground/80 on primary | ≈ 7 | ✅ (footer links) |
 | primary-foreground/60 on primary | ≈ 4.7 | ✅ minimum — do not go lower |
 | input border on background | 1.48 | Inputs also rely on fill/shape and focus ring; do not use borders as the only indicator of state |
@@ -234,9 +236,9 @@ Built on [components/ui/button.tsx](components/ui/button.tsx) (`cva`). Change th
 | Size | Height | Padding | Text | Use |
 |---|---|---|---|---|
 | `sm` | 32 px (`h-8`) | `px-3` | `text-sm font-medium` | Dense tables, admin, inline actions |
-| `default` | 40 px (`h-10`) — **Proposed** (today `h-9`) | `px-4` | `text-sm font-medium` | Standard |
-| `lg` | 48 px (`h-12`) — **Proposed** (today `h-10`) | `px-6` | `text-base font-semibold` | Hero and primary page CTAs; mobile primary actions |
-| `icon` | 40×40 (`size-10`) | — | — | Icon-only, must have `aria-label`. 44×44 hit area on mobile. |
+| `default` | 40 px (`h-10`) | `px-4` | `text-sm font-medium` | Standard |
+| `lg` | 48 px (`h-12`) | `px-6` | `text-base font-semibold` | Hero and primary page CTAs; mobile primary actions |
+| `icon` / `icon-sm` / `icon-lg` | 40 / 32 / 48 px square | — | — | Icon-only, must have `aria-label`. |
 
 Radius `rounded-md` for all. Icons 16 px (`size-4`), 20 px in `lg`.
 
@@ -244,16 +246,16 @@ Radius `rounded-md` for all. Icons 16 px (`size-4`), 20 px in `lg`.
 
 | Variant | Rest | Hover | Active | Focus | Disabled |
 |---|---|---|---|---|---|
-| Primary (`default`) | `bg-primary text-primary-foreground` | `bg-primary-hover` (token exists; button still uses `bg-primary/90`) | `bg-primary-hover` | `focus-visible:ring-[3px] ring-ring/50 border-ring` (Existing) | `opacity-50 pointer-events-none` + `disabled` / `aria-disabled` |
+| Primary (`default`) | `bg-primary text-primary-foreground` | `bg-primary-hover` | `bg-primary-hover` | `focus-visible:ring-[3px] ring-ring/50 border-ring` (Existing) | `opacity-50 pointer-events-none` + `disabled` / `aria-disabled` |
 | Secondary | `bg-secondary text-secondary-foreground` | `bg-secondary/80` | same | same | same |
-| Outline | `border border-input bg-background text-foreground shadow-xs` | `bg-muted` (**Proposed**; today `hover:bg-accent` turns the button solid teal) | same | same | same |
+| Outline | `border border-input bg-background text-foreground shadow-xs` | `bg-muted` | same | same | same |
 | Ghost | transparent, `text-foreground` | `bg-muted` | same | same | same |
 | Link | `text-primary underline-offset-4` | `underline` | — | same | same |
 | Destructive | `bg-destructive text-white` | `bg-destructive/90` | same | `ring-destructive/40` | same |
-| On-dark primary (**Proposed**) | `bg-background text-primary` | `bg-background/90` | same | ring visible on navy | same |
-| On-dark outline (**Proposed**) | `border-primary-foreground/60 text-primary-foreground bg-transparent` | `bg-primary-foreground/10` | same | same | same |
+| On-dark primary (`inverse`) | `bg-background text-primary` | `bg-background/90` | same | ring visible on navy | same |
+| On-dark outline (`outline-inverse`) | `border-primary-foreground/60 text-primary-foreground bg-transparent` | `bg-primary-foreground/10` | same | same | same |
 
-**Loading:** keep the button width stable, show `Loader2` (`animate-spin`, `aria-hidden`) + a verb ("Sending…", "Processing payment…"), set `disabled` and `aria-busy="true"`. Never show success until the server confirms.
+**Loading:** `<Button loading>Processing payment…</Button>` — renders an `aria-hidden` spinner, disables the button and sets `aria-busy`. Use a verb in the label. Never show success until the server confirms. (`loading` is ignored with `asChild`.)
 
 **Hierarchy:** one primary button per region; secondary action uses outline or ghost. Do not place two filled primaries side by side.
 
@@ -289,6 +291,12 @@ Single shared component ([components/course-card.tsx](components/course-card.tsx
 Do **not** show: ratings, review counts, seeded student counts, instructor names, more than one badge, or more than one CTA. **Enrolled-student counts are shown** (owner-approved) — only the real count from `enrollments` (`Users` icon + number, body small muted).
 
 Layout: `h-full flex flex-col` so footers align across a grid. Grid: 1 col mobile, 2 cols `sm`, 3 cols `lg` (catalogue), 3–4 cols featured on home.
+
+### 11a. Programme card
+
+`components/academy/programme-card.tsx`. A **programme area** that groups several courses (e.g. "Web Development"), linking to the filtered catalogue. Not for individual courses (use CourseCard).
+
+Content: optional icon tile (`size-10 rounded-lg bg-primary/10 text-primary`), title (H4, the card's stretched link), short description, real course count (omit if unknown), "Explore →" affordance in `text-accent`. Feature-card styling: `p-6`, border, no resting shadow, hover shadow (interactive).
 
 ---
 
@@ -328,7 +336,7 @@ Built from shadcn `Label`, `Input`, `Select`, `Textarea`, `Checkbox`, `RadioGrou
 | Element | Spec |
 |---|---|
 | Label | Above the control, `Label` (text-sm, medium). Required fields marked with `*` **and** `aria-required` / `required`. Placeholders are hints, never labels; no real people's names as placeholders. |
-| Input / Select trigger | `h-10` (**Proposed**; today `h-9`), `rounded-md`, `border-input`, `bg-background`, `px-3`, `text-base md:text-sm` (16 px on mobile prevents iOS zoom). |
+| Input / Select trigger | `h-10`, `rounded-md`, `border-input`, `bg-background`, `px-3`, `text-base md:text-sm` (16 px on mobile prevents iOS zoom). |
 | Textarea | Same as input, `min-h-28`, `py-2`. |
 | Checkbox / Radio | Control `size-4`; the whole row is clickable via `<Label htmlFor>`; mobile row height ≥ 44 px. Radio choices with descriptions use "radio cards": `border rounded-lg p-4`, selected `border-primary bg-primary/5`. |
 | Focus | Existing shadcn: `focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50`. Never remove outlines. |
@@ -532,22 +540,68 @@ When an existing component conflicts with it:
 3. Never create a one-off visual solution.
 4. Preserve functionality.
 
-Known conflicts in the current code (to resolve in the foundation/shared-component stages, not ad hoc):
+Conflicts resolved in the shared-components stage: button sizes/hover/outline variant, input/select heights, status tokens, level badge colors (neutral `outline`), skeleton color, dialog overlay/radius, accordion trigger, menu highlight color (`secondary`), ping loader, duplicate toast store, hand-built course card.
+
+Remaining conflicts (resolve in page stages, not ad hoc):
 
 | Conflict | Where | Target |
 |---|---|---|
-| Button default `h-9`, `lg` `h-10` | `components/ui/button.tsx` | `h-10` / `h-12` (§9) |
-| Outline hover `bg-accent` (bright blue) | `components/ui/button.tsx` | `hover:bg-muted` (§9) |
-| Primary hover `bg-primary/90` | `components/ui/button.tsx` | `bg-primary-hover` token (§3.1) |
-| `bg-transparent` overrides on outline buttons (~12) | many call sites | Remove after the variant fix |
-| Input/select `h-9` | `components/ui/input.tsx`, select | `h-10` (§14) |
-| Level badges green/yellow/red | `course-card.tsx`, `course-hero.tsx` | Neutral outline (§20) |
-| Raw grays on `/courses`, admin | `app/courses/page.tsx`, admin | Tokens (§3.5) |
-| Home CTA band uses `from-primary to-accent` (now navy→teal) while the home hero also has a gradient | `components/home/cta-section.tsx`, `hero-section.tsx` | Keep one gradient device per page (§3.3) |
+| `bg-transparent` overrides on outline buttons (~11) | many call sites | Remove when each page is redesigned |
+| Raw grays on `/courses`, admin | `app/courses/page.tsx`, admin | Tokens (§3.3) |
+| Home has two gradient devices (hero background + CTA band) | `hero-section.tsx`, `cta-section.tsx` | One per page (§3.3) |
+| Section headings hand-built per section | home/about/contact sections | `SectionHeader` (§13) |
+| Page heroes hand-built per page; hand-rolled breadcrumb | `about-hero`, `contact-hero`, `course-hero` | `PageHeader` (§12) |
+| `LoadingFallback` redefined in 7 pages; full-screen spinners | `app/**/page.tsx` | `LoadingState` / skeletons (§28) |
 | Hand-built cards with mixed radii | home/about/contact sections | `Card` + `rounded-xl` (§10) |
-| Breadcrumb hand-rolled | `course-hero.tsx` | shadcn `Breadcrumb` (§12) |
 | Nav switches at `md`, no active state, raw email | `components/navbar.tsx` | §15 |
-| Ping loader + 800 ms overlay | `components/ui/loader.tsx`, `route-loader.tsx` | Remove/skeletons (§22) |
+| 800 ms route overlay | `components/providers/route-loader.tsx` | Remove (§22) |
 | Legal pages use `container` + unstyled `prose` | `app/privacy`, `app/terms` | Narrow container + typography scale (§6, §4) |
+| Raw `green-*`/`blue-*` panels | `registration-success.tsx`, `payment-success`, `step-payment.tsx` (dev notices) | `Alert` variants (§28) |
 
 Do not redesign individual pages while establishing the system; pages are redesigned in their own stages using these rules.
+
+---
+
+## 28. Loading, empty and error states
+
+`components/academy/states.tsx` (built on `components/ui/empty`).
+
+| Component | Use | Accessibility |
+|---|---|---|
+| `LoadingState` (`size="inline" \| "page"`) | Fetching data for a section or page area | `role="status"`, `aria-live="polite"`, spinner `aria-hidden`, honors reduced motion |
+| Skeletons (`ui/skeleton`, `CourseCardSkeleton`) | Loading content with a known layout (grids) — preferred over spinners | Container `aria-hidden`; `bg-muted` pulse, no animation under reduced motion |
+| `EmptyState` | No results / nothing yet — title, short guidance, one action | Plain content; dashed border card |
+| `ErrorState` | Data failed to load — title, description, optional "Try again" (`onRetry`) and extra action | `role="alert"`; `bg-destructive-subtle` |
+| `Alert` (`info`/`success`/`warning`/`destructive`) | Inline messages within forms/pages | `role="status"`, or `role="alert"` for `destructive` |
+| `Button loading` | Pending form/payment actions | `aria-busy`, disabled |
+
+Never use artificial minimum loading times, and never show a success state before the server confirms.
+
+---
+
+## 29. Component inventory
+
+Use these before creating anything new (see CLAUDE.md §7).
+
+| Need | Component | File |
+|---|---|---|
+| Button | `Button` (`default`, `secondary`, `outline`, `ghost`, `link`, `destructive`, `inverse`, `outline-inverse`; sizes `sm`/`default`/`lg`/`icon*`; `loading`) | `components/ui/button.tsx` |
+| Card | `Card` (+ `interactive`), `CardHeader`, `CardTitle`, `CardDescription`, `CardContent`, `CardFooter` | `components/ui/card.tsx` |
+| Badge | `Badge` (`default`, `secondary`, `outline`, `success`, `warning`, `info`, `error`, `destructive`) | `components/ui/badge.tsx` |
+| Form controls | `Input`, `Textarea`, `Select*`, `Checkbox`, `RadioGroup`, `Label`; layout/errors via `Field`, `FieldLabel`, `FieldDescription`, `FieldError` (`role="alert"`) | `components/ui/*.tsx`, `components/ui/field.tsx` |
+| Modal | `Dialog*`, `AlertDialog*` (confirmations) | `components/ui/dialog.tsx`, `alert-dialog.tsx` |
+| Accordion / FAQ | `Accordion*` | `components/ui/accordion.tsx` |
+| Tabs | `Tabs*` | `components/ui/tabs.tsx` |
+| Alerts | `Alert*` | `components/ui/alert.tsx` |
+| Breadcrumb | `Breadcrumb*` (or via `PageHeader`) | `components/ui/breadcrumb.tsx` |
+| Toasts | `useToast` + `<Toaster />` | `hooks/use-toast.ts` (`components/ui/use-toast.ts` re-exports it) |
+| Course card | `CourseCard`, `CourseCardSkeleton` | `components/course-card.tsx`, `components/course-card-skeleton.tsx` |
+| Programme card | `ProgrammeCard` | `components/academy/programme-card.tsx` |
+| Section header | `SectionHeader` | `components/academy/section-header.tsx` |
+| Page header / hero | `PageHeader` | `components/academy/page-header.tsx` |
+| Stat | `StatCard` (inside a `<dl>`) | `components/academy/stat-card.tsx` |
+| Testimonial | `TestimonialCard` | `components/academy/testimonial-card.tsx` |
+| CTA | `CTASection` (`band` / `panel`, `gradient`) | `components/academy/cta-section.tsx` |
+| States | `LoadingState`, `EmptyState`, `ErrorState` | `components/academy/states.tsx` |
+| Course display rules | `isCourseUpcoming`, `formatCoursePrice`, `formatCourseDuration`, `getCourseMode` | `lib/course-display.ts` |
+

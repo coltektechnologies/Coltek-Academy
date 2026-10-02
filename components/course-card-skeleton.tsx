@@ -1,25 +1,25 @@
-import { Card, CardContent, CardFooter } from "@/components/ui/card"
+import { Card } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 
+// Loading placeholder matching CourseCard's layout
 export function CourseCardSkeleton() {
   return (
-    <Card className="overflow-hidden border-border/50">
-      <Skeleton className="aspect-video w-full" />
-      <CardContent className="p-5">
-        <Skeleton className="h-5 w-20 mb-2" />
-        <Skeleton className="h-6 w-full mb-2" />
-        <Skeleton className="h-4 w-full mb-1" />
-        <Skeleton className="h-4 w-3/4 mb-4" />
-        <div className="flex items-center gap-4">
-          <Skeleton className="h-4 w-16" />
-          <Skeleton className="h-4 w-16" />
-          <Skeleton className="h-4 w-12" />
+    <Card className="h-full gap-0 overflow-hidden py-0" aria-hidden="true">
+      <Skeleton className="aspect-video w-full rounded-none" />
+      <div className="flex flex-1 flex-col p-6">
+        <Skeleton className="h-4 w-24" />
+        <Skeleton className="mt-2 h-6 w-full" />
+        <Skeleton className="mt-3 h-4 w-full" />
+        <Skeleton className="mt-1.5 h-4 w-3/4" />
+        <div className="mt-4 flex gap-4">
+          <Skeleton className="h-4 w-20" />
+          <Skeleton className="h-4 w-20" />
         </div>
-      </CardContent>
-      <CardFooter className="px-5 py-4 border-t border-border/50 flex items-center justify-between">
-        <Skeleton className="h-7 w-16" />
-        <Skeleton className="h-9 w-24" />
-      </CardFooter>
+      </div>
+      <div className="flex min-h-16 items-center justify-between border-t border-border px-6 py-4">
+        <Skeleton className="h-6 w-16" />
+        <Skeleton className="h-8 w-24" />
+      </div>
     </Card>
   )
 }

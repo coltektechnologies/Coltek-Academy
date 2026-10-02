@@ -46,12 +46,6 @@ export function CourseHero({ course, isUpcoming = false }: CourseHeroProps) {
     checkUserEnrollment(user.uid, course.id).then(setIsEnrolled).catch(() => setIsEnrolled(false))
   }, [user, course?.id])
 
-  const levelColors = {
-    Beginner: "bg-green-100 text-green-800",
-    Intermediate: "bg-yellow-100 text-yellow-800",
-    Advanced: "bg-red-100 text-red-800",
-  }
-
   const instructor =
     course.category === "Mobile App"
       ? TEAM_BY_IMAGE.cto
@@ -86,12 +80,8 @@ export function CourseHero({ course, isUpcoming = false }: CourseHeroProps) {
           <div className="space-y-6">
             <div className="flex items-center gap-3 flex-wrap">
               <Badge variant="secondary">{course.category}</Badge>
-              <Badge className={levelColors[course.level]}>{course.level}</Badge>
-              {isUpcoming && (
-                <Badge variant="secondary" className="bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200">
-                  Upcoming
-                </Badge>
-              )}
+              <Badge variant="outline">{course.level}</Badge>
+              {isUpcoming && <Badge variant="warning">Coming soon</Badge>}
             </div>
 
             <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-foreground leading-tight text-balance">
@@ -148,8 +138,8 @@ export function CourseHero({ course, isUpcoming = false }: CourseHeroProps) {
               </div>
               <div className="p-6 space-y-6">
                 {isUpcoming ? (
-                  <div className="rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 p-4 text-center">
-                    <p className="font-semibold text-amber-800 dark:text-amber-200">Coming soon</p>
+                  <div className="rounded-lg bg-warning-subtle p-4 text-center" role="status">
+                    <p className="font-semibold text-warning">Coming soon</p>
                     <p className="text-sm text-muted-foreground mt-1">This course is not yet available for enrollment. Check back later!</p>
                   </div>
                 ) : (
