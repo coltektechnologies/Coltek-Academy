@@ -63,7 +63,7 @@ export function Footer() {
 
           {/* Quick Links */}
           <div>
-            <h3 className="font-semibold text-lg mb-4">Quick Links</h3>
+            <h2 className="font-semibold text-lg mb-4">Quick Links</h2>
             <ul className="space-y-3">
               <li>
                 <Link
@@ -102,7 +102,7 @@ export function Footer() {
 
           {/* Categories */}
           <div>
-            <h3 className="font-semibold text-lg mb-4">Categories</h3>
+            <h2 className="font-semibold text-lg mb-4">Categories</h2>
             <ul className="space-y-3">
               <li>
                 <Link

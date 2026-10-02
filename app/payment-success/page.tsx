@@ -1,6 +1,7 @@
 "use client"
 
-import { useEffect, useState } from 'react'
+import { LoadingState } from '@/components/academy/states'
+import { Suspense, useEffect, useState } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { useAuth } from '@/hooks/use-auth'
 import { saveUserEnrollment } from '@/lib/enrollment'
@@ -11,7 +12,7 @@ import { CheckCircle, Loader2, MessageCircle } from 'lucide-react'
 
 const WHATSAPP_GROUP_LINK = 'https://chat.whatsapp.com/CVTzw4zdtqVHjDV3IwC1zy'
 
-export default function PaymentSuccessPage() {
+function PaymentSuccessPageContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const { user, loading: authLoading } = useAuth()
@@ -254,5 +255,14 @@ export default function PaymentSuccessPage() {
         </CardContent>
       </Card>
     </div>
+  )
+}
+
+// Reads the URL (useSearchParams), so the page renders inside its own Suspense boundary
+export default function PaymentSuccessPage() {
+  return (
+    <Suspense fallback={<LoadingState size="page" label="Confirming your payment…" />}>
+      <PaymentSuccessPageContent />
+    </Suspense>
   )
 }

@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useCallback } from 'react';
+import { LoadingState } from '@/components/academy/states'
+import { Suspense, useState, useEffect, useCallback } from 'react';
 import { collection, getDocs, doc, setDoc, deleteDoc, Timestamp, getDoc, query, orderBy } from 'firebase/firestore';
 import type { DocumentData } from 'firebase/firestore';
 import { firebase } from '@/lib/firebase';
@@ -137,7 +138,7 @@ interface Course extends DocumentData {
   customFields?: Record<string, any>;
 }
 
-export default function AdminCoursesPage() {
+function AdminCoursesPageContent() {
   const [courses, setCourses] = useState<CourseType[]>([]);
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -621,4 +622,13 @@ export default function AdminCoursesPage() {
       </Dialog>
     </div>
   );
+}
+
+// Reads the URL (useSearchParams), so the page renders inside its own Suspense boundary
+export default function AdminCoursesPage() {
+  return (
+    <Suspense fallback={<LoadingState size="page" label="Loading courses…" />}>
+      <AdminCoursesPageContent />
+    </Suspense>
+  )
 }

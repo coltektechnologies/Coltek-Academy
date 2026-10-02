@@ -6,6 +6,8 @@ import { Badge } from "@/components/ui/badge"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import { CourseCurriculum } from "@/components/course-detail/course-curriculum"
 import { EnrollAction } from "@/components/course-detail/enroll-action"
+import { ProjectCard } from "@/components/academy/project-card"
+import type { PublicProject } from "@/lib/public-projects"
 import { formatCourseDuration, formatCoursePrice, getCourseMode, isCourseUpcoming } from "@/lib/course-display"
 import { getCourseFaqs } from "@/lib/faqs"
 import { getCourseInstructor } from "@/lib/team"
@@ -37,7 +39,7 @@ function CheckList({ items, columns = false }: { items: string[]; columns?: bool
   )
 }
 
-export function CourseBody({ course }: { course: Course }) {
+export function CourseBody({ course, projects = [] }: { course: Course; projects?: PublicProject[] }) {
   const upcoming = isCourseUpcoming(course)
   const priceLabel = formatCoursePrice(course)
   const duration = formatCourseDuration(course.duration)
@@ -63,6 +65,7 @@ export function CourseBody({ course }: { course: Course }) {
     outcomes.length > 0 && { id: "learn", label: "What you'll learn" },
     { id: "requirements", label: "Requirements" },
     course.curriculum?.length > 0 && { id: "curriculum", label: "Curriculum" },
+    projects.length > 0 && { id: "projects", label: "Projects" },
     { id: "format", label: "How it works" },
     { id: "receive", label: "What you receive" },
     { id: "faq", label: "FAQ" },
@@ -179,6 +182,19 @@ export function CourseBody({ course }: { course: Course }) {
           {course.curriculum?.length > 0 && (
             <Section id="curriculum" title="Curriculum">
               <CourseCurriculum curriculum={course.curriculum} />
+            </Section>
+          )}
+
+          {projects.length > 0 && (
+            <Section id="projects" title="Student projects">
+              <p className="-mt-2 mb-6 text-muted-foreground">Real work built by students in this course.</p>
+              <ul className="grid gap-6 sm:grid-cols-2">
+                {projects.map((project) => (
+                  <li key={project.id}>
+                    <ProjectCard project={project} />
+                  </li>
+                ))}
+              </ul>
             </Section>
           )}
 

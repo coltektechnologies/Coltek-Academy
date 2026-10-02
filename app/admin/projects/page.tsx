@@ -15,6 +15,10 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+
+// Radix Select cannot use an empty value, so "no course" has its own sentinel
+const NO_COURSE = "none"
 
 interface Project {
   id: string
@@ -26,6 +30,7 @@ interface Project {
   imageUrl: string
   projectUrl: string
   repoUrl: string
+  courseId: string
   isPublished: boolean
   order: number
 }
@@ -39,6 +44,7 @@ interface ProjectForm {
   imageUrl: string
   projectUrl: string
   repoUrl: string
+  courseId: string
   isPublished: boolean
   order: number
 }
@@ -52,6 +58,7 @@ const emptyForm: ProjectForm = {
   imageUrl: "",
   projectUrl: "",
   repoUrl: "",
+  courseId: "",
   isPublished: true,
   order: 0,
 }
@@ -97,6 +104,7 @@ export default function AdminProjectsPage() {
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [projects, setProjects] = useState<Project[]>([])
   const [form, setForm] = useState<ProjectForm>(emptyForm)
+  const [courses, setCourses] = useState<{ id: string; title: string }[]>([])
 
   useEffect(() => {
     const checkAdmin = async () => {
@@ -138,6 +146,7 @@ export default function AdminProjectsPage() {
             imageUrl: data.imageUrl || "",
             projectUrl: data.projectUrl || "",
             repoUrl: data.repoUrl || "",
+            courseId: data.courseId || "",
             isPublished: data.isPublished === true,
             order: Number.isFinite(Number(data.order)) ? Number(data.order) : 999,
           } as Project
@@ -163,6 +172,22 @@ export default function AdminProjectsPage() {
     }
   }, [fetchProjects, isAdmin])
 
+  // Courses a project can be linked to
+  useEffect(() => {
+    if (!isAdmin) return
+    getDocs(collection(firebase.db, "courses"))
+      .then((snapshot) =>
+        setCourses(
+          snapshot.docs
+            .map((item) => ({ id: item.id, title: String(item.data().title || item.id) }))
+            .sort((a, b) => a.title.localeCompare(b.title)),
+        ),
+      )
+      .catch((error) => console.error("Failed to load courses:", error))
+  }, [isAdmin])
+
+  const courseTitle = (courseId: string) => courses.find((course) => course.id === courseId)?.title
+
   const resetForm = () => {
     setForm(emptyForm)
     setImageFile(null)
@@ -181,6 +206,7 @@ export default function AdminProjectsPage() {
       imageUrl: project.imageUrl,
       projectUrl: project.projectUrl,
       repoUrl: project.repoUrl,
+      courseId: project.courseId,
       isPublished: project.isPublished,
       order: project.order,
     })
@@ -243,6 +269,7 @@ export default function AdminProjectsPage() {
         imageUrl,
         projectUrl: form.projectUrl.trim(),
         repoUrl: form.repoUrl.trim(),
+        courseId: form.courseId,
         isPublished: form.isPublished,
         order: Number(form.order) || 0,
         updatedAt: serverTimestamp(),
@@ -374,6 +401,29 @@ export default function AdminProjectsPage() {
                     placeholder="e.g. Web Development, 2025"
                   />
                 </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="courseId">Course</Label>
+                <Select
+                  value={form.courseId || NO_COURSE}
+                  onValueChange={(value) => setForm((prev) => ({ ...prev, courseId: value === NO_COURSE ? "" : value }))}
+                >
+                  <SelectTrigger id="courseId" className="w-full" aria-describedby="courseId-help">
+                    <SelectValue placeholder="Not linked to a course" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={NO_COURSE}>Not linked to a course</SelectItem>
+                    {courses.map((course) => (
+                      <SelectItem key={course.id} value={course.id}>
+                        {course.title}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p id="courseId-help" className="text-xs text-muted-foreground">
+                  Linked projects also appear on that course&apos;s page.
+                </p>
               </div>
 
               <div className="space-y-2">
@@ -533,6 +583,11 @@ export default function AdminProjectsPage() {
                         {project.studentName}
                         {project.cohort && ` · ${project.cohort}`}
                       </p>
+                      {project.courseId && (
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          Course: <span className="font-medium text-foreground">{courseTitle(project.courseId) || project.courseId}</span>
+                        </p>
+                      )}
                       <p className="mt-2 line-clamp-2 text-sm text-foreground">{project.description}</p>
                       {project.technologies.length > 0 && (
                         <div className="mt-2 flex flex-wrap gap-1">

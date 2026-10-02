@@ -10,6 +10,7 @@ import { CourseBody } from "@/components/course-detail/course-body"
 import { MobileEnrollBar } from "@/components/course-detail/enroll-action"
 import { formatCoursePrice, isCourseUpcoming } from "@/lib/course-display"
 import { getPublicCourseBySlug, getRelatedPublicCourses } from "@/lib/public-course"
+import { getPublishedProjects } from "@/lib/public-projects"
 
 // Course data changes rarely; refresh the rendered page at most once a minute
 export const revalidate = 60
@@ -40,7 +41,10 @@ export default async function CoursePage({ params }: Params) {
 
   const upcoming = isCourseUpcoming(course)
   const priceLabel = formatCoursePrice(course)
-  const related = await getRelatedPublicCourses(course.category, course.id).catch(() => [])
+  const [related, projects] = await Promise.all([
+    getRelatedPublicCourses(course.category, course.id).catch(() => []),
+    getPublishedProjects({ courseId: course.id }).catch(() => []),
+  ])
 
   // Structured data for search engines, using only real course fields
   const jsonLd = {
@@ -66,7 +70,7 @@ export default async function CoursePage({ params }: Params) {
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }}
         />
         <CourseHero course={course} />
-        <CourseBody course={course} />
+        <CourseBody course={course} projects={projects} />
 
         {related.length > 0 && (
           <section aria-labelledby="related-heading" className="border-t border-border bg-muted py-16 md:py-20">
