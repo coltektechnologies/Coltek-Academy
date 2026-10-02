@@ -1,67 +1,55 @@
+// The Academy's own milestones (2025)
 const milestones = [
   {
-    year: "2025",
-    title: "Q1: COLTEK ACADEMY Founded",
-    description: "Established COLTEK ACADEMY as the training arm of Coltek Technologies, focusing on practical coding and technology skills.",
+    period: "2025 · Q1",
+    title: "Coltek Academy founded",
+    description:
+      "Established as the training arm of Coltek Technologies, focusing on practical coding and technology skills.",
   },
   {
-    year: "2025",
-    title: "Q2: Platform Development",
+    period: "2025 · Q2",
+    title: "Platform development",
     description: "Built our learning platform and infrastructure to support scalable and effective online training programs.",
   },
   {
-    year: "2025",
-    title: "Q3: Curriculum Finalized",
-    description: "Completed development of our comprehensive curriculum based on industry needs and learner feedback.",
+    period: "2025 · Q3",
+    title: "Curriculum finalized",
+    description: "Completed development of our curriculum based on industry needs and learner feedback.",
   },
   {
-    year: "2025",
-    title: "Q4: First Programs Launched",
-    description: "Successfully launched our initial coding programs, bringing hands-on learning to our first cohort of students."
-  }
+    period: "2025 · Q4",
+    title: "First programs launched",
+    description: "Launched our initial coding programs, bringing hands-on learning to our first cohort of students.",
+  },
 ]
 
 export function MilestonesSection() {
   return (
-    <section className="py-20 bg-secondary/30">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-12">
-          <h2 className="text-3xl font-bold text-foreground mb-4">Our Journey</h2>
-          <p className="text-muted-foreground max-w-2xl mx-auto">
-            Here&apos;s how COLTEK ACADEMY has grown so far.
-          </p>
+    <section aria-labelledby="journey-heading" className="bg-muted py-16 md:py-20 lg:py-24">
+      <div className="mx-auto grid max-w-7xl gap-10 px-4 sm:px-6 lg:grid-cols-12 lg:gap-16 lg:px-8">
+        <div className="lg:col-span-4">
+          <p className="text-sm font-semibold text-accent">Our journey</p>
+          <h2
+            id="journey-heading"
+            className="mt-2 text-2xl font-bold leading-tight tracking-tight text-foreground text-balance sm:text-3xl lg:text-4xl"
+          >
+            How we got here
+          </h2>
+          <p className="mt-4 text-lg leading-relaxed text-muted-foreground">Here&apos;s how Coltek Academy has grown so far.</p>
         </div>
-
-        <div className="relative">
-          {/* Timeline line */}
-          <div className="absolute left-4 md:left-1/2 top-0 bottom-0 w-0.5 bg-border md:-translate-x-1/2" />
-
-          <div className="space-y-8">
-            {milestones.map((milestone, index) => (
-              <div
-                key={`${milestone.year}-${index}`}
-                className={`relative flex items-center gap-8 ${
-                  index % 2 === 0 ? "md:flex-row" : "md:flex-row-reverse"
-                }`}
-              >
-                {/* Dot */}
-                <div className="absolute left-4 md:left-1/2 w-4 h-4 bg-primary rounded-full border-4 border-background md:-translate-x-1/2 z-10" />
-
-                {/* Content */}
-                <div className={`ml-12 md:ml-0 md:w-1/2 ${index % 2 === 0 ? "md:pr-12 md:text-right" : "md:pl-12"}`}>
-                  <div className="bg-card border border-border rounded-xl p-6">
-                    <span className="text-primary font-bold text-lg">{milestone.year}</span>
-                    <h3 className="font-semibold text-foreground mt-1 mb-2">{milestone.title}</h3>
-                    <p className="text-muted-foreground text-sm">{milestone.description}</p>
-                  </div>
-                </div>
-
-                {/* Empty space for alternating layout */}
-                <div className="hidden md:block md:w-1/2" />
-              </div>
-            ))}
-          </div>
-        </div>
+        <ol className="relative space-y-10 border-l-2 border-border pl-8 lg:col-span-8">
+          {milestones.map((milestone) => (
+            <li key={milestone.title} className="relative">
+              <span
+                aria-hidden="true"
+                className="absolute -left-[2.6rem] top-1 size-4 rounded-full border-4 border-muted bg-primary"
+              />
+              <p className="text-sm font-semibold text-accent">{milestone.period}</p>
+              <h3 className="mt-1 text-lg font-semibold text-foreground">{milestone.title}</h3>
+              <p className="mt-2 max-w-2xl leading-relaxed text-muted-foreground">{milestone.description}</p>
+            </li>
+          ))}
+        </ol>
       </div>
     </section>
   )

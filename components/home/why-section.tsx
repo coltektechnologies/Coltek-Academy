@@ -1,7 +1,7 @@
 import Link from "next/link"
 import { ArrowRight, Building2, Hammer, ListChecks, MessageCircle } from "lucide-react"
 import { SectionHeader } from "@/components/academy/section-header"
-import { LiveStats } from "@/components/home/stats-section"
+import { LiveStats } from "@/components/academy/live-stats"
 
 // Advantages grounded in how the Academy actually works (About page, course data, enrollment flow)
 const reasons = [

@@ -1,65 +1,45 @@
-"use client";
+import type { Metadata } from "next"
+import { Navbar } from "@/components/navbar"
+import { Footer } from "@/components/footer"
+import { CTASection } from "@/components/academy/cta-section"
+import { AboutHero } from "@/components/about/about-hero"
+import { MissionSection } from "@/components/about/mission-section"
+import { ApproachSection } from "@/components/about/approach-section"
+import { ValuesSection } from "@/components/about/values-section"
+import { TeamSection } from "@/components/about/team-section"
+import { MilestonesSection } from "@/components/about/milestones-section"
+import { CommunitySection } from "@/components/about/community-section"
 
-import dynamic from 'next/dynamic';
-import { Suspense } from 'react';
-import { Loader2 } from 'lucide-react';
+const description =
+  "Coltek Academy is the training arm of Coltek Technologies, equipping learners with practical coding and technology skills through hands-on learning and real-world projects."
 
-const LoadingFallback = () => (
-  <div className="flex items-center justify-center min-h-[300px]">
-    <Loader2 className="h-8 w-8 animate-spin text-primary" />
-  </div>
-);
-
-// Lazy load components
-const Navbar = dynamic(() => import('@/components/navbar').then(mod => mod.Navbar), { 
-  ssr: false,
-  loading: () => <div className="h-16 bg-background" />
-});
-
-const Footer = dynamic(() => import('@/components/footer').then(mod => mod.Footer), { 
-  ssr: false,
-  loading: () => null
-});
-
-const AboutHero = dynamic(() => import('@/components/about/about-hero').then(mod => mod.AboutHero), { 
-  ssr: false,
-  loading: () => <LoadingFallback />
-});
-
-const MissionSection = dynamic(() => import('@/components/about/mission-section').then(mod => mod.MissionSection), { 
-  ssr: false,
-  loading: () => <LoadingFallback />
-});
-
-const ValuesSection = dynamic(() => import('@/components/about/values-section').then(mod => mod.ValuesSection), { 
-  ssr: false,
-  loading: () => <LoadingFallback />
-});
-
-const TeamSection = dynamic(() => import('@/components/about/team-section').then(mod => mod.TeamSection), { 
-  ssr: false,
-  loading: () => <LoadingFallback />
-});
-
-const MilestonesSection = dynamic(() => import('@/components/about/milestones-section').then(mod => mod.MilestonesSection), { 
-  ssr: false,
-  loading: () => <LoadingFallback />
-});
+export const metadata: Metadata = {
+  title: "About | Coltek Academy",
+  description,
+  openGraph: { title: "About Coltek Academy", description, type: "website" },
+}
 
 export default function AboutPage() {
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="flex min-h-screen flex-col">
       <Navbar />
-      <main className="flex-1">
-        <Suspense fallback={<LoadingFallback />}>
-          <AboutHero />
-          <MissionSection />
-          <ValuesSection />
-          <TeamSection />
-          <MilestonesSection />
-        </Suspense>
+      <main id="main" className="flex-1">
+        <AboutHero />
+        <MissionSection />
+        <ApproachSection />
+        <ValuesSection />
+        <TeamSection />
+        <MilestonesSection />
+        <CommunitySection />
+        <CTASection
+          gradient
+          title="Start learning with Coltek Academy"
+          description="Explore the courses, find the one that fits your goals and enroll online."
+          primaryAction={{ label: "Explore courses", href: "/courses" }}
+          secondaryAction={{ label: "Contact us", href: "/contact" }}
+        />
       </main>
       <Footer />
     </div>
-  );
+  )
 }
