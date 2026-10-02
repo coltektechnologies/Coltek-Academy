@@ -1,46 +1,55 @@
 import { Check } from "lucide-react"
+import { cn } from "@/lib/utils"
 
 interface ProgressStepsProps {
   currentStep: number
   steps: string[]
 }
 
+/** Form progress: compact "Step x of n" on mobile, full step row from sm. */
 export function ProgressSteps({ currentStep, steps }: ProgressStepsProps) {
   return (
-    <div className="mb-8">
-      <div className="flex items-center justify-between">
-        {steps.map((step, index) => {
-          const stepNumber = index + 1
-          const isCompleted = currentStep > stepNumber
-          const isCurrent = currentStep === stepNumber
+    <nav aria-label="Enrollment progress" className="mb-8">
+      {/* Mobile */}
+      <div className="sm:hidden">
+        <p className="text-sm font-medium text-foreground">
+          Step {currentStep} of {steps.length} · {steps[currentStep - 1]}
+        </p>
+        <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted" aria-hidden="true">
+          <div
+            className="h-full rounded-full bg-primary transition-[width] duration-300 motion-reduce:transition-none"
+            style={{ width: `${(currentStep / steps.length) * 100}%` }}
+          />
+        </div>
+      </div>
 
+      {/* sm and up */}
+      <ol className="hidden items-center sm:flex">
+        {steps.map((step, index) => {
+          const number = index + 1
+          const done = currentStep > number
+          const current = currentStep === number
           return (
-            <div key={step} className="flex items-center">
-              <div className="flex flex-col items-center">
-                <div
-                  className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold transition-colors ${
-                    isCompleted
-                      ? "bg-primary text-primary-foreground"
-                      : isCurrent
-                        ? "bg-primary text-primary-foreground"
-                        : "bg-secondary text-muted-foreground"
-                  }`}
-                >
-                  {isCompleted ? <Check className="h-5 w-5" /> : stepNumber}
-                </div>
-                <span
-                  className={`mt-2 text-xs font-medium hidden sm:block ${isCurrent ? "text-foreground" : "text-muted-foreground"}`}
-                >
-                  {step}
-                </span>
-              </div>
+            <li key={step} className={cn("flex items-center", index < steps.length - 1 && "flex-1")} aria-current={current ? "step" : undefined}>
+              <span
+                className={cn(
+                  "flex size-8 shrink-0 items-center justify-center rounded-full text-sm font-semibold",
+                  done || current ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground",
+                )}
+              >
+                {done ? <Check className="size-4" aria-hidden="true" /> : number}
+              </span>
+              <span className={cn("ml-3 text-sm font-medium", current ? "text-foreground" : "text-muted-foreground")}>
+                {step}
+                {done && <span className="sr-only"> (completed)</span>}
+              </span>
               {index < steps.length - 1 && (
-                <div className={`w-12 sm:w-24 h-1 mx-2 ${isCompleted ? "bg-primary" : "bg-secondary"}`} />
+                <span aria-hidden="true" className={cn("mx-4 h-px flex-1", done ? "bg-primary" : "bg-border")} />
               )}
-            </div>
+            </li>
           )
         })}
-      </div>
-    </div>
+      </ol>
+    </nav>
   )
 }

@@ -7,10 +7,11 @@ import { useAuth } from '@/hooks/use-auth'
 import { saveUserEnrollment } from '@/lib/enrollment'
 import { getCourseById } from '@/lib/courses'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { CheckCircle, Loader2, MessageCircle } from 'lucide-react'
-
-const WHATSAPP_GROUP_LINK = 'https://chat.whatsapp.com/CVTzw4zdtqVHjDV3IwC1zy'
+import Link from 'next/link'
+import { AlertTriangle } from 'lucide-react'
+import { Navbar } from '@/components/navbar'
+import { Footer } from '@/components/footer'
+import { EnrollmentSuccess } from '@/components/register/enrollment-success'
 
 function PaymentSuccessPageContent() {
   const searchParams = useSearchParams()
@@ -19,7 +20,8 @@ function PaymentSuccessPageContent() {
   const [isProcessing, setIsProcessing] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [isRedirecting, setIsRedirecting] = useState(false)
-  const [emailSent, setEmailSent] = useState(false)
+  const [emailStatus, setEmailStatus] = useState<'pending' | 'sent' | 'failed'>('pending')
+  const [courseTitleShown, setCourseTitleShown] = useState<string>('')
 
   // Handle authentication and payment processing
   useEffect(() => {
@@ -94,6 +96,7 @@ function PaymentSuccessPageContent() {
         if (!selectedCourse) {
           throw new Error(`Course not found (id: ${courseId})`)
         }
+        setCourseTitleShown(selectedCourse.title || courseTitle || '')
 
         if (!paymentRef) {
           throw new Error('Payment reference not found')
@@ -126,9 +129,10 @@ function PaymentSuccessPageContent() {
             }),
           })
           const emailResult = await emailResponse.json().catch(() => ({}))
-          setEmailSent(emailResponse.ok && emailResult.success === true)
+          setEmailStatus(emailResponse.ok && emailResult.success === true ? 'sent' : 'failed')
         } catch (emailError) {
           console.error('Failed to send confirmation email:', emailError)
+          setEmailStatus('failed')
           // Don't fail the flow - enrollment was successful
         }
 
@@ -150,110 +154,77 @@ function PaymentSuccessPageContent() {
   }, [user, searchParams])
 
 
+  const reference = searchParams.get('reference') || searchParams.get('trxref')
+  const isTestPayment = !!reference?.startsWith('MOCK-')
+  const needsLogin = !!error?.includes('authenticated')
+
+  let content: React.ReactNode
   if (authLoading || isProcessing) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <Card className="w-full max-w-md">
-          <CardHeader className="text-center">
-            <CardTitle className="flex items-center justify-center gap-2">
-              <Loader2 className="h-6 w-6 animate-spin" />
-              {authLoading ? 'Checking authentication...' : 'Processing Payment...'}
-            </CardTitle>
-            <CardDescription>
-              {authLoading 
-                ? 'Please wait while we verify your session.'
-                : 'Please wait while we confirm your payment and enroll you in the course.'
-              }
-            </CardDescription>
-          </CardHeader>
-        </Card>
+    content = (
+      <LoadingState
+        size="page"
+        label={authLoading ? 'Checking your account…' : 'Confirming your payment and enrollment. Please keep this page open.'}
+      />
+    )
+  } else if (error) {
+    content = (
+      <div className="mx-auto max-w-xl rounded-xl border border-border bg-card p-8 text-center shadow-sm" role="alert">
+        <span className="mx-auto flex size-12 items-center justify-center rounded-full bg-destructive-subtle text-destructive">
+          <AlertTriangle className="size-6" aria-hidden="true" />
+        </span>
+        <h1 className="mt-5 text-2xl font-bold tracking-tight text-foreground">
+          {needsLogin ? 'Please log in to finish enrolling' : "We couldn't confirm your enrollment"}
+        </h1>
+        <p className="mt-2 text-muted-foreground">{error}</p>
+        {reference && !needsLogin && (
+          <p className="mt-3 text-sm text-muted-foreground">
+            Payment reference: <span className="font-mono text-foreground">{reference}</span>
+          </p>
+        )}
+        <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-center">
+          {needsLogin ? (
+            <Button
+              size="lg"
+              onClick={() => {
+                // Save current URL to redirect back after login
+                localStorage.setItem('redirectAfterLogin', window.location.pathname + window.location.search)
+                router.push(`/login?redirect=${encodeURIComponent(window.location.pathname + window.location.search)}`)
+              }}
+            >
+              Log in
+            </Button>
+          ) : (
+            <Button asChild size="lg">
+              <Link href="/contact">Contact support</Link>
+            </Button>
+          )}
+          <Button asChild size="lg" variant="outline">
+            <Link href="/courses">Return to courses</Link>
+          </Button>
+        </div>
       </div>
     )
-  }
-
-  if (error) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <Card className="w-full max-w-md">
-          <CardHeader className="text-center">
-            <CardTitle className="text-red-600">
-              {error.includes('authenticated') ? 'Authentication Required' : 'Payment Error'}
-            </CardTitle>
-            <CardDescription>{error}</CardDescription>
-          </CardHeader>
-          <CardContent className="text-center space-y-2">
-            {error.includes('authenticated') ? (
-              <Button 
-                onClick={() => {
-                  // Save current URL to redirect back after login
-                  localStorage.setItem('redirectAfterLogin', window.location.pathname + window.location.search);
-                  router.push('/login');
-                }}
-                className="w-full"
-              >
-                Log In
-              </Button>
-            ) : null}
-            <Button 
-              onClick={() => router.push('/courses')} 
-              variant={error.includes('authenticated') ? 'outline' : 'default'}
-              className="w-full"
-            >
-              Return to Courses
-            </Button>
-          </CardContent>
-        </Card>
+  } else {
+    content = (
+      <div className="mx-auto max-w-2xl">
+        <EnrollmentSuccess
+          courseTitle={courseTitleShown}
+          emailStatus={emailStatus}
+          email={user?.email}
+          paymentReference={reference}
+          isTestPayment={isTestPayment}
+        />
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <CardTitle className="flex items-center justify-center gap-2 text-green-600">
-            <CheckCircle className="h-6 w-6" />
-            Payment Successful!
-          </CardTitle>
-          <CardDescription>
-            {searchParams.get('reference')?.startsWith('MOCK-') || searchParams.get('trxref')?.startsWith('MOCK-')
-              ? "This was a test payment. In production, you would be charged."
-              : `You have been successfully enrolled in your course.${emailSent ? " A confirmation email has been sent with next steps." : ""}`
-            }
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="text-center space-y-4">
-          <div className="rounded-lg border border-green-200 bg-green-50 dark:bg-green-950/30 dark:border-green-900 p-4 text-left">
-            <p className="font-medium text-green-800 dark:text-green-200 mb-2 flex items-center gap-2">
-              <MessageCircle className="h-4 w-4" />
-              Join the CADs WhatsApp Group
-            </p>
-            <p className="text-sm text-muted-foreground mb-3">
-              Connect with fellow students and stay updated on course announcements.
-            </p>
-            <Button asChild className="w-full bg-[#25D366] hover:bg-[#20BD5A] text-white">
-              <a href={WHATSAPP_GROUP_LINK} target="_blank" rel="noopener noreferrer">
-                Join WhatsApp Group
-              </a>
-            </Button>
-          </div>
-          <div className="text-sm text-muted-foreground">
-            Payment Reference: {searchParams.get('reference') || searchParams.get('trxref')}
-          </div>
-          <div className="space-y-2">
-            <Button onClick={() => router.push('/courses')} className="w-full">
-              Browse More Courses
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => router.push('/dashboard')}
-              className="w-full"
-            >
-              Go to Dashboard
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+    <div className="flex min-h-screen flex-col">
+      <Navbar />
+      <main id="main" className="flex-1">
+        <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 md:py-14 lg:px-8">{content}</div>
+      </main>
+      <Footer />
     </div>
   )
 }

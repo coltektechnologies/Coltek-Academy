@@ -1,11 +1,10 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { Label } from "@/components/ui/label"
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+import { useEffect, useState } from "react"
+import { AlertTriangle, Lock } from "lucide-react"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Button } from "@/components/ui/button"
-import { CreditCard, Loader2 } from "lucide-react"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { getCourseById } from "@/lib/courses"
 import { useAuth } from "@/hooks/use-auth"
 import { useToast } from "@/hooks/use-toast"
@@ -13,18 +12,6 @@ import { saveUserEnrollment } from "@/lib/enrollment"
 import type { RegistrationFormData } from "@/lib/types"
 
 const IS_DEV_BUILD = process.env.NODE_ENV !== "production"
-
-// Paystack type declarations
-interface PaystackTransaction {
-  key: string
-  email: string
-  amount: number
-  currency: string
-  ref: string
-  metadata?: Record<string, any>
-  callback: (response: any) => void
-  onClose: () => void
-}
 
 // Paystack type declarations
 declare global {
@@ -38,12 +25,21 @@ interface StepPaymentProps {
   updateFormData: (data: Partial<RegistrationFormData>) => void
   errors: Record<string, string>
   onPaymentSuccess?: () => void
+  /** Validates this step (terms) and focuses the first problem; returns true when valid. */
+  onValidate: () => boolean
+  onBack: () => void
+  /** Jump back to a step to edit it. */
+  onEditStep: (step: number) => void
 }
 
-export function StepPayment({ formData, updateFormData, errors, onPaymentSuccess }: StepPaymentProps) {
+const SCHEDULE_LABELS: Record<string, string> = { weekdays: "Weekdays (Mon – Fri)", weekends: "Weekends (Sat – Sun)" }
+
+/** Step 3: review the application, accept the terms, then pay with Paystack or enroll for free. */
+export function StepPayment({ formData, updateFormData, errors, onPaymentSuccess, onValidate, onBack, onEditStep }: StepPaymentProps) {
   const { user } = useAuth()
   const { toast } = useToast()
   const [isProcessing, setIsProcessing] = useState(false)
+  const [actionError, setActionError] = useState<string | null>(null)
   const [selectedCourse, setSelectedCourse] = useState<{ id: string; title: string; price: number; [key: string]: any } | null>(null)
 
   useEffect(() => {
@@ -54,14 +50,16 @@ export function StepPayment({ formData, updateFormData, errors, onPaymentSuccess
     }
   }, [formData.selectedCourseId])
 
+  const isFree = !!selectedCourse && selectedCourse.price <= 0
+
   const handleFreeEnrollment = async () => {
     if (!selectedCourse || !user) return
-    
+
     setIsProcessing(true)
-    
+
     try {
       const paymentReference = `FREE-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
-      
+
       // Save to Firebase using the existing saveUserEnrollment function
       await saveUserEnrollment(
         user.uid,
@@ -71,26 +69,22 @@ export function StepPayment({ formData, updateFormData, errors, onPaymentSuccess
         0, // paymentAmount
         'free' // paymentMethod
       )
-      
-      // Call success callback
+
       if (onPaymentSuccess) {
         onPaymentSuccess()
       }
-      
     } catch (error) {
       console.error('Free enrollment error:', error)
-      toast({
-        title: "Enrollment Error",
-        description: error instanceof Error ? error.message : "An error occurred during enrollment. Please try again.",
-        variant: "destructive",
-      })
+      const message = "We couldn't complete your enrollment. Please try again, or contact us if it keeps happening."
+      setActionError(message)
+      toast({ title: "Enrollment not completed", description: message, variant: "destructive" })
       setIsProcessing(false)
     }
   }
 
   const handlePaystackPayment = async () => {
     if (!selectedCourse || !user) return
-    
+
     // Handle free courses
     if (selectedCourse.price <= 0) {
       return handleFreeEnrollment()
@@ -98,11 +92,9 @@ export function StepPayment({ formData, updateFormData, errors, onPaymentSuccess
 
     // Check if user has an email (required for Paystack)
     if (!user.email) {
-      toast({
-        title: "Email Required",
-        description: "An email address is required to process payments. Please update your profile.",
-        variant: "destructive",
-      })
+      const message = "Your account needs an email address to pay with Paystack. Please sign in with an email account."
+      setActionError(message)
+      toast({ title: "Email required", description: message, variant: "destructive" })
       return
     }
 
@@ -114,9 +106,7 @@ export function StepPayment({ formData, updateFormData, errors, onPaymentSuccess
       localStorage.setItem('selectedCourseTitle', selectedCourse.title)
       localStorage.setItem('registrationFormData', JSON.stringify(formData))
 
-      console.log('Initializing payment with Paystack...')
-
-      // Initialize transaction server-side
+      // Initialize transaction server-side (the server sets the amount from the course record)
       const response = await fetch('/api/paystack/initialize', {
         method: 'POST',
         headers: {
@@ -133,15 +123,11 @@ export function StepPayment({ formData, updateFormData, errors, onPaymentSuccess
       })
 
       const data = await response.json()
-      console.log('Paystack initialize API response:', { status: response.status, data })
 
       if (!response.ok) {
-        const errorMessage = data.error || data.message || 'Failed to initialize payment'
-        console.error('Payment initialization failed:', { status: response.status, errorMessage, details: data })
-        throw new Error(`${errorMessage}${data.details ? ` (${JSON.stringify(data.details)})` : ''}`)
+        console.error('Payment initialization failed:', { status: response.status, data })
+        throw new Error(data.error || data.message || 'Failed to initialize payment')
       }
-
-      console.log('Paystack initialization successful:', data)
 
       // Redirect to Paystack checkout
       if (data.data?.authorization_url) {
@@ -149,133 +135,151 @@ export function StepPayment({ formData, updateFormData, errors, onPaymentSuccess
       } else {
         throw new Error('No authorization URL received from Paystack')
       }
-
     } catch (error) {
       console.error('Payment initialization error:', error)
       setIsProcessing(false)
-      toast({
-        title: "Payment Error",
-        description: error instanceof Error ? error.message : "An error occurred while processing payment. Please try again.",
-        variant: "destructive",
-      })
+      const message = "We couldn't start the payment. Please try again in a moment. You have not been charged."
+      setActionError(message)
+      toast({ title: "Payment not started", description: message, variant: "destructive" })
     }
   }
 
+  const handleSubmit = () => {
+    setActionError(null)
+    if (!onValidate()) return
+    void handlePaystackPayment()
+  }
+
+  const actionLabel = !selectedCourse
+    ? "Submit application"
+    : isFree
+      ? "Enroll for free"
+      : `Pay GH₵${selectedCourse.price.toLocaleString()} with Paystack`
+
+  const summary = [
+    { label: "Course", value: selectedCourse?.title || "—", step: 1 },
+    { label: "Schedule", value: SCHEDULE_LABELS[formData.preferredSchedule] || formData.preferredSchedule, step: 1 },
+    { label: "Name", value: `${formData.firstName} ${formData.lastName}`.trim(), step: 2 },
+    { label: "Email", value: formData.email, step: 2 },
+  ]
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <div>
-        <h2 className="text-2xl font-bold text-foreground mb-2">Payment Information</h2>
-        <p className="text-muted-foreground">Complete your registration by selecting a payment method.</p>
+        <h2 className="text-xl font-semibold text-foreground sm:text-2xl">Review and enroll</h2>
+        <p className="mt-1 text-muted-foreground">Check your details, accept the terms and complete your enrollment.</p>
       </div>
 
-      {/* Order Summary */}
-      {selectedCourse && (
-        <div className="p-6 bg-secondary/50 rounded-lg border border-border">
-          <h4 className="font-semibold text-foreground mb-4">Order Summary</h4>
-          <div className="space-y-3">
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">{selectedCourse.title}</span>
-              <span className="font-medium text-foreground">GH₵{selectedCourse.price}</span>
+      {/* Application summary */}
+      <section aria-labelledby="summary-heading" className="rounded-xl border border-border">
+        <h3 id="summary-heading" className="border-b border-border px-5 py-3 text-sm font-semibold text-foreground sm:px-6">
+          Your application
+        </h3>
+        <dl className="divide-y divide-border">
+          {summary.map((item) => (
+            <div key={item.label} className="flex items-start justify-between gap-4 px-5 py-3 text-sm sm:px-6">
+              <dt className="w-24 shrink-0 text-muted-foreground">{item.label}</dt>
+              <dd className="min-w-0 flex-1 wrap-break-word font-medium text-foreground">{item.value}</dd>
+              <dd className="shrink-0">
+                <button
+                  type="button"
+                  onClick={() => onEditStep(item.step)}
+                  className="rounded-sm text-primary underline-offset-4 hover:underline outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                >
+                  Edit<span className="sr-only"> {item.label.toLowerCase()}</span>
+                </button>
+              </dd>
             </div>
-            <div className="border-t border-border pt-3 flex justify-between">
-              <span className="font-semibold text-foreground">Total</span>
-              <span className="font-bold text-foreground text-xl">GH₵{selectedCourse.price}</span>
-            </div>
+          ))}
+        </dl>
+        <div className="flex items-center justify-between gap-4 border-t border-border bg-muted px-5 py-4 sm:px-6">
+          <span className="font-semibold text-foreground">{isFree ? "Fee" : "Total to pay"}</span>
+          <span className="text-2xl font-bold text-foreground">
+            {selectedCourse ? (isFree ? "Free" : `GH₵${selectedCourse.price.toLocaleString()}`) : "—"}
+          </span>
+        </div>
+      </section>
+
+      {/* Payment method: Paystack is the only supported method */}
+      {!isFree && selectedCourse && (
+        <div className="flex items-start gap-3 rounded-xl border border-border p-5 text-sm sm:p-6">
+          <Lock className="mt-0.5 size-5 shrink-0 text-primary" aria-hidden="true" />
+          <div>
+            <p className="font-semibold text-foreground">Paid securely with Paystack</p>
+            <p className="mt-1 text-muted-foreground">
+              You will be taken to Paystack to pay by card, then brought back here to confirm your enrollment.
+            </p>
           </div>
         </div>
       )}
 
-      {/* Payment Method */}
-      <div className="space-y-3">
-        <Label>Payment Method *</Label>
-        <RadioGroup
-          value={formData.paymentMethod}
-          onValueChange={(value) => updateFormData({ paymentMethod: value })}
-          className="space-y-3"
-        >
-          <div
-            className={`flex items-center space-x-3 p-4 border rounded-lg cursor-pointer transition-colors ${formData.paymentMethod === "credit-card" ? "border-primary bg-primary/5" : "border-border hover:border-primary/50"}`}
-          >
-            <RadioGroupItem value="credit-card" id="credit-card" />
-            <CreditCard className="h-5 w-5 text-muted-foreground" />
-            <Label htmlFor="credit-card" className="font-normal cursor-pointer flex-1">
-              Paystack (Credit / Debit Card)
-            </Label>
-          </div>
-        </RadioGroup>
-        {errors.paymentMethod && <p className="text-sm text-destructive">{errors.paymentMethod}</p>}
-      </div>
-
-      {/* Paystack Payment Button */}
-      {formData.paymentMethod === "credit-card" && (
-        <div className="space-y-3">
-          <Button
-            className="w-full"
-            onClick={handlePaystackPayment}
-            disabled={isProcessing || !formData.agreeToTerms || !selectedCourse}
-          >
-            {isProcessing ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                {selectedCourse && selectedCourse.price > 0 ? 'Processing Payment...' : 'Completing Enrollment...'}
-              </>
-            ) : (
-              selectedCourse && (selectedCourse.price > 0 
-                ? `Pay GH₵${selectedCourse.price} with Paystack` 
-                : 'Enroll for Free')
-            )}
-          </Button>
-        </div>
+      {/* Developer-only payment notes: never rendered in production builds */}
+      {IS_DEV_BUILD && process.env.NEXT_PUBLIC_MOCK_PAYSTACK === 'true' && (
+        <Alert variant="info">
+          <AlertTitle>Development mode</AlertTitle>
+          <AlertDescription>Mock payments enabled. Paying will simulate a successful payment without contacting Paystack.</AlertDescription>
+        </Alert>
+      )}
+      {IS_DEV_BUILD && process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY?.startsWith('pk_test') && process.env.NEXT_PUBLIC_MOCK_PAYSTACK !== 'true' && (
+        <Alert variant="warning">
+          <AlertTitle>Test mode</AlertTitle>
+          <AlertDescription>Test card: 4084084084084081 · any future expiry · CVV 408</AlertDescription>
+        </Alert>
       )}
 
-      {/* Terms Agreement */}
+      {/* Terms, before the action */}
       <div className="space-y-2">
-        <div className="flex items-start space-x-3">
+        <div className="flex items-start gap-3">
           <Checkbox
-            id="terms"
+            id="agreeToTerms"
             checked={formData.agreeToTerms}
-            onCheckedChange={(checked) => updateFormData({ agreeToTerms: checked as boolean })}
-            className="mt-1"
+            onCheckedChange={(checked) => updateFormData({ agreeToTerms: checked === true })}
+            aria-invalid={errors.agreeToTerms ? true : undefined}
+            aria-describedby={errors.agreeToTerms ? "agreeToTerms-error" : undefined}
+            className="mt-0.5"
           />
-          <Label htmlFor="terms" className="font-normal leading-relaxed cursor-pointer">
+          <label htmlFor="agreeToTerms" className="cursor-pointer text-sm leading-relaxed text-foreground">
             I agree to the{" "}
-            <a href="/terms" className="text-primary hover:underline">
-              Terms of Service
+            <a href="/terms" target="_blank" rel="noopener noreferrer" className="font-medium text-primary underline underline-offset-4">
+              Terms &amp; Conditions
             </a>{" "}
             and{" "}
-            <a href="/privacy" className="text-primary hover:underline">
+            <a href="/privacy" target="_blank" rel="noopener noreferrer" className="font-medium text-primary underline underline-offset-4">
               Privacy Policy
             </a>
-            . I understand that my enrollment is subject to the course availability and refund policy.
-          </Label>
+            , including the refund policy, and understand that enrollment depends on course availability.
+          </label>
         </div>
-        {errors.agreeToTerms && <p className="text-sm text-destructive">{errors.agreeToTerms}</p>}
+        {errors.agreeToTerms && (
+          <p id="agreeToTerms-error" className="pl-7 text-sm text-destructive">
+            {errors.agreeToTerms}
+          </p>
+        )}
       </div>
 
-      <div className="p-4 bg-primary/5 rounded-lg border border-primary/20">
-        <p className="text-sm text-muted-foreground">
-          <strong className="text-foreground">Note:</strong> Payment processing is handled securely through Paystack.
-        </p>
-        {/* Developer-only payment notes: never rendered in production builds */}
-        {IS_DEV_BUILD && process.env.NEXT_PUBLIC_MOCK_PAYSTACK === 'true' && (
-          <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded text-sm">
-            <strong className="text-blue-800">Development Mode:</strong>
-            <p className="text-blue-700 mt-1">
-              Mock payments enabled. Clicking "Pay Now" will simulate a successful payment without contacting Paystack.
-            </p>
-          </div>
-        )}
-        {IS_DEV_BUILD && process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY?.startsWith('pk_test') && process.env.NEXT_PUBLIC_MOCK_PAYSTACK !== 'true' && (
-          <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded text-sm">
-            <strong className="text-yellow-800">Test Mode:</strong>
-            <p className="text-yellow-700 mt-1">
-              Use these test card details:
-              <br />• Card: 4084084084084081
-              <br />• Expiry: Any future date (MM/YY)
-              <br />• CVV: 408
-            </p>
-          </div>
-        )}
+      {actionError && (
+        <Alert variant="destructive">
+          <AlertTriangle aria-hidden="true" />
+          <AlertTitle>Enrollment not completed</AlertTitle>
+          <AlertDescription>{actionError}</AlertDescription>
+        </Alert>
+      )}
+
+      {/* Actions */}
+      <div className="flex flex-col-reverse gap-3 border-t border-border pt-6 sm:flex-row sm:items-center sm:justify-between">
+        <Button variant="outline" size="lg" onClick={onBack} disabled={isProcessing}>
+          Back
+        </Button>
+        {/* While the course (and its fee) loads, the action shows a loading state instead of a silent disabled button */}
+        <Button size="lg" onClick={handleSubmit} loading={isProcessing || !selectedCourse} className="sm:min-w-64">
+          {!selectedCourse
+            ? "Loading course…"
+            : isProcessing
+              ? isFree
+                ? "Completing enrollment…"
+                : "Redirecting to Paystack…"
+              : actionLabel}
+        </Button>
       </div>
     </div>
   )

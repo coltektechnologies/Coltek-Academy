@@ -3,7 +3,8 @@
 import { useState } from "react"
 import Link from "next/link"
 import Image from "next/image"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
+import { safeRedirect } from "@/lib/safe-redirect"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -35,6 +36,10 @@ export function SignupForm() {
   })
 
   const router = useRouter()
+  // Return to where the visitor started (e.g. the enrollment form for a course); same-site paths only
+  const rawRedirect = useSearchParams().get("redirect")
+  const redirectTo = safeRedirect(rawRedirect)
+  const loginHref = rawRedirect ? `/login?redirect=${encodeURIComponent(redirectTo)}` : "/login"
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -109,7 +114,7 @@ export function SignupForm() {
       })
 
       // Full page reload ensures auth state is loaded before homepage renders
-      window.location.href = '/'
+      window.location.href = redirectTo
     } catch (error: any) {
       console.error('Error signing up:', error)
       let errorMessage = "Failed to create account. Please try again."
@@ -119,7 +124,7 @@ export function SignupForm() {
         errorMessage = "This email is already registered."
         action = {
           label: 'Go to Login',
-          onClick: () => router.push('/login')
+          onClick: () => router.push(loginHref)
         }
       } else if (error.code === 'auth/weak-password') {
         errorMessage = "Please choose a stronger password (at least 6 characters)."
@@ -177,7 +182,7 @@ export function SignupForm() {
         title: "Account created!",
         description: "Welcome to Coltek Academy.",
       })
-      window.location.href = "/"
+      window.location.href = redirectTo
     } catch (error: any) {
       console.error("Google sign-up error:", error)
       let errorMessage = "Failed to sign up with Google. Please try again."
@@ -193,7 +198,7 @@ export function SignupForm() {
           description: errorMessage,
           variant: "destructive",
           action: (
-            <Button variant="outline" size="sm" onClick={() => router.push("/login")}>
+            <Button variant="outline" size="sm" onClick={() => router.push(loginHref)}>
               Go to Login
             </Button>
           ),
@@ -237,7 +242,7 @@ export function SignupForm() {
         title: "Account created!",
         description: "Welcome to Coltek Academy.",
       })
-      window.location.href = "/"
+      window.location.href = redirectTo
     } catch (error: any) {
       console.error("GitHub sign-up error:", error)
       let errorMessage = "Failed to sign up with GitHub. Please try again."
@@ -253,7 +258,7 @@ export function SignupForm() {
           description: errorMessage,
           variant: "destructive",
           action: (
-            <Button variant="outline" size="sm" onClick={() => router.push("/login")}>
+            <Button variant="outline" size="sm" onClick={() => router.push(loginHref)}>
               Go to Login
             </Button>
           ),
@@ -389,7 +394,7 @@ export function SignupForm() {
         <div className="mt-6 text-center text-sm">
           <p className="text-muted-foreground">
             Already have an account?{" "}
-            <Link href="/login" className="text-primary hover:underline font-medium">
+            <Link href={loginHref} className="text-primary hover:underline font-medium">
               Sign in
             </Link>
           </p>

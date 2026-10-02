@@ -14,12 +14,15 @@ import { GoogleButton } from "./google-button"
 import { GithubButton } from "./github-button"
 import { signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, GithubAuthProvider } from "firebase/auth"
 import { firebase } from "@/lib/firebase"
+import { safeRedirect } from "@/lib/safe-redirect"
 
 export function LoginForm() {
   const { toast } = useToast()
   const router = useRouter()
   const searchParams = useSearchParams()
-  const redirectTo = searchParams.get('redirect') || '/'
+  // Only same-site paths are allowed as redirect targets
+  const rawRedirect = searchParams.get('redirect')
+  const redirectTo = safeRedirect(rawRedirect)
   const [isLoading, setIsLoading] = useState(false)
   const [socialProvider, setSocialProvider] = useState<"google" | "github" | null>(null)
   const [showPassword, setShowPassword] = useState(false)
@@ -83,7 +86,7 @@ export function LoginForm() {
         title: "Signed in successfully!",
         description: "Welcome back to Coltek Academy.",
       })
-      window.location.href = redirectTo || '/'
+      window.location.href = redirectTo
     } catch (error: any) {
       console.error("Google sign-in error:", error)
       let errorMessage = "Failed to sign in with Google. Please try again."
@@ -119,7 +122,7 @@ export function LoginForm() {
         title: "Signed in successfully!",
         description: "Welcome back to Coltek Academy.",
       })
-      window.location.href = redirectTo || '/'
+      window.location.href = redirectTo
     } catch (error: any) {
       console.error("GitHub sign-in error:", error)
       let errorMessage = "Failed to sign in with GitHub. Please try again."
@@ -251,7 +254,10 @@ export function LoginForm() {
         {/* Sign Up Link */}
         <p className="text-center text-sm text-muted-foreground mt-6">
           Don&apos;t have an account?{" "}
-          <Link href="/signup" className="text-primary font-medium hover:underline">
+          <Link
+            href={rawRedirect ? `/signup?redirect=${encodeURIComponent(redirectTo)}` : "/signup"}
+            className="text-primary font-medium hover:underline"
+          >
             Sign up for free
           </Link>
         </p>

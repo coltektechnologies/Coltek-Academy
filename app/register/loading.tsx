@@ -1,5 +1,5 @@
-import Loader from "@/components/ui/loader";
+import { LoadingState } from "@/components/academy/states"
 
 export default function Loading() {
-  return <Loader label="Preparing registration..." />
+  return <LoadingState size="page" label="Preparing enrollment…" />
 }
