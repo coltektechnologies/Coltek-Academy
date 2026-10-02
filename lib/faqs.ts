@@ -74,3 +74,20 @@ export const homeFaqs: Faq[] = [
   byQuestion("Do I get a certificate upon completion?"),
   byQuestion("Can I get a refund if I'm not satisfied?"),
 ]
+
+const homeByQuestion = (question: string) => {
+  const faq = homeFaqs.find((item) => item.question === question)
+  if (!faq) throw new Error(`Missing FAQ: ${question}`)
+  return faq
+}
+
+// Shown on course detail pages. The certificate answer is only included when the course offers one.
+export function getCourseFaqs({ certificateIncluded }: { certificateIncluded: boolean }): Faq[] {
+  return [
+    homeByQuestion("Do I need an account to enroll?"),
+    homeByQuestion("Can I choose when I study?"),
+    homeByQuestion("What payment methods do you accept?"),
+    ...(certificateIncluded ? [homeByQuestion("Do I get a certificate upon completion?")] : []),
+    homeByQuestion("Can I get a refund if I'm not satisfied?"),
+  ]
+}

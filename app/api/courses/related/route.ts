@@ -1,52 +1,21 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { collection, query, where, limit, getDocs } from 'firebase/firestore';
-import { firebase } from '@/lib/firebase';
-import { getEnrolledStudentCounts } from '@/lib/enrollment-counts';
+import { NextResponse } from 'next/server';
+import { getRelatedPublicCourses } from '@/lib/public-course';
 
+// Other published courses in a category. Public fields only (see lib/public-course.ts).
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const category = searchParams.get('category');
-  const excludeId = searchParams.get('excludeId');
-  const limitCount = parseInt(searchParams.get('limit') || '3');
+  const excludeId = searchParams.get('excludeId') || '';
+  const limitCount = Math.min(12, Math.max(1, parseInt(searchParams.get('limit') || '3') || 3));
 
   if (!category) {
-    return NextResponse.json(
-      { error: 'Category is required' },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: 'Category is required' }, { status: 400 });
   }
 
   try {
-    // Get all courses in the same category
-    let q = query(
-      collection(firebase.db, 'courses'),
-      where('category', '==', category)
-    );
-    
-    const [querySnapshot, enrolledCounts] = await Promise.all([
-      getDocs(q),
-      getEnrolledStudentCounts().catch(() => new Map<string, number>()),
-    ]);
-    
-    // Filter out the current course, only published courses, and limit results
-    const relatedCourses = querySnapshot.docs
-      .filter(doc => doc.id !== excludeId && doc.data().isPublished === true)
-      .slice(0, limitCount)
-      .map(doc => {
-        const { rating, reviewCount, totalRatings, ...data } = doc.data();
-        const price = typeof data.price === 'number' ? data.price : 0;
-        return { id: doc.id, ...data, price, enrolledStudents: enrolledCounts.get(doc.id) || 0 };
-      });
-
-    return NextResponse.json(relatedCourses);
+    return NextResponse.json(await getRelatedPublicCourses(category, excludeId, limitCount));
   } catch (error) {
     console.error('Error fetching related courses:', error);
-    return NextResponse.json(
-      { 
-        error: 'Failed to fetch related courses',
-        details: error instanceof Error ? error.message : 'Unknown error'
-      },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Failed to fetch related courses' }, { status: 500 });
   }
 }

@@ -1,281 +1,105 @@
-"use client"
+import type { Metadata } from "next"
+import { notFound } from "next/navigation"
+import { Navbar } from "@/components/navbar"
+import { Footer } from "@/components/footer"
+import { CourseCard } from "@/components/course-card"
+import { CTASection } from "@/components/academy/cta-section"
+import { SectionHeader } from "@/components/academy/section-header"
+import { CourseHero } from "@/components/course-detail/course-hero"
+import { CourseBody } from "@/components/course-detail/course-body"
+import { MobileEnrollBar } from "@/components/course-detail/enroll-action"
+import { formatCoursePrice, isCourseUpcoming } from "@/lib/course-display"
+import { getPublicCourseBySlug, getRelatedPublicCourses } from "@/lib/public-course"
 
-import Link from "next/link"
-import { notFound, useParams } from "next/navigation"
-import { Suspense, useEffect, useRef, useState, useCallback } from "react"
-import dynamic from 'next/dynamic';
-import { Loader2, AlertCircle, Sparkles } from 'lucide-react';
-import { Button } from "@/components/ui/button"
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { useToast } from "@/hooks/use-toast"
-import type { Course } from "@/lib/types"
-import { isCourseUpcoming } from "@/lib/course-display"
+// Course data changes rarely; refresh the rendered page at most once a minute
+export const revalidate = 60
 
-const LoadingFallback = () => (
-  <div className="flex items-center justify-center min-h-[300px]">
-    <Loader2 className="h-8 w-8 animate-spin text-primary" />
-  </div>
-);
+type Params = { params: Promise<{ slug: string }> }
 
-// Lazy load components with proper dynamic imports
-const Navbar = dynamic(
-  () => import('@/components/navbar').then(mod => mod.Navbar),
-  { 
-    ssr: false,
-    loading: () => <div className="h-16 bg-background" />
+export async function generateMetadata({ params }: Params): Promise<Metadata> {
+  const { slug } = await params
+  const course = await getPublicCourseBySlug(slug).catch(() => null)
+  if (!course) return { title: "Course not found | Coltek Academy" }
+  return {
+    title: `${course.title} | Coltek Academy`,
+    description: course.description,
+    openGraph: {
+      title: course.title,
+      description: course.description,
+      type: "website",
+      images: course.image ? [course.image] : undefined,
+    },
+    alternates: { canonical: `/courses/${course.slug}` },
   }
-);
+}
 
-const Footer = dynamic(
-  () => import('@/components/footer').then(mod => mod.Footer || mod),
-  { 
-    ssr: false,
-    loading: () => null
-  }
-);
+export default async function CoursePage({ params }: Params) {
+  const { slug } = await params
+  const course = await getPublicCourseBySlug(slug)
+  if (!course) notFound()
 
-const CourseHero = dynamic(
-  () => import('@/components/course-detail/course-hero').then(mod => mod.CourseHero || mod),
-  { 
-    ssr: false,
-    loading: () => <LoadingFallback />
-  }
-);
+  const upcoming = isCourseUpcoming(course)
+  const priceLabel = formatCoursePrice(course)
+  const related = await getRelatedPublicCourses(course.category, course.id).catch(() => [])
 
-const CourseContent = dynamic(
-  () => import('@/components/course-detail/course-content').then(mod => mod.CourseContent || mod),
-  { 
-    ssr: false,
-    loading: () => <LoadingFallback />
-  }
-);
-
-const RelatedCourses = dynamic(
-  () => import('@/components/course-detail/related-courses').then(mod => mod.RelatedCourses || mod),
-  { 
-    ssr: false,
-    loading: () => <LoadingFallback />
-  }
-);
-
-// Client-side metadata handling
-const useCourseMetadata = (course: Course | null) => {
-  // Always call hooks unconditionally at the top level
-  const title = course?.title || 'Coltek Academy';
-  const description = course?.description || 'Online Learning Platform';
-  
-  useEffect(() => {
-    // Update document title
-    document.title = course ? `${title} | Coltek Academy` : 'Coltek Academy';
-    
-    // Update meta description if it exists
-    const metaDescription = document.querySelector('meta[name="description"]');
-    if (metaDescription) {
-      metaDescription.setAttribute('content', course ? description : 'Coltek Academy - Online Learning Platform');
-    }
-    
-    // Cleanup function to reset title and description
-    return () => {
-      document.title = 'Coltek Academy';
-      if (metaDescription) {
-        metaDescription.setAttribute('content', 'Coltek Academy - Online Learning Platform');
-      }
-    };
-  }, [course, title, description]);
-};
-
-// Custom hook for fetching related courses
-const useRelatedCourses = (course: Course | null) => {
-  const [relatedCourses, setRelatedCourses] = useState<Course[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  
-  useEffect(() => {
-    const fetchRelatedCourses = async () => {
-      if (!course?.category) {
-        setIsLoading(false);
-        return;
-      }
-
-      try {
-        const response = await fetch(
-          `/api/courses/related?category=${encodeURIComponent(course.category)}&excludeId=${course.id}`
-        );
-        
-        if (!response.ok) {
-          throw new Error('Failed to fetch related courses');
-        }
-        
-        const data = await response.json();
-        setRelatedCourses(data);
-      } catch (error) {
-        console.error('Error fetching related courses:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchRelatedCourses();
-  }, [course]);
-
-  return { relatedCourses, isLoading };
-};
-
-export default function CoursePage() {
-  const params = useParams();
-  const { toast } = useToast();
-  const [course, setCourse] = useState<Course | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [retryCount, setRetryCount] = useState(0);
-  const upcomingToastShown = useRef(false);
-  
-  // Call all hooks at the top level
-  useCourseMetadata(course);
-  const { relatedCourses, isLoading: isLoadingRelated } = useRelatedCourses(course);
-  
-  const fetchCourse = useCallback(async (slug: string | string[]) => {
-    const courseSlug = Array.isArray(slug) ? slug[0] : slug;
-    
-    if (!courseSlug) {
-      setError('Course slug is missing');
-      setIsLoading(false);
-      return;
-    }
-
-    setIsLoading(true);
-    setError(null);
-    
-    try {
-      // Try fetching with the slug in the URL path
-      let response = await fetch(`/api/courses/${encodeURIComponent(courseSlug)}`);
-      
-      // If that fails with 400, try with query parameter
-      if (response.status === 400) {
-        response = await fetch(`/api/courses/${encodeURIComponent(courseSlug)}?slug=${encodeURIComponent(courseSlug)}`);
-      }
-      
-      const data = await response.json();
-      
-      if (!response.ok) {
-        if (response.status === 404) {
-          notFound();
-          return;
-        }
-        throw new Error(data.error || 'Failed to fetch course');
-      }
-      
-      setCourse(data);
-      setError(null);
-    } catch (err) {
-      console.error('Error fetching course:', err);
-      setError(err instanceof Error ? err.message : 'Failed to load course. Please try again later.');
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    const slug = params?.slug;
-    if (slug) {
-      fetchCourse(Array.isArray(slug) ? slug[0] : slug);
-    } else {
-      setError('Course slug is missing');
-      setIsLoading(false);
-    }
-  }, [params?.slug, fetchCourse, retryCount]);
-
-  const handleRetry = useCallback(() => {
-    setRetryCount(prev => prev + 1);
-  }, []);
-
-  const isUpcoming = course ? isCourseUpcoming(course) : false;
-
-  // Show toast once when viewing an upcoming course (no full content)
-  useEffect(() => {
-    if (isUpcoming && !upcomingToastShown.current) {
-      upcomingToastShown.current = true;
-      toast({
-        title: "Coming soon",
-        description: "This course is coming soon. Stay tuned!",
-      });
-    }
-  }, [isUpcoming, toast]);
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-12 w-12 animate-spin text-primary" />
-      </div>
-    )
-  }
-
-  if (error) {
-    return (
-      <div className="min-h-screen flex items-center justify-center p-4">
-        <Alert variant="destructive" className="max-w-md">
-          <AlertCircle className="h-4 w-4" />
-          <AlertTitle>Error</AlertTitle>
-          <AlertDescription className="mb-4">
-            {error}
-          </AlertDescription>
-          <Button 
-            variant="outline" 
-            onClick={handleRetry}
-            className="w-full"
-            disabled={isLoading}
-          >
-            {isLoading ? 'Loading...' : 'Try Again'}
-          </Button>
-        </Alert>
-      </div>
-    )
-  }
-
-  if (!course) {
-    notFound()
-  }
-
-  if (isUpcoming) {
-    return (
-      <div className="min-h-screen flex flex-col">
-        <Navbar />
-        <main className="flex-1 flex items-center justify-center p-4">
-          <Alert className="max-w-md">
-            <Sparkles className="h-4 w-4" />
-            <AlertTitle>Coming soon</AlertTitle>
-            <AlertDescription>
-              <span className="font-medium text-foreground">{course.title}</span> is not yet available. This course is coming soon — stay tuned!
-            </AlertDescription>
-            <div className="mt-4">
-              <Button asChild>
-                <Link href="/courses">Browse courses</Link>
-              </Button>
-            </div>
-          </Alert>
-        </main>
-        <Footer />
-      </div>
-    );
+  // Structured data for search engines, using only real course fields
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Course",
+    name: course.title,
+    description: course.description,
+    provider: { "@type": "EducationalOrganization", name: "Coltek Academy" },
+    inLanguage: course.language || undefined,
+    educationalLevel: course.level || undefined,
+    ...(!upcoming && typeof course.price === "number" && course.price > 0
+      ? { offers: { "@type": "Offer", price: course.price, priceCurrency: "GHS", category: "Paid" } }
+      : {}),
   }
 
   return (
-    <div className="min-h-screen flex flex-col">
+    // Bottom padding on small screens leaves room for the fixed enroll bar below the footer
+    <div className="flex min-h-screen flex-col pb-20 lg:pb-0">
       <Navbar />
-      <main className="flex-1">
-        <Suspense fallback={<LoadingFallback />}>
-          <CourseHero course={course} isUpcoming={false} />
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <CourseContent course={course} />
-          </div>
-          {!isLoadingRelated && relatedCourses.length > 0 && (
-            <RelatedCourses 
-              courses={relatedCourses} 
-              currentCourseId={course.id} 
-            />
-          )}
-        </Suspense>
+      <main id="main" className="flex-1">
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }}
+        />
+        <CourseHero course={course} />
+        <CourseBody course={course} />
+
+        {related.length > 0 && (
+          <section aria-labelledby="related-heading" className="border-t border-border bg-muted py-16 md:py-20">
+            <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+              <SectionHeader id="related-heading" title={`More ${course.category} courses`} />
+              <ul className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                {related.map((item) => (
+                  <li key={item.id}>
+                    <CourseCard course={item} />
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </section>
+        )}
+
+        <CTASection
+          title={upcoming ? `${course.title} is coming soon` : `Ready to join ${course.title}?`}
+          description={
+            upcoming
+              ? "Browse the courses that are open now, or contact us to ask about this one."
+              : "Create your account if you don't have one yet, complete the short registration form and confirm your place."
+          }
+          primaryAction={
+            upcoming
+              ? { label: "Browse courses", href: "/courses" }
+              : { label: "Enroll now", href: `/register?course=${encodeURIComponent(course.id)}` }
+          }
+          secondaryAction={upcoming ? { label: "Contact us", href: "/contact" } : { label: "How enrollment works", href: "/#how-to-join" }}
+        />
       </main>
       <Footer />
+      <MobileEnrollBar courseId={course.id} courseTitle={course.title} upcoming={upcoming} priceLabel={priceLabel} />
     </div>
-  );
+  )
 }
