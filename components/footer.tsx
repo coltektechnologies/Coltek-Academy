@@ -1,176 +1,164 @@
 import Link from "next/link"
-import { Facebook, Twitter, Linkedin, Instagram } from "lucide-react"
 import Image from "next/image"
+import { Clock, ExternalLink, Facebook, Instagram, Linkedin, Mail, MapPin, Phone, Twitter } from "lucide-react"
+import { CONTACT, MAIN_NAV, PROGRAMME_CATEGORIES, SITE_NAME, SITE_TAGLINE, SOCIAL_LINKS } from "@/lib/site"
 
+const SOCIAL_ICONS = {
+  Facebook,
+  "X (formerly Twitter)": Twitter,
+  LinkedIn: Linkedin,
+  Instagram,
+} as const
+
+const STUDENT_LINKS = [
+  { label: "Log in", href: "/login" },
+  { label: "Create an account", href: "/signup" },
+  { label: "My dashboard", href: "/dashboard" },
+  { label: "My certificates", href: "/certificates" },
+]
+
+const linkClass =
+  "rounded-sm text-sm text-primary-foreground/80 transition-colors duration-150 hover:text-primary-foreground hover:underline underline-offset-4 outline-none focus-visible:ring-[3px] focus-visible:ring-primary-foreground/60"
+const headingClass = "text-sm font-semibold uppercase tracking-wide text-primary-foreground"
+
+function FooterColumn({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <nav aria-label={title}>
+      <h2 className={headingClass}>{title}</h2>
+      <ul className="mt-4 space-y-3">{children}</ul>
+    </nav>
+  )
+}
+
+/** Global site footer (DESIGN_SYSTEM.md §16). */
 export function Footer() {
   return (
     <footer className="bg-primary text-primary-foreground">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12">
-          {/* Brand */}
-          <div className="space-y-4">
-            <Link href="/" className="flex items-center gap-2">
-              <Image
-                src="/coltek-academy-logo-white.svg"
-                alt="Coltek Academy"
-                width={117}
-                height={40}
-                className="h-10 w-auto"
-              />
+      <div className="container-page py-14 md:py-16">
+        <div className="grid grid-cols-1 gap-10 sm:grid-cols-2 lg:grid-cols-12 lg:gap-8">
+          {/* Academy information */}
+          <div className="sm:col-span-2 lg:col-span-3">
+            <Link
+              href="/"
+              aria-label={`${SITE_NAME}, home`}
+              className="inline-block rounded-md outline-none focus-visible:ring-[3px] focus-visible:ring-primary-foreground/60"
+            >
+              <Image src="/coltek-academy-logo-white.svg" alt="" width={117} height={40} className="h-10 w-auto" />
             </Link>
-            <p className="text-primary-foreground/80 text-sm leading-relaxed">
-              Empowering learners worldwide with expert-led courses and cutting-edge skills for the future.
-            </p>
-            <div className="flex gap-4">
-              <a
-                href="https://web.facebook.com/coltektechnologies"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-primary-foreground/70 hover:text-primary-foreground transition-colors"
-                aria-label="Facebook"
-              >
-                <Facebook className="h-5 w-5" />
-              </a>
-              <a
-                href="https://x.com/coltekdev"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-primary-foreground/70 hover:text-primary-foreground transition-colors"
-                aria-label="Twitter"
-              >
-                <Twitter className="h-5 w-5" />
-              </a>
-              <a
-                href="https://www.linkedin.com/company/coltek-technologies?originalSubdomain=gh"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-primary-foreground/70 hover:text-primary-foreground transition-colors"
-                aria-label="LinkedIn"
-              >
-                <Linkedin className="h-5 w-5" />
-              </a>
-              <a
-                href="https://www.instagram.com/coltektechnologies/"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-primary-foreground/70 hover:text-primary-foreground transition-colors"
-                aria-label="Instagram"
-              >
-                <Instagram className="h-5 w-5" />
-              </a>
-            </div>
-          </div>
-
-          {/* Quick Links */}
-          <div>
-            <h2 className="font-semibold text-lg mb-4">Quick Links</h2>
-            <ul className="space-y-3">
-              <li>
-                <Link
-                  href="/courses"
-                  className="text-primary-foreground/80 hover:text-primary-foreground transition-colors text-sm"
-                >
-                  Browse Courses
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/about"
-                  className="text-primary-foreground/80 hover:text-primary-foreground transition-colors text-sm"
-                >
-                  About Us
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/contact"
-                  className="text-primary-foreground/80 hover:text-primary-foreground transition-colors text-sm"
-                >
-                  Contact
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/register"
-                  className="text-primary-foreground/80 hover:text-primary-foreground transition-colors text-sm"
-                >
-                  Get Started
-                </Link>
-              </li>
+            <p className="mt-4 max-w-sm text-sm leading-relaxed text-primary-foreground/80">{SITE_TAGLINE}</p>
+            <a href={CONTACT.website} target="_blank" rel="noopener noreferrer" className={`mt-3 inline-flex items-center gap-1.5 ${linkClass}`}>
+              Coltek Technologies
+              <ExternalLink className="size-3.5" aria-hidden="true" />
+              <span className="sr-only">(opens in a new tab)</span>
+            </a>
+            <ul className="mt-6 flex gap-1" aria-label="Social media">
+              {SOCIAL_LINKS.map((social) => {
+                const Icon = SOCIAL_ICONS[social.label]
+                return (
+                  <li key={social.label}>
+                    <a
+                      href={social.href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex size-11 items-center justify-center rounded-md text-primary-foreground/80 transition-colors hover:bg-primary-foreground/10 hover:text-primary-foreground outline-none focus-visible:ring-[3px] focus-visible:ring-primary-foreground/60"
+                    >
+                      <Icon className="size-5" aria-hidden="true" />
+                      <span className="sr-only">
+                        {SITE_NAME} on {social.label} (opens in a new tab)
+                      </span>
+                    </a>
+                  </li>
+                )
+              })}
             </ul>
           </div>
 
-          {/* Categories */}
-          <div>
-            <h2 className="font-semibold text-lg mb-4">Categories</h2>
-            <ul className="space-y-3">
+          <div className="lg:col-span-2">
+            <FooterColumn title="Academy">
+              {MAIN_NAV.map((item) => (
+                <li key={item.href}>
+                  <Link href={item.href} className={linkClass}>
+                    {item.label}
+                  </Link>
+                </li>
+              ))}
               <li>
-                <Link
-                  href="/courses?category=Web"
-                  className="text-primary-foreground/80 hover:text-primary-foreground transition-colors text-sm"
-                >
-                  Web
+                <Link href="/#how-to-join" className={linkClass}>
+                  How to enroll
                 </Link>
               </li>
-              <li>
-                <Link
-                  href="/courses?category=Data Science"
-                  className="text-primary-foreground/80 hover:text-primary-foreground transition-colors text-sm"
-                >
-                  Data Science
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/courses?category=UI/UX"
-                  className="text-primary-foreground/80 hover:text-primary-foreground transition-colors text-sm"
-                >
-                  UI/UX
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/courses?category=Graphic Design"
-                  className="text-primary-foreground/80 hover:text-primary-foreground transition-colors text-sm"
-                >
-                  Graphic Design
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/courses?category=Mobile App"
-                  className="text-primary-foreground/80 hover:text-primary-foreground transition-colors text-sm"
-                >
-                  Mobile App
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/courses?category=Business"
-                  className="text-primary-foreground/80 hover:text-primary-foreground transition-colors text-sm"
-                >
-                  Business
-                </Link>
-              </li>
-            </ul>
+            </FooterColumn>
+          </div>
+
+          <div className="lg:col-span-2">
+            <FooterColumn title="Programmes">
+              {PROGRAMME_CATEGORIES.map((category) => (
+                <li key={category}>
+                  <Link href={`/courses?category=${encodeURIComponent(category)}`} className={linkClass}>
+                    {category}
+                  </Link>
+                </li>
+              ))}
+            </FooterColumn>
+          </div>
+
+          <div className="lg:col-span-2">
+            <FooterColumn title="Students">
+              {STUDENT_LINKS.map((item) => (
+                <li key={item.href}>
+                  <Link href={item.href} className={linkClass}>
+                    {item.label}
+                  </Link>
+                </li>
+              ))}
+            </FooterColumn>
+          </div>
+
+          <div className="lg:col-span-3">
+            <h2 className={headingClass}>Contact</h2>
+            <address className="mt-4 space-y-3 text-sm not-italic text-primary-foreground/80">
+              <p className="flex items-start gap-2">
+                <Mail className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+                <a href={`mailto:${CONTACT.email}`} className={`wrap-anywhere ${linkClass}`}>
+                  {CONTACT.email}
+                </a>
+              </p>
+              <p className="flex items-start gap-2">
+                <Phone className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+                <a href={CONTACT.phoneHref} className={linkClass}>
+                  {CONTACT.phoneDisplay}
+                </a>
+              </p>
+              <p className="flex items-start gap-2">
+                <Clock className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+                <span>{CONTACT.hours}</span>
+              </p>
+              <p className="flex items-start gap-2">
+                <MapPin className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+                <span>{CONTACT.location}</span>
+              </p>
+            </address>
           </div>
         </div>
 
-        <div className="mt-12 pt-8 border-t border-primary-foreground/20">
-          <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-            <p className="text-sm text-primary-foreground/60">
-              &copy; {new Date().getFullYear()} Coltek Academy. All rights reserved.
-            </p>
-            <div className="flex items-center gap-4 text-sm">
-              <Link href="/terms" className="text-primary-foreground/60 hover:underline hover:text-primary-foreground/90 transition-colors">
-                Terms & Conditions
-              </Link>
-              <span className="text-primary-foreground/40">•</span>
-              <Link href="/privacy" className="text-primary-foreground/60 hover:underline hover:text-primary-foreground/90 transition-colors">
-                Privacy Policy
-              </Link>
-            </div>
-          </div>
+        <div className="mt-12 flex flex-col gap-4 border-t border-primary-foreground/20 pt-8 text-sm sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-primary-foreground/70">
+            &copy; {new Date().getFullYear()} {SITE_NAME}. All rights reserved.
+          </p>
+          <nav aria-label="Legal">
+            <ul className="flex flex-wrap gap-x-6 gap-y-2">
+              <li>
+                <Link href="/terms" className={linkClass}>
+                  Terms &amp; Conditions
+                </Link>
+              </li>
+              <li>
+                <Link href="/privacy" className={linkClass}>
+                  Privacy Policy
+                </Link>
+              </li>
+            </ul>
+          </nav>
         </div>
       </div>
     </footer>

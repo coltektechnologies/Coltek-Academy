@@ -9,7 +9,7 @@ export default function ContactPage() {
   return (
     <div className="min-h-screen flex flex-col">
       <Navbar />
-      <main className="flex-1">
+      <main id="main" className="flex-1">
         <ContactHero />
         <section className="py-16">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

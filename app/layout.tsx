@@ -2,10 +2,8 @@ import type React from "react"
 import type { Metadata, Viewport } from "next"
 import { Inter, Geist_Mono } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
-import { Suspense } from "react"
 import "./globals.css"
 import { Toaster } from "@/components/ui/toaster"
-import { RouteLoaderProvider } from "@/components/providers/route-loader"
 import { AuthProvider } from "@/hooks/use-auth"
 
 const _inter = Inter({ subsets: ["latin"] })
@@ -44,11 +42,15 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className="font-sans antialiased">
+      <body>
+        {/* First focusable element: lets keyboard users jump past the header */}
+        <a
+          href="#main"
+          className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-md focus:bg-primary focus:px-4 focus:py-3 focus:text-sm focus:font-semibold focus:text-primary-foreground focus:shadow-lg"
+        >
+          Skip to main content
+        </a>
         <AuthProvider>
-          <Suspense fallback={null}>
-            <RouteLoaderProvider minDurationMs={800} label="Loading..." />
-          </Suspense>
           {children}
           <Toaster />
         </AuthProvider>

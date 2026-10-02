@@ -442,7 +442,7 @@ export default function CertificatesPage() {
     <div className="min-h-screen flex flex-col bg-background">
       <Navbar />
       <Suspense fallback={<LoadingFallback />}>
-        <main className="flex-1">
+        <main id="main" className="flex-1">
           {/* Hero */}
           <section className="relative overflow-hidden border-b border-border bg-gradient-to-b from-primary/5 to-transparent">
             <div className="absolute inset-0 bg-[linear-gradient(to_right,var(--border)_1px,transparent_1px),linear-gradient(to_bottom,var(--border)_1px,transparent_1px)] bg-[size:3rem_3rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,black_70%,transparent_110%)]" />

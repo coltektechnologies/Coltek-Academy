@@ -1,6 +1,8 @@
 import { Metadata } from 'next'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
+import { Navbar } from '@/components/navbar'
+import { Footer } from '@/components/footer'
 
 export const metadata: Metadata = {
   title: 'Terms & Conditions | Coltek Academy',
@@ -11,7 +13,10 @@ export default function TermsPage() {
   const currentYear = new Date().getFullYear()
   
   return (
-    <div className="container mx-auto px-4 py-12 max-w-4xl">
+    <div className="flex min-h-screen flex-col">
+      <Navbar />
+      <main id="main" className="flex-1">
+    <div className="mx-auto w-full max-w-3xl px-4 py-12 sm:px-6 md:py-16 lg:px-8">
       <div className="text-center mb-12">
         <h1 className="text-4xl font-bold text-foreground mb-4">Terms & Conditions</h1>
         <p className="text-muted-foreground">Last Updated: {currentYear}</p>
@@ -98,6 +103,9 @@ export default function TermsPage() {
           <Link href="/">Back to Home</Link>
         </Button>
       </div>
+    </div>
+      </main>
+      <Footer />
     </div>
   )
 }

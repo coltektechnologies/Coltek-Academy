@@ -110,11 +110,56 @@
   --color-sidebar-ring: var(--sidebar-ring);
 }
 
+/* Standard page container (DESIGN_SYSTEM.md §6): 1280px max, 16 / 24 / 32px side padding */
+@utility container-page {
+  margin-inline: auto;
+  width: 100%;
+  max-width: var(--container-7xl);
+  padding-inline: 1rem;
+  @variant sm {
+    padding-inline: 1.5rem;
+  }
+  @variant lg {
+    padding-inline: 2rem;
+  }
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
+  html {
+    /* In-page links land below the sticky 64px header */
+    scroll-padding-top: 5rem;
+    -webkit-text-size-adjust: 100%;
+  }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground font-sans antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  h1,
+  h2,
+  h3 {
+    text-wrap: balance;
+  }
+  ::selection {
+    @apply bg-primary text-primary-foreground;
+  }
+  /* Fallback focus indicator for interactive elements without their own focus style */
+  :where(a, button, summary, [tabindex]):focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+}
+
+/* Respect the operating system's reduced-motion setting everywhere (DESIGN_SYSTEM.md §22) */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }
