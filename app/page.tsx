@@ -6,6 +6,7 @@ import { ValueStrip } from "@/components/home/value-strip"
 import { ProgrammesSection } from "@/components/home/programmes-section"
 import { WhySection } from "@/components/home/why-section"
 import { LearningJourney } from "@/components/home/learning-journey"
+import { ProjectsSection } from "@/components/home/projects-section"
 import { TestimonialsSection } from "@/components/home/testimonials-section"
 import { HowToJoin } from "@/components/home/how-to-join"
 import { HomeFaqSection } from "@/components/home/faq-section"
@@ -24,8 +25,8 @@ export const metadata: Metadata = {
   },
 }
 
-// Server-rendered page; only sections that load live data (courses, stats, testimonials) run on the client.
-// A projects/portfolio section is intentionally omitted until real student projects exist in the data.
+// Server-rendered page; only sections that load live data (courses, stats, projects, testimonials) run on the client.
+// The projects section stays hidden until an admin publishes a real student project at /admin/projects.
 export default function HomePage() {
   return (
     <div className="flex min-h-screen flex-col">
@@ -36,6 +37,7 @@ export default function HomePage() {
         <ProgrammesSection />
         <WhySection />
         <LearningJourney />
+        <ProjectsSection />
         <TestimonialsSection />
         <HowToJoin />
         <HomeFaqSection />

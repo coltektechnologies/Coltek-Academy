@@ -182,6 +182,14 @@ service cloud.firestore {
       allow create, update, delete: if isAdmin();
     }
 
+    match /projects/{projectId} {
+      // Homepage can read published student projects.
+      allow read: if resource.data.isPublished == true || isAdmin();
+
+      // Admins manage projects from /admin/projects.
+      allow create, update, delete: if isAdmin();
+    }
+
     // Default deny all other access
     match /{document=**} {
       allow read, write: if false;

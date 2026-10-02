@@ -127,6 +127,11 @@ const MessageSquareQuote = dynamic(
   { ssr: false, loading: () => <span className="w-6 h-6" /> }
 );
 
+const FolderKanban = dynamic(
+  () => import('lucide-react').then(mod => mod.FolderKanban),
+  { ssr: false, loading: () => <span className="w-6 h-6" /> }
+);
+
 import { firebase } from '@/lib/firebase';
 import { 
   doc, 
@@ -654,6 +659,10 @@ export default function AdminPage() {
               <Button variant="outline" className="w-full justify-start" onClick={() => router.push('/admin/testimonials')}>
                 <MessageSquareQuote className="mr-2 h-4 w-4" />
                 Add Testimonial
+              </Button>
+              <Button variant="outline" className="w-full justify-start" onClick={() => router.push('/admin/projects')}>
+                <FolderKanban className="mr-2 h-4 w-4" />
+                Add Student Project
               </Button>
             </CardContent>
           </Card>

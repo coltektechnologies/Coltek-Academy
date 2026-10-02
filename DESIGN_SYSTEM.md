@@ -298,6 +298,12 @@ Layout: `h-full flex flex-col` so footers align across a grid. Grid: 1 col mobil
 
 Content: optional icon tile (`size-10 rounded-lg bg-primary/10 text-primary`), title (H4, the card's stretched link), short description, real course count (omit if unknown), "Explore →" affordance in `text-accent`. Feature-card styling: `p-6`, border, no resting shadow, hover shadow (interactive).
 
+### 11b. Project card
+
+`components/academy/project-card.tsx`. A real student project published by an admin at `/admin/projects` (Firestore `projects`, public via `/api/projects`, published only, links restricted to http(s)).
+
+Content: screenshot (`aspect-video`, `object-top`), title (H4), "By {student} · {course/cohort}", description (`line-clamp-3`), technology badges (`outline`), optional "Live project" / "Source code" links (open in a new tab, announced as such). Sections that list projects must render nothing when none are published — never placeholders or sample projects.
+
 ---
 
 ## 12. Page hero
@@ -601,6 +607,7 @@ Use these before creating anything new (see CLAUDE.md §7).
 | Page header / hero | `PageHeader` | `components/academy/page-header.tsx` |
 | Stat | `StatCard` (inside a `<dl>`) | `components/academy/stat-card.tsx` |
 | Testimonial | `TestimonialCard` | `components/academy/testimonial-card.tsx` |
+| Student project | `ProjectCard` | `components/academy/project-card.tsx` |
 | CTA | `CTASection` (`band` / `panel`, `gradient`) | `components/academy/cta-section.tsx` |
 | States | `LoadingState`, `EmptyState`, `ErrorState` | `components/academy/states.tsx` |
 | Course display rules | `isCourseUpcoming`, `formatCoursePrice`, `formatCourseDuration`, `getCourseMode` | `lib/course-display.ts` |

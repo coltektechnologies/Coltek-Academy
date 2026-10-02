@@ -1,4 +1,4 @@
-import { BookOpen, Home, LogOut, Settings, FileText, Users, GraduationCap, MessageSquareQuote } from 'lucide-react';
+import { BookOpen, Home, LogOut, Settings, FileText, Users, GraduationCap, MessageSquareQuote, FolderKanban } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -15,6 +15,7 @@ export function Sidebar() {
     { name: 'Enrollments', href: '/admin/enrollments', icon: GraduationCap },
     { name: 'Courses', href: '/admin/courses', icon: BookOpen },
     { name: 'Testimonials', href: '/admin/testimonials', icon: MessageSquareQuote },
+    { name: 'Projects', href: '/admin/projects', icon: FolderKanban },
     { name: 'Settings', href: '/admin/settings', icon: Settings },
   ];
 
