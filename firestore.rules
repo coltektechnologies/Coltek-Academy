@@ -1,198 +1,85 @@
 rules_version = '2';
+
+// Coltek Academy — Firestore security rules.
+//
+// Browsers (Firebase client SDK) are bound by these rules. Server code that needs
+// private data (enrollment counts, statistics, certificate API routes, uploads)
+// uses Firebase Admin, which is not bound by them.
+//
+// An admin is a signed-in user with ANY of:
+//   users/{uid}.role == 'admin', adminUsers/{uid}.role == 'admin', or the `admin` custom claim.
+// Admins are provisioned only with scripts/create-admin-user.ts (Firebase Admin) —
+// no browser can grant itself the admin role.
 service cloud.firestore {
-  // Development mode - set to true to enable all operations
-  function isDevelopment() {
-    return true; // Temporarily enable all operations for debugging
-  }
-  
-  // Debug function to log rule evaluation
-  function debugLog(message) {
-    return request.auth != null ? 
-      request.auth.token.email + ': ' + message : 
-      'Unauthenticated: ' + message;
-  }
-
-  // Helper function to check if user is admin
-  function isAdmin() {
-    return request.auth != null && (
-      (exists(/databases/$(database)/documents/adminUsers/$(request.auth.uid)) && 
-       get(/databases/$(database)/documents/adminUsers/$(request.auth.uid)).data.role == 'admin') ||
-      (request.auth.token != null && 
-       (request.auth.token.email_verified == true && 
-        request.auth.token.admin == true))
-    );
-  }
-
-  function isAuthenticated() {
-    return request.auth != null && request.auth.uid != null;
-  }
-
-  function isCourseOwner() {
-    return isAuthenticated() && resource.data.createdBy == request.auth.uid;
-  }
-  
-  function isSignedIn() {
-    return request.auth != null;
-  }
-
   match /databases/{database}/documents {
-    // Allow all operations in development
-    match /{document=**} {
-      allow read, write: if isDevelopment();
+
+    function signedIn() {
+      return request.auth != null;
     }
-    
-    // Courses collection rules
+
+    function isSelf(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+
+    function hasAdminRole(collectionName) {
+      let path = /databases/$(database)/documents/$(collectionName)/$(request.auth.uid);
+      return exists(path) && get(path).data.get('role', '') == 'admin';
+    }
+
+    function isAdmin() {
+      return signedIn() && (
+        request.auth.token.get('admin', false) == true ||
+        hasAdminRole('users') ||
+        hasAdminRole('adminUsers')
+      );
+    }
+
+    // Admins can read and write everything (admin dashboard, certificates, users, courses…)
+    match /{document=**} {
+      allow read, write: if isAdmin();
+    }
+
+    // Public course catalogue
     match /courses/{courseId} {
-      // In development, allow all operations
-      allow read, write: if isDevelopment() || (
-        // Read rules
-        (request.method == 'get' && (
-          resource.data.isPublished == true || 
-          isAdmin() || 
-          isCourseOwner()
-        )) ||
-        // List rules
-        (request.method == 'list' && (
-          isAdmin() || 
-          (isSignedIn() && resource.data.isPublished == true)
-        )) ||
-        // Write rules
-        (request.method in ['create', 'update'] && isSignedIn() && (
-          isAdmin() || (
-            isCourseOwner() && 
-            request.resource.data.createdBy == request.auth.uid &&
-            (resource == null || resource.data.createdBy == request.auth.uid)
-          )
-        )) ||
-        // Delete rules
-        (request.method == 'delete' && (
-          isAdmin() || 
-          (isCourseOwner() && resource.data.isPublished == false)
-        ))
-      ) || debugLog('Access denied for ' + request.method + ' on /courses/' + courseId);
+      allow read: if true;
     }
 
-    match /users/{userId} {
-      // Allow users to read and write their own data
-      allow read, update, delete: if request.auth != null && (
-        request.auth.uid == userId || 
-        isAdmin()
-      );
-
-      // Allow create: users create their own doc on signup, or admin creates user docs
-      allow create: if request.auth != null && (
-        (request.auth.uid == userId &&
-         request.resource.data.uid == userId &&
-         request.resource.data.email == request.auth.token.email) ||
-        isAdmin()
-      );
-    }
-    
-    // Allow listing all users for admin
-    match /users {
-      allow list: if isAdmin();
-    }
-
-    // Activities collection rules
-    match /activities/{activityId} {
-      // Allow any authenticated user to read activities
-      allow read: if request.auth != null;
-      
-      // Allow listing activities (required for queries)
-      allow list: if request.auth != null;
-      
-      // Only allow admins to create activities
-      allow create: if isAdmin();
-      
-      // Allow users to read their own activities
-      allow get: if request.auth != null;
-    }
-    
-    // This is needed for collection group queries
-    match /{path=**}/activities/{activityId} {
-      allow read: if request.auth != null;
-    }
-
-    match /enrollments/{enrollmentId} {
-      // Allow authenticated users to create enrollment documents
-      allow create: if request.auth != null;
-
-      // Allow users to read their own enrollments and admins to read all enrollments
-      allow read: if request.auth != null && (
-        request.auth.uid == resource.data.userId ||
-        isAdmin()
-      );
-
-      // Allow users to update their own enrollments
-      allow update: if request.auth != null && request.auth.uid == resource.data.userId;
-
-      // Deny delete operations for enrollments
-      allow delete: if false;
-    }
-
-    match /adminUsers/{userId} {
-      // Allow authenticated users to read admin user documents
-      allow read: if request.auth != null;
-
-      // Allow users to create their own admin document (for registration)
-      allow create: if
-        request.auth != null &&
-        request.auth.uid == userId &&
-        request.resource.data.uid == userId &&
-        request.resource.data.role == 'admin';
-
-      // Allow admins to update admin documents
-      allow update: if
-        request.auth != null &&
-        exists(/databases/$(database)/documents/adminUsers/$(request.auth.uid)) &&
-        get(/databases/$(database)/documents/adminUsers/$(request.auth.uid)).data.role == 'admin';
-
-      // Deny delete operations for admin users
-      allow delete: if false;
-    }
-
-    match /certificates/{certificateId} {
-      // Allow authenticated users to read certificate documents
-      allow read: if request.auth != null;
-
-      // Allow admins to create certificate documents
-      allow create: if
-        request.auth != null &&
-        exists(/databases/$(database)/documents/adminUsers/$(request.auth.uid)) &&
-        get(/databases/$(database)/documents/adminUsers/$(request.auth.uid)).data.role == 'admin';
-
-      // Allow admins to update certificate documents
-      allow update: if
-        request.auth != null &&
-        exists(/databases/$(database)/documents/adminUsers/$(request.auth.uid)) &&
-        get(/databases/$(database)/documents/adminUsers/$(request.auth.uid)).data.role == 'admin';
-
-      // Allow admins to delete certificate documents
-      allow delete: if
-        request.auth != null &&
-        exists(/databases/$(database)/documents/adminUsers/$(request.auth.uid)) &&
-        get(/databases/$(database)/documents/adminUsers/$(request.auth.uid)).data.role == 'admin';
-    }
-
+    // Published testimonials and student projects are public (queries must filter isPublished == true)
     match /testimonials/{testimonialId} {
-      // Homepage can read published testimonials.
-      allow read: if resource.data.isPublished == true || isAdmin();
-
-      // Admins manage testimonials from /admin/testimonials.
-      allow create, update, delete: if isAdmin();
+      allow read: if resource.data.isPublished == true;
     }
-
     match /projects/{projectId} {
-      // Homepage can read published student projects.
-      allow read: if resource.data.isPublished == true || isAdmin();
-
-      // Admins manage projects from /admin/projects.
-      allow create, update, delete: if isAdmin();
+      allow read: if resource.data.isPublished == true;
     }
 
-    // Default deny all other access
-    match /{document=**} {
-      allow read, write: if false;
+    // Student profiles: each student reads and maintains their own, but can never change their role
+    match /users/{userId} {
+      allow read: if isSelf(userId);
+      allow create: if isSelf(userId)
+        && request.resource.data.get('role', 'student') == 'student';
+      allow update: if isSelf(userId)
+        && request.resource.data.get('role', 'student') == resource.data.get('role', 'student');
     }
+
+    // Admin markers: a user may check their own; only admins (or Firebase Admin) write them
+    match /adminUsers/{userId} {
+      allow read: if isSelf(userId);
+    }
+
+    // Enrollments: a student creates and reads only their own
+    match /enrollments/{enrollmentId} {
+      allow read: if signedIn() && resource.data.userId == request.auth.uid;
+      allow create: if signedIn()
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.status == 'active';
+    }
+
+    // Certificates: a student reads only their own (missing documents read as "not found")
+    match /certificates/{certificateId} {
+      allow read: if signedIn() && (resource == null || resource.data.userId == request.auth.uid);
+    }
+
+    // certificateFiles (+ chunks) and activities: admins and Firebase Admin only (covered above)
+    // Everything else is denied by default.
   }
 }

@@ -1,13 +1,21 @@
-import { collection, getDocs } from 'firebase/firestore';
-import { firebase } from '@/lib/firebase';
+import { getAdminDb } from '@/lib/admin-db';
 
 /**
  * Count unique enrolled users per course from the `enrollments` collection.
  * Cancelled enrollments are excluded. This is the only supported source for
  * "students enrolled" figures shown to visitors.
+ *
+ * Enrollments are private under the Firestore rules, so this runs on the server
+ * through Firebase Admin. If Admin is unavailable the counts are empty (pages still render).
  */
 export async function getEnrolledStudentCounts(): Promise<Map<string, number>> {
-  const snapshot = await getDocs(collection(firebase.db, 'enrollments'));
+  let snapshot;
+  try {
+    snapshot = await getAdminDb().collection('enrollments').get();
+  } catch (error) {
+    console.error('[enrollment-counts] Firebase Admin read failed', error);
+    return new Map();
+  }
   const usersByCourse = new Map<string, Set<string>>();
 
   snapshot.docs.forEach((doc) => {

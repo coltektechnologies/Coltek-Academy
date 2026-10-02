@@ -1,15 +1,9 @@
 import { ReactNode } from 'react';
-import { Sidebar } from './sidebar';
 
+/**
+ * Kept for existing admin pages. The admin shell (access check, sidebar, mobile bar)
+ * now lives in app/admin/layout.tsx and wraps every admin page, so this only passes children through.
+ */
 export function AdminLayout({ children }: { children: ReactNode }) {
-  return (
-    <div className="min-h-screen bg-muted flex flex-col">
-      <div className="flex flex-1 overflow-hidden">
-        <Sidebar />
-        <div className="flex-1 overflow-auto">
-          {children}
-        </div>
-      </div>
-    </div>
-  );
+  return <>{children}</>;
 }

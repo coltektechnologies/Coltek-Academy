@@ -48,13 +48,31 @@ export function ContactInfo() {
         ))}
       </ul>
 
-      {/* Map placeholder */}
-      <div className="bg-secondary/50 border border-border rounded-xl overflow-hidden h-64 flex items-center justify-center">
-        <div className="text-center">
-          <MapPin className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
-          <p className="text-muted-foreground text-sm">Interactive map would go here</p>
-        </div>
-      </div>
+      {/* City-level map: only "Accra, Ghana" is confirmed — use the street address once the owner provides it */}
+      <figure className="overflow-hidden rounded-xl border border-border bg-card">
+        <iframe
+          title={`Map of ${CONTACT.location}`}
+          src={`https://www.google.com/maps?q=${encodeURIComponent(CONTACT.location)}&output=embed`}
+          className="block h-64 w-full border-0 sm:h-72"
+          loading="lazy"
+          referrerPolicy="no-referrer-when-downgrade"
+        />
+        <figcaption className="flex flex-wrap items-center justify-between gap-2 border-t border-border px-4 py-3 text-sm">
+          <span className="flex items-center gap-2 text-foreground">
+            <MapPin className="size-4 text-accent" aria-hidden="true" />
+            {CONTACT.location}
+          </span>
+          <a
+            href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(CONTACT.location)}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-medium text-primary underline-offset-4 hover:underline"
+          >
+            Open in Google Maps
+            <span className="sr-only"> (opens in a new tab)</span>
+          </a>
+        </figcaption>
+      </figure>
     </div>
   )
 }

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { collection, getDocs } from 'firebase/firestore';
-import { firebase, isFirebaseConfigured } from '@/lib/firebase';
+import { isFirebaseConfigured } from '@/lib/firebase';
+import { getAdminDb } from '@/lib/admin-db';
 
 /**
  * Public homepage statistics, computed live from Firestore.
@@ -8,6 +8,7 @@ import { firebase, isFirebaseConfigured } from '@/lib/firebase';
  * - coursesAvailable: published courses
  * - certificatesIssued: certificates with status "issued"
  * - graduates: unique users holding at least one issued certificate
+ * Enrollments and certificates are private under the Firestore rules, so this reads through Firebase Admin.
  */
 export async function GET() {
   if (!isFirebaseConfigured()) {
@@ -15,10 +16,11 @@ export async function GET() {
   }
 
   try {
+    const db = getAdminDb();
     const [enrollments, courses, certificates] = await Promise.all([
-      getDocs(collection(firebase.db, 'enrollments')),
-      getDocs(collection(firebase.db, 'courses')),
-      getDocs(collection(firebase.db, 'certificates')),
+      db.collection('enrollments').get(),
+      db.collection('courses').get(),
+      db.collection('certificates').get(),
     ]);
 
     const students = new Set<string>();

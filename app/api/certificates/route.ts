@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { CertificateService } from '@/lib/certificate-service'
-import { verifyFirebaseIdToken } from '@/lib/verify-firebase-token'
+import { isUidAdminServer, verifyFirebaseIdToken } from '@/lib/verify-firebase-token'
+import { getAdminDb } from '@/lib/admin-db'
 import type { Certificate } from '@/lib/types'
 
 export async function POST(request: NextRequest) {
@@ -22,8 +23,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
     }
 
-    // Check if user is admin
-    const isAdmin = await CertificateService.checkAdminStatus(decodedToken.uid)
+    // Check if user is admin (server-side: Firebase Admin, not bound by Firestore rules)
+    const isAdmin = await isUidAdminServer(decodedToken.uid, decodedToken)
     if (!isAdmin) {
       return NextResponse.json({ error: 'Admin access required' }, { status: 403 })
     }
@@ -106,17 +107,57 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// GET endpoint to retrieve certificates for a user
+function toIso(value: unknown): string | null {
+  if (value && typeof value === 'object' && 'toDate' in value && typeof (value as { toDate: () => Date }).toDate === 'function') {
+    return (value as { toDate: () => Date }).toDate().toISOString()
+  }
+  if (typeof value === 'string' || typeof value === 'number' || value instanceof Date) {
+    const date = new Date(value)
+    return Number.isNaN(date.getTime()) ? null : date.toISOString()
+  }
+  return null
+}
+
+// GET endpoint to retrieve a user's issued certificates — the user themself or an admin only
 export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url)
-    const userId = searchParams.get('userId')
-
-    if (!userId) {
-      return NextResponse.json({ error: 'User ID required' }, { status: 400 })
+    const authHeader = request.headers.get('authorization')
+    if (!authHeader?.startsWith('Bearer ')) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const certificates = await CertificateService.getUserCertificates(userId)
+    let decodedToken
+    try {
+      decodedToken = await verifyFirebaseIdToken(authHeader.substring(7))
+    } catch {
+      return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
+    }
+
+    const { searchParams } = new URL(request.url)
+    const userId = searchParams.get('userId') || decodedToken.uid
+
+    if (userId !== decodedToken.uid && !(await isUidAdminServer(decodedToken.uid, decodedToken))) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
+
+    const snapshot = await getAdminDb()
+      .collection('certificates')
+      .where('userId', '==', userId)
+      .where('status', '==', 'issued')
+      .get()
+
+    const certificates = snapshot.docs
+      .map((doc) => {
+        const data = doc.data()
+        return {
+          ...data,
+          id: doc.id,
+          certificateId: data.certificateId || doc.id,
+          issueDate: toIso(data.issueDate),
+          completionDate: toIso(data.completionDate),
+        }
+      })
+      .sort((a, b) => String(b.issueDate).localeCompare(String(a.issueDate)))
 
     return NextResponse.json({ certificates })
 
