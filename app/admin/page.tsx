@@ -167,6 +167,7 @@ interface UserData {
   displayName: string;
   role?: string;
   photoURL?: string;
+  createdAt?: string;
 }
 
 interface Certificate {
@@ -335,7 +336,6 @@ export default function AdminPage() {
 
   const handleSearchSubmit = (query: string) => {
     // We're already filtering on change, but you could add additional logic here
-    console.log('Search submitted:', query);
   };
 
   // Fetch all users
@@ -350,21 +350,13 @@ export default function AdminPage() {
         displayName: docItem.data().displayName || '',
         role: docItem.data().role || 'student',
         photoURL: docItem.data().photoURL || '',
-        enrolledCourses: docItem.data().enrolledCourses || []
+        enrolledCourses: docItem.data().enrolledCourses || [],
+        createdAt: typeof docItem.data().createdAt === 'string' ? docItem.data().createdAt : undefined,
       })) as UserData[];
       
       setUsers(usersData);
       setFilteredUsers(usersData); // Initialize filtered users with all users
-      
-      // Filter for students (role is 'student' or not set)
-      const students = usersData.filter(user => !user.role || user.role === 'student');
-      
-      // Update stats
-      setStats(prev => ({
-        ...prev,
-        totalUsers: usersData.length,
-        activeUsers: students.length
-      }));
+      // The stat cards come from fetchStats; this list only feeds the newest-students card
     } catch (error) {
       console.error('Error fetching users:', error);
       toast({
@@ -378,35 +370,19 @@ export default function AdminPage() {
   // Fetch courses with detailed debugging
   const fetchCourses = async () => {
     try {
-      console.log('1. Starting to fetch courses...');
       const coursesRef = collection(firebase.db, 'courses');
-      console.log('2. Collection reference created:', coursesRef);
       
       // First, try to get the documents directly
-      console.log('3. Attempting to get documents...');
       const coursesSnapshot = await getDocs(coursesRef);
       
       // Log collection metadata
-      console.log('4. Collection metadata:', {
-        path: coursesRef.path,
-        id: coursesRef.id,
-        type: coursesRef.type
-      });
       
       // Log snapshot details
-      console.log('5. Snapshot details:', {
-        size: coursesSnapshot.size,
-        empty: coursesSnapshot.empty,
-        fromCache: coursesSnapshot.metadata.fromCache,
-        hasPendingWrites: coursesSnapshot.metadata.hasPendingWrites
-      });
       
       // Log each document in the collection
       const coursesData: Course[] = [];
-      console.log('6. Documents in collection:');
       coursesSnapshot.forEach((doc) => {
         const data = doc.data();
-        console.log(`  - ${doc.id}:`, data);
         coursesData.push({
           id: doc.id,
           title: data.title || 'Untitled Course',
@@ -417,14 +393,12 @@ export default function AdminPage() {
         });
       });
       
-      console.log('7. Processed courses data:', coursesData);
       setCourses(coursesData);
       setFilteredCourses(coursesData); // Initialize filtered courses with all courses
       
       // Set up a real-time listener for changes
       const unsubscribe = onSnapshot(coursesRef, 
         (snapshot) => {
-          console.log('Live update - Courses changed. New count:', snapshot.size);
           const updatedCourses = snapshot.docs.map(doc => ({
             id: doc.id,
             ...doc.data()
@@ -520,7 +494,8 @@ export default function AdminPage() {
       const totalCourses = coursesSnapshot.data().count;
 
       // Fetch total certificates issued
-      const certsQuery = collection(firebase.db, 'certificates');
+      // Revoked certificates are not counted as issued
+      const certsQuery = query(collection(firebase.db, 'certificates'), where('status', '==', 'issued'));
       const certsSnapshot = await getCountFromServer(certsQuery);
       const totalCertificates = certsSnapshot.data().count;
 
@@ -586,21 +561,21 @@ export default function AdminPage() {
     );
   }
 
+  const students = users
+    .filter((user) => user.role !== 'admin')
+    .sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
+
   return (
     <AdminLayout>
       <AdminHeader 
         title="Admin Dashboard" 
         description="Welcome to the admin dashboard"
-        searchQuery={searchQuery}
-        onSearchChange={handleSearchChange}
-        onSearchSubmit={handleSearchSubmit}
-        placeholder="Search users, courses, and more..."
       />
       <div className="p-6">
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mb-8">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Users</CardTitle>
+              <CardTitle className="text-sm font-medium">Student accounts</CardTitle>
               <Users className="h-4 w-4 text-accent" />
             </CardHeader>
             <CardContent>
@@ -713,17 +688,17 @@ export default function AdminPage() {
           </Card>
         </div>
 
-        {/* Recent Users */}
+        {/* Newest student accounts (admins excluded; newest first when a sign-up date is recorded) */}
         <Card>
           <CardHeader>
-            <CardTitle>Recent Students</CardTitle>
+            <CardTitle>Newest students</CardTitle>
             <CardDescription>
-              {users.length} students registered in total
+              {students.length} student account{students.length === 1 ? '' : 's'} in total
             </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {users.slice(0, 5).map((user) => (
+              {students.slice(0, 5).map((user) => (
                 <div key={user.id} className="flex items-center justify-between">
                   <div className="flex items-center space-x-4">
                     <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-medium">
@@ -741,9 +716,9 @@ export default function AdminPage() {
                   </span>
                 </div>
               ))}
-              {users.length === 0 && (
+              {students.length === 0 && (
                 <div className="text-center py-8 text-muted-foreground">
-                  No users found
+                  No student accounts yet
                 </div>
               )}
             </div>

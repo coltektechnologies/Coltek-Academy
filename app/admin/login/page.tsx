@@ -3,7 +3,8 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { signInWithEmailAndPassword } from 'firebase/auth'
+import { signInWithEmailAndPassword, signOut } from 'firebase/auth'
+import { isAdminUser } from '@/lib/admin-access'
 import { firebase } from '@/lib/firebase'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -28,7 +29,14 @@ export default function AdminLoginPage() {
     setError('')
 
     try {
-      await signInWithEmailAndPassword(firebase.auth, email, password)
+      const { user } = await signInWithEmailAndPassword(firebase.auth, email, password)
+
+      // Only admins may continue; anyone else is signed straight back out
+      if (!(await isAdminUser(user))) {
+        await signOut(firebase.auth)
+        setError("This account doesn't have admin access.")
+        return
+      }
 
       toast({
         title: "Login successful",
@@ -37,8 +45,16 @@ export default function AdminLoginPage() {
 
       router.push('/admin')
     } catch (error: any) {
-      console.error('Login error:', error)
-      setError(error.message || 'Login failed')
+      const code = typeof error?.code === 'string' ? error.code : ''
+      setError(
+        code === 'auth/invalid-credential' || code === 'auth/wrong-password' || code === 'auth/user-not-found' || code === 'auth/invalid-email'
+          ? 'Incorrect email or password.'
+          : code === 'auth/too-many-requests'
+            ? 'Too many attempts. Please wait a few minutes and try again.'
+            : code === 'auth/network-request-failed'
+              ? 'Network error. Check your connection and try again.'
+              : 'Sign in failed. Please try again.'
+      )
     } finally {
       setLoading(false)
     }
@@ -72,7 +88,7 @@ export default function AdminLoginPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                placeholder="admin@coltekacademy.com"
+                placeholder="name@example.com"
               />
             </div>
 
@@ -93,11 +109,13 @@ export default function AdminLoginPage() {
                   size="sm"
                   className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
                   onClick={() => setShowPassword(!showPassword)}
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  aria-pressed={showPassword}
                 >
                   {showPassword ? (
-                    <EyeOff className="h-4 w-4" />
+                    <EyeOff className="h-4 w-4" aria-hidden="true" />
                   ) : (
-                    <Eye className="h-4 w-4" />
+                    <Eye className="h-4 w-4" aria-hidden="true" />
                   )}
                 </Button>
               </div>

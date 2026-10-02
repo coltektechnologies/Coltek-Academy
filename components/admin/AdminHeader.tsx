@@ -1,6 +1,5 @@
 import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { Bell, Search, X } from 'lucide-react';
+import { Search, X } from 'lucide-react';
 import { UserMenu } from './user-menu';
 import { ChangeEvent, KeyboardEvent, useState, useEffect } from 'react';
 
@@ -59,6 +58,8 @@ export function AdminHeader({
             )}
           </div>
           <div className="flex items-center space-x-4">
+            {/* Search is shown only when the page actually filters something with it */}
+            {onSearchChange && (
             <div className="relative flex-1 md:w-64">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                 <Search className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
@@ -85,10 +86,8 @@ export function AdminHeader({
                 </button>
               )}
             </div>
-            <Button variant="ghost" size="icon" className="relative">
-              <span className="sr-only">View notifications</span>
-              <Bell className="h-5 w-5" />
-            </Button>
+            )}
+            {/* No notification system exists, so there is no notifications button */}
             <UserMenu />
           </div>
         </div>

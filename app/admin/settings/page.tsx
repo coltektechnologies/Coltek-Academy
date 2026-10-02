@@ -1,278 +1,104 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
-import { Settings, Save, Loader2 } from 'lucide-react';
+import { Info } from 'lucide-react';
 
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { useToast } from '@/components/ui/use-toast';
+import { useAuth } from '@/hooks/use-auth';
+import { CONTACT, SITE_NAME } from '@/lib/site';
 
-// Form validation schema
-const settingsSchema = z.object({
-  siteName: z.string().min(2, 'Site name must be at least 2 characters'),
-  adminEmail: z.string().email('Please enter a valid email'),
-  maintenanceMode: z.boolean().default(false),
-  enableRegistration: z.boolean().default(true),
-  enableEmailNotifications: z.boolean().default(true),
-  maxFileSize: z.number().min(1, 'File size must be at least 1MB').max(50, 'File size cannot exceed 50MB'),
-});
-
-type SettingsFormValues = z.infer<typeof settingsSchema>;
-
-const defaultValues: Partial<SettingsFormValues> = {
-  siteName: 'Coltek Academy',
-  adminEmail: 'admin@coltekacademy.com',
-  maintenanceMode: false,
-  enableRegistration: true,
-  enableEmailNotifications: true,
-  maxFileSize: 10,
-};
-
+/**
+ * Read-only settings overview.
+ * The previous form had no backend: it loaded hard-coded values and reported "Settings saved"
+ * without saving anything (maintenance mode, registration and upload-size switches did not exist
+ * anywhere in the app). Until real configurable settings exist, this page only shows the actual
+ * values and where each one is managed.
+ */
 export default function SettingsPage() {
-  const [isLoading, setIsLoading] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
-  const { toast } = useToast();
+  const { user } = useAuth();
 
-  const form = useForm<SettingsFormValues>({
-    resolver: zodResolver(settingsSchema),
-    defaultValues,
-  });
+  const siteDetails = [
+    { label: 'Site name', value: SITE_NAME },
+    { label: 'Contact email', value: CONTACT.email },
+    { label: 'Phone', value: CONTACT.phoneDisplay },
+    { label: 'Office hours', value: CONTACT.hours },
+    { label: 'Location', value: CONTACT.location },
+  ];
 
-  useEffect(() => {
-    // Simulate loading settings from an API
-    const loadSettings = async () => {
-      try {
-        // In a real app, you would fetch these settings from your backend
-        // const response = await fetch('/api/settings');
-        // const data = await response.json();
-        // form.reset(data);
-        
-        // For now, we'll use the default values
-        form.reset(defaultValues);
-      } catch (error) {
-        console.error('Failed to load settings:', error);
-        toast({
-          title: 'Error',
-          description: 'Failed to load settings',
-          variant: 'destructive',
-        });
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    loadSettings();
-  }, [form, toast]);
-
-  const onSubmit = async (data: SettingsFormValues) => {
-    try {
-      setIsSaving(true);
-      // In a real app, you would save these settings to your backend
-      // await fetch('/api/settings', {
-      //   method: 'POST',
-      //   body: JSON.stringify(data),
-      // });
-      
-      toast({
-        title: 'Success',
-        description: 'Settings saved successfully',
-      });
-    } catch (error) {
-      console.error('Failed to save settings:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to save settings',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="w-8 h-8 animate-spin" />
-      </div>
-    );
-  }
+  const managedElsewhere = [
+    { label: 'Admin accounts', value: 'Granted with scripts/create-admin-user.ts (Firebase Admin).' },
+    { label: 'Payments', value: 'Paystack keys are set in the hosting environment (PAYSTACK_SECRET_KEY, NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY).' },
+    { label: 'Emails', value: 'Contact and enrollment emails use the SMTP settings in the hosting environment.' },
+    { label: 'Data access', value: 'Who can read and write data is controlled by firestore.rules.' },
+  ];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-4 sm:p-6">
       <div>
-        <h1 className="text-3xl font-bold">Settings</h1>
-        <p className="text-muted-foreground">
-          Manage your platform settings and preferences
+        <h1 className="text-2xl font-semibold text-primary">Settings</h1>
+        <p className="mt-1 text-sm text-muted-foreground">Current site details and where each setting is managed.</p>
+      </div>
+
+      <div className="flex items-start gap-3 rounded-lg border border-border bg-info-subtle p-4 text-sm text-info" role="note">
+        <Info className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+        <p>
+          These settings can&apos;t be edited from the admin panel yet. Site details are kept in <code className="font-mono">lib/site.ts</code>;
+          ask your developer to change them.
         </p>
       </div>
 
-      <Tabs defaultValue="general" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="general">General</TabsTrigger>
-          <TabsTrigger value="security">Security</TabsTrigger>
-          <TabsTrigger value="notifications">Notifications</TabsTrigger>
-          <TabsTrigger value="appearance">Appearance</TabsTrigger>
-        </TabsList>
-
-        <form onSubmit={form.handleSubmit(onSubmit)}>
-          <TabsContent value="general" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>General Settings</CardTitle>
-                <CardDescription>
-                  Configure your platform's general settings
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label htmlFor="siteName">Site Name</Label>
-                    <Input
-                      id="siteName"
-                      placeholder="Site Name"
-                      {...form.register('siteName')}
-                    />
-                    {form.formState.errors.siteName && (
-                      <p className="text-sm text-destructive">
-                        {form.formState.errors.siteName.message}
-                      </p>
-                    )}
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="adminEmail">Admin Email</Label>
-                    <Input
-                      id="adminEmail"
-                      type="email"
-                      placeholder="admin@example.com"
-                      {...form.register('adminEmail')}
-                    />
-                    {form.formState.errors.adminEmail && (
-                      <p className="text-sm text-destructive">
-                        {form.formState.errors.adminEmail.message}
-                      </p>
-                    )}
-                  </div>
+      <div className="grid gap-6 lg:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle>Site details</CardTitle>
+            <CardDescription>Shown in the site header, footer and contact page.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <dl className="divide-y divide-border text-sm">
+              {siteDetails.map((item) => (
+                <div key={item.label} className="flex flex-col gap-1 py-3 sm:flex-row sm:justify-between sm:gap-4">
+                  <dt className="text-muted-foreground">{item.label}</dt>
+                  <dd className="font-medium text-foreground wrap-anywhere sm:text-right">{item.value}</dd>
                 </div>
+              ))}
+            </dl>
+          </CardContent>
+        </Card>
 
-                <div className="space-y-4 pt-4">
-                  <div className="flex items-center justify-between rounded-lg border p-4">
-                    <div className="space-y-0.5">
-                      <Label htmlFor="maintenanceMode">Maintenance Mode</Label>
-                      <p className="text-sm text-muted-foreground">
-                        Enable maintenance mode to restrict access to the platform
-                      </p>
-                    </div>
-                    <Switch
-                      id="maintenanceMode"
-                      checked={form.watch('maintenanceMode')}
-                      onCheckedChange={(checked) =>
-                        form.setValue('maintenanceMode', checked)
-                      }
-                    />
-                  </div>
+        <Card>
+          <CardHeader>
+            <CardTitle>Your admin account</CardTitle>
+            <CardDescription>The account you are signed in with.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <dl className="divide-y divide-border text-sm">
+              <div className="flex flex-col gap-1 py-3 sm:flex-row sm:justify-between sm:gap-4">
+                <dt className="text-muted-foreground">Name</dt>
+                <dd className="font-medium text-foreground sm:text-right">{user?.displayName || '—'}</dd>
+              </div>
+              <div className="flex flex-col gap-1 py-3 sm:flex-row sm:justify-between sm:gap-4">
+                <dt className="text-muted-foreground">Email</dt>
+                <dd className="font-medium text-foreground wrap-anywhere sm:text-right">{user?.email || '—'}</dd>
+              </div>
+            </dl>
+          </CardContent>
+        </Card>
 
-                  <div className="flex items-center justify-between rounded-lg border p-4">
-                    <div className="space-y-0.5">
-                      <Label htmlFor="enableRegistration">Allow New Registrations</Label>
-                      <p className="text-sm text-muted-foreground">
-                        Allow new users to create accounts
-                      </p>
-                    </div>
-                    <Switch
-                      id="enableRegistration"
-                      checked={form.watch('enableRegistration')}
-                      onCheckedChange={(checked) =>
-                        form.setValue('enableRegistration', checked)
-                      }
-                    />
-                  </div>
+        <Card className="lg:col-span-2">
+          <CardHeader>
+            <CardTitle>Managed outside the admin panel</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <dl className="divide-y divide-border text-sm">
+              {managedElsewhere.map((item) => (
+                <div key={item.label} className="flex flex-col gap-1 py-3 sm:flex-row sm:gap-4">
+                  <dt className="font-medium text-foreground sm:w-40 sm:shrink-0">{item.label}</dt>
+                  <dd className="text-muted-foreground">{item.value}</dd>
                 </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="security" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Security Settings</CardTitle>
-                <CardDescription>
-                  Configure security and access control settings
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label htmlFor="maxFileSize">Max File Upload Size (MB)</Label>
-                    <Input
-                      id="maxFileSize"
-                      type="number"
-                      min={1}
-                      max={50}
-                      {...form.register('maxFileSize', { valueAsNumber: true })}
-                    />
-                    {form.formState.errors.maxFileSize && (
-                      <p className="text-sm text-destructive">
-                        {form.formState.errors.maxFileSize.message}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="notifications" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Notification Settings</CardTitle>
-                <CardDescription>
-                  Configure how you receive notifications
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center justify-between rounded-lg border p-4">
-                  <div className="space-y-0.5">
-                    <Label htmlFor="enableEmailNotifications">Email Notifications</Label>
-                    <p className="text-sm text-muted-foreground">
-                      Receive email notifications for important events
-                    </p>
-                  </div>
-                  <Switch
-                    id="enableEmailNotifications"
-                    checked={form.watch('enableEmailNotifications')}
-                    onCheckedChange={(checked) =>
-                      form.setValue('enableEmailNotifications', checked)
-                    }
-                  />
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <div className="flex justify-end pt-6">
-            <Button type="submit" disabled={isSaving}>
-              {isSaving ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Saving...
-                </>
-              ) : (
-                <>
-                  <Save className="mr-2 h-4 w-4" />
-                  Save Changes
-                </>
-              )}
-            </Button>
-          </div>
-        </form>
-      </Tabs>
+              ))}
+            </dl>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }

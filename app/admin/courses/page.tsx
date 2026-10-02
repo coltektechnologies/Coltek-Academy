@@ -5,6 +5,7 @@ import { Suspense, useState, useEffect, useCallback } from 'react';
 import { collection, getDocs, doc, setDoc, deleteDoc, Timestamp, getDoc, query, orderBy } from 'firebase/firestore';
 import type { DocumentData } from 'firebase/firestore';
 import { firebase } from '@/lib/firebase';
+import { getAllEnrollments } from '@/lib/enrollment';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -140,6 +141,9 @@ interface Course extends DocumentData {
 
 function AdminCoursesPageContent() {
   const [courses, setCourses] = useState<CourseType[]>([]);
+  // Real student counts per course from the enrollments collection (the course's own
+  // enrolledStudents field is seeded/unverified and is not shown)
+  const [enrollmentCounts, setEnrollmentCounts] = useState<Map<string, number> | null>(null);
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -155,29 +159,15 @@ function AdminCoursesPageContent() {
 
   const fetchCourses = useCallback(async () => {
     try {
-      console.log('1. Starting to fetch courses...');
       setLoading(true);
       const coursesRef = collection(firebase.db, 'courses');
-      console.log('2. Collection reference created:', coursesRef);
       
-      console.log('3. Attempting to get documents...');
       const querySnapshot = await getDocs(query(coursesRef, orderBy('createdAt', 'desc')));
       const coursesData: CourseType[] = [];
       
-      console.log('4. Collection metadata:', {
-        size: querySnapshot.size,
-        empty: querySnapshot.empty,
-        docs: querySnapshot.docs.length
-      });
       
-      console.log('5. Snapshot details:', {
-        metadata: querySnapshot.metadata,
-        query: querySnapshot.query
-      });
       
-      console.log('6. Documents in collection:');
       querySnapshot.forEach((doc) => {
-        console.log('Processing document:', doc.id, doc.data());
         const data = doc.data();
         const course: Partial<CourseType> = { id: doc.id };
         
@@ -258,13 +248,25 @@ function AdminCoursesPageContent() {
         coursesData.push({ ...defaultCourse, ...course } as Course);
       });
       
-      console.log('7. Processed courses data:', coursesData);
-      console.log('8. Setting courses state with data:', coursesData);
       if (coursesData.length === 0) {
         console.warn('No courses found in the database');
       }
       setCourses(coursesData);
       setLoading(false);
+
+      // Distinct students per course, cancelled enrollments excluded (same rule as the public site)
+      getAllEnrollments()
+        .then((enrollments) => {
+          const usersByCourse = new Map<string, Set<string>>();
+          enrollments.forEach((enrollment) => {
+            if (String(enrollment.status || '').toLowerCase() === 'cancelled' || !enrollment.courseId) return;
+            const users = usersByCourse.get(enrollment.courseId) || new Set<string>();
+            users.add(enrollment.userId || enrollment.userEmail || enrollment.id);
+            usersByCourse.set(enrollment.courseId, users);
+          });
+          setEnrollmentCounts(new Map([...usersByCourse].map(([courseId, users]) => [courseId, users.size])));
+        })
+        .catch((error) => console.error('Error counting enrollments:', error));
     } catch (error) {
       console.error('Error fetching courses:', error);
       toast({
@@ -278,20 +280,16 @@ function AdminCoursesPageContent() {
   }, [toast]);
 
   useEffect(() => {
-    console.log('Auth state in effect:', authState);
     if (!authState) {
-      console.log('Auth state not initialized yet');
       return;
     }
     
     if (authState.isAuthenticated) {
-      console.log('User is authenticated, fetching courses...');
       fetchCourses().catch(error => {
         console.error('Error in fetchCourses:', error);
         setLoading(false);
       });
     } else {
-      console.log('User is not authenticated, clearing courses');
       setCourses([]);
       setLoading(false);
     }
@@ -301,7 +299,6 @@ function AdminCoursesPageContent() {
     let unsubscribe: (() => void) | undefined;
     import('firebase/auth').then(({ onAuthStateChanged }) => {
       unsubscribe = onAuthStateChanged(firebase.auth, (user) => {
-        console.log('Auth state changed:', user);
         setAuthState({
           isAuthenticated: !!user,
           user: user ? {
@@ -547,7 +544,7 @@ function AdminCoursesPageContent() {
                           </>
                         )}
                       </TableCell>
-                      <TableCell>{course.enrolledStudents || 0}</TableCell>
+                      <TableCell>{enrollmentCounts ? enrollmentCounts.get(course.id) ?? 0 : '…'}</TableCell>
                       <TableCell>
                         {course.createdAt ? new Date(course.createdAt).toLocaleDateString() : 'N/A'}
                       </TableCell>

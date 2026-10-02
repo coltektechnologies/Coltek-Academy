@@ -136,26 +136,21 @@ export function IssueCertificate({ users, courses, children }: IssueCertificateP
   
   // Debug effect (commented out but kept for future use)
   // useEffect(() => {
-  //   console.log('All users:', users);
-  //   console.log('Filtered students:', students);
   // }, [users, students]);
 
   // Fetch enrolled courses when user changes
   useEffect(() => {
     const fetchEnrolledCourses = async () => {
       if (!selectedUserId) {
-        console.log('No user selected, clearing courses');
         setEnrolledCourses([]);
         setSelectedCourseId('');
         return;
       }
 
       try {
-        console.log(`Fetching enrollments for user: ${selectedUserId}`);
         
         // First, get the user document to check for direct course references
         const userDoc = await getDoc(doc(firebase.db, 'users', selectedUserId));
-        console.log('User document data:', userDoc.data());
         
         // Then fetch enrollments for this user
         const enrollmentsQuery = query(
@@ -167,19 +162,16 @@ export function IssueCertificate({ users, courses, children }: IssueCertificateP
         // Log all enrollment documents with their data
         const enrollments = snapshot.docs.map(doc => {
           const data = doc.data();
-          console.log(`Raw enrollment ${doc.id}:`, data);
           return {
             id: doc.id,
             ...data
           } as Enrollment;
         });
         
-        console.log('All enrollments for user:', JSON.stringify(enrollments, null, 2));
         
         // Extract course IDs from enrollments with detailed logging
         const enrolledCourseIds = enrollments.flatMap(enrollment => {
           // Log the full enrollment for debugging
-          console.log('Processing enrollment:', JSON.stringify(enrollment, null, 2));
           
           // Check all possible locations for courseId
           const courseId = enrollment.courseId || // Direct property
@@ -187,25 +179,15 @@ export function IssueCertificate({ users, courses, children }: IssueCertificateP
                          (enrollment as any)?.course?.id || // Nested in course object
                          (enrollment as any)?.courseId; // Any other possible variation
           
-          console.log(`Extracted course ID from enrollment:`, {
-            enrollmentId: enrollment.id,
-            courseId,
-            courseTitle: (enrollment as any)?.courseTitle || 'N/A',
-            enrollmentType: typeof enrollment
-          });
           
           // Return the course ID as a trimmed string if it exists
           return courseId ? [String(courseId).trim()] : [];
         });
         
-        console.log('Extracted course IDs from enrollments:', enrolledCourseIds);
-        console.log('Available courses count:', courses.length);
         
         // Log all available course IDs for verification
-        console.log('Available course IDs:', courses.map(c => c.id));
         
         // Log all courses for debugging
-        console.log('All available courses:', JSON.stringify(courses, null, 2));
         
         // Filter courses to only show enrolled ones with type safety
         const userCourses = courses.filter(course => {
@@ -223,29 +205,13 @@ export function IssueCertificate({ users, courses, children }: IssueCertificateP
                          (!isNaN(enrolledIdNum) && enrolledIdNum === courseIdNum);
             
             // Detailed logging for debugging
-            console.log(`Course Matching - `, {
-              enrolledCourseId: enrolledId,
-              availableCourseId: course.id,
-              enrolledIdType: typeof enrolledId,
-              courseIdType: typeof course.id,
-              match,
-              courseTitle: course.title,
-              comparison: {
-                'enrolledId (str)': enrolledIdStr,
-                'course.id (str)': courseIdStr,
-                'enrolledId (num)': enrolledIdNum,
-                'course.id (num)': courseIdNum
-              }
-            });
             
             return match;
           });
           
-          console.log(`Course ${course.id} (${course.title}) enrolled:`, isEnrolled);
           return isEnrolled;
         });
         
-        console.log('Filtered user courses:', JSON.stringify(userCourses, null, 2));
         
         if (userCourses.length === 0 && enrolledCourseIds.length > 0) {
           console.warn('No courses found matching the enrolled course IDs. This could indicate a data mismatch.');
@@ -285,7 +251,6 @@ export function IssueCertificate({ users, courses, children }: IssueCertificateP
     }
 
     try {
-      console.log(`Uploading certificate file (attempt ${attempt})...`);
 
       toast({
         title: 'Uploading Certificate',
@@ -335,7 +300,6 @@ export function IssueCertificate({ users, courses, children }: IssueCertificateP
       console.error('Upload error:', error);
 
       if (attempt < MAX_RETRIES) {
-        console.log(`Retrying upload (${attempt + 1}/${MAX_RETRIES})...`);
         toast({
           title: 'Uploading',
           description: `Attempt ${attempt + 1} of ${MAX_RETRIES} - Please wait...`,
@@ -378,7 +342,6 @@ export function IssueCertificate({ users, courses, children }: IssueCertificateP
     setIsLoading(true);
     
     try {
-      console.log('Starting certificate issuance process...');
       
       // 1. First, verify the user and course exist
       const [userDoc, courseDoc] = await Promise.all([
@@ -394,11 +357,9 @@ export function IssueCertificate({ users, courses, children }: IssueCertificateP
       }
       
       // 2. Prepare certificate file for preview/download
-      console.log('Preparing certificate file...');
       const uploadResult = await handleFileUpload(certificateFile);
       const fileUrl = uploadResult.fileUrl;
       const storagePath = uploadResult.storagePath;
-      console.log('Certificate file ready:', storagePath);
       
       const certId = certificateId.trim() || `cert_${Date.now()}`;
       const issueDate = new Date().toISOString();
@@ -461,7 +422,6 @@ export function IssueCertificate({ users, courses, children }: IssueCertificateP
         }
       }
 
-      console.log('Updating user document...');
       const userRef = doc(firebase.db, 'users', selectedUserId);
       await updateDoc(userRef, {
         certificates: arrayUnion({
@@ -469,25 +429,10 @@ export function IssueCertificate({ users, courses, children }: IssueCertificateP
           certificateId: certId,
         }),
       });
-      console.log('User document updated');
 
-      // 5. Update course's issued certificates
-      console.log('Updating course document...');
-      const courseRef = doc(firebase.db, 'courses', selectedCourseId);
-      await updateDoc(courseRef, {
-        issuedCertificates: arrayUnion({
-          userId: selectedUserId,
-          userName: recipientName,
-          certificateId: certId,
-          issueDate,
-          remarks: remarks || '',
-          fileUrl,
-          status: 'issued'
-        })
-      });
-      console.log('Course document updated');
-
-      console.log('Certificate document created');
+      // Certificates live in the `certificates` collection (and the student's own profile).
+      // They are no longer copied onto the course document: courses are publicly readable,
+      // so that copy exposed student names and certificate links.
 
       toast({
         title: 'Success',

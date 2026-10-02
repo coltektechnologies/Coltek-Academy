@@ -22,17 +22,18 @@ const activityMessages = {
     `${user} enrolled in ${course || 'a course'}`,
 };
 
-const getActionLink = (activity: Activity) => {
+// Only link to admin pages that exist (there are no per-user or per-course admin pages)
+const getActionLink = (activity: Activity): string | null => {
   switch (activity.type) {
     case 'CERTIFICATE_ISSUED':
-      return `/admin/certificates/${activity.metadata?.certificateId}`;
+      return activity.metadata?.certificateId ? `/admin/certificates/${activity.metadata.certificateId}` : '/admin/certificates';
     case 'USER_REGISTERED':
-      return `/admin/users/${activity.user.id}`;
+      return '/admin/users';
     case 'COURSE_CREATED':
     case 'USER_ENROLLED':
-      return activity.course ? `/admin/courses/${activity.course.id}` : '#';
+      return '/admin/courses';
     default:
-      return '#';
+      return null;
   }
 };
 
@@ -64,11 +65,13 @@ export function ActivityItem({ activity }: ActivityItemProps) {
           </div>
         </div>
       </div>
-      <Button variant="ghost" size="sm" asChild>
-        <Link href={getActionLink(activity)}>
-          View
-        </Link>
-      </Button>
+      {getActionLink(activity) && (
+        <Button variant="ghost" size="sm" asChild>
+          <Link href={getActionLink(activity)!}>
+            View
+          </Link>
+        </Button>
+      )}
     </div>
   );
 }
