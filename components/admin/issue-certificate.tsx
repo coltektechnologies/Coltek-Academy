@@ -355,6 +355,19 @@ export function IssueCertificate({ users, courses, children }: IssueCertificateP
       if (!courseDoc.exists()) {
         throw new Error('Course not found');
       }
+
+      // One certificate per student per course: a second one would double-count graduates
+      const existing = await getDocs(
+        query(
+          collection(firebase.db, 'certificates'),
+          where('userId', '==', selectedUserId),
+          where('courseId', '==', selectedCourseId),
+          where('status', '==', 'issued')
+        )
+      );
+      if (!existing.empty) {
+        throw new Error('This student already has a certificate for this course. Revoke it on the Certificates page before issuing a new one.');
+      }
       
       // 2. Prepare certificate file for preview/download
       const uploadResult = await handleFileUpload(certificateFile);
@@ -404,6 +417,16 @@ export function IssueCertificate({ users, courses, children }: IssueCertificateP
 
       const certificateRef = doc(collection(firebase.db, 'certificates'), certId);
       await setDoc(certificateRef, certificateData, { merge: true });
+
+      // A certificate means the student graduated from the course: mark their enrollment completed
+      const enrollmentSnap = await getDocs(
+        query(collection(firebase.db, 'enrollments'), where('userId', '==', selectedUserId), where('courseId', '==', selectedCourseId))
+      );
+      await Promise.all(
+        enrollmentSnap.docs
+          .filter((enrollment) => String(enrollment.data().status || '').toLowerCase() !== 'completed')
+          .map((enrollment) => updateDoc(enrollment.ref, { status: 'completed', completedAt: issueDate, updatedAt: issueDate }))
+      );
 
       // Log the certificate issuance activity with the actual certificate ID
       if (user && course) {
