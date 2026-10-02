@@ -8,7 +8,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { getCourseById } from "@/lib/courses"
 import { useAuth } from "@/hooks/use-auth"
 import { useToast } from "@/hooks/use-toast"
-import { saveUserEnrollment } from "@/lib/enrollment"
+import { requestEnrollment } from "@/lib/enrollment"
 import type { RegistrationFormData } from "@/lib/types"
 
 const IS_DEV_BUILD = process.env.NODE_ENV !== "production"
@@ -58,17 +58,8 @@ export function StepPayment({ formData, updateFormData, errors, onPaymentSuccess
     setIsProcessing(true)
 
     try {
-      const paymentReference = `FREE-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
-
-      // Save to Firebase using the existing saveUserEnrollment function
-      await saveUserEnrollment(
-        user.uid,
-        user.email || '',
-        formData,
-        paymentReference,
-        0, // paymentAmount
-        'free' // paymentMethod
-      )
+      // The server confirms the course is free before saving the enrollment
+      await requestEnrollment({ courseId: selectedCourse.id, formData })
 
       if (onPaymentSuccess) {
         onPaymentSuccess()

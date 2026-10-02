@@ -4,12 +4,12 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { signOut } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
 import { ShieldAlert } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { LoadingState } from '@/components/academy/states';
 import { useAuth } from '@/hooks/use-auth';
 import { firebase } from '@/lib/firebase';
+import { isAdminUser } from '@/lib/admin-access'
 
 type Access = 'checking' | 'admin' | 'denied';
 
@@ -36,15 +36,7 @@ export function AdminGuard({ children }: { children: React.ReactNode }) {
     setAccess('checking');
     (async () => {
       try {
-        const [token, userDoc, adminDoc] = await Promise.all([
-          user.getIdTokenResult(),
-          getDoc(doc(firebase.db, 'users', user.uid)),
-          getDoc(doc(firebase.db, 'adminUsers', user.uid)),
-        ]);
-        const isAdmin =
-          token.claims.admin === true ||
-          (userDoc.exists() && userDoc.data()?.role === 'admin') ||
-          (adminDoc.exists() && adminDoc.data()?.role === 'admin');
+        const isAdmin = await isAdminUser(user);
         if (!cancelled) setAccess(isAdmin ? 'admin' : 'denied');
       } catch (error) {
         console.error('[AdminGuard] Could not verify admin access', error);

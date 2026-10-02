@@ -3,7 +3,8 @@ rules_version = '2';
 // Coltek Academy — Firestore security rules.
 //
 // Browsers (Firebase client SDK) are bound by these rules. Server code that needs
-// private data (enrollment counts, statistics, certificate API routes, uploads)
+// private data or must be trusted (enrollment creation, enrollment counts, statistics,
+// certificate API routes, uploads)
 // uses Firebase Admin, which is not bound by them.
 //
 // An admin is a signed-in user with ANY of:
@@ -66,12 +67,11 @@ service cloud.firestore {
       allow read: if isSelf(userId);
     }
 
-    // Enrollments: a student creates and reads only their own
+    // Enrollments: a student reads only their own. They are created by the server
+    // (/api/enrollments, Firebase Admin) after it checks the price and verifies the Paystack payment,
+    // so no browser can enroll itself in a paid course without paying.
     match /enrollments/{enrollmentId} {
       allow read: if signedIn() && resource.data.userId == request.auth.uid;
-      allow create: if signedIn()
-        && request.resource.data.userId == request.auth.uid
-        && request.resource.data.status == 'active';
     }
 
     // Certificates: a student reads only their own (missing documents read as "not found")

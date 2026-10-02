@@ -153,6 +153,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { Activity } from '@/types/activity';
 import { subscribeToActivities, getRecentActivities } from '@/lib/activity-service';
+import { isAdminUser } from '@/lib/admin-access'
 
 const LoadingFallback = () => (
   <div className="flex items-center justify-center min-h-[200px]">
@@ -216,14 +217,13 @@ export default function AdminPage() {
       if (!currentUser) {
         if (!authLoading) {
           // If not authenticated and auth is done loading, redirect to login
-          router.push('/auth/signin');
+          router.push('/admin/login');
         }
         return;
       }
 
       try {
-        const userDoc = await getDoc(doc(firebase.db, 'users', currentUser.uid));
-        if (userDoc.exists() && userDoc.data()?.role === 'admin') {
+        if (await isAdminUser(currentUser)) {
           setIsAdmin(true);
         } else {
           setError('You do not have permission to access this page');
@@ -469,13 +469,8 @@ export default function AdminPage() {
       }
 
       try {
-        // Check admin status in both users and adminUsers collections
-        const [userDoc, adminDoc] = await Promise.all([
-          getDoc(doc(firebase.db, 'users', currentUser.uid)),
-          getDoc(doc(firebase.db, 'adminUsers', currentUser.uid))
-        ]);
-
-        const isUserAdmin = adminDoc.exists() && adminDoc.data()?.role === 'admin';
+        // Same admin markers as the rules: claim, users.role or adminUsers.role
+        const isUserAdmin = await isAdminUser(currentUser);
         setIsAdmin(isUserAdmin);
 
         if (!isUserAdmin) {

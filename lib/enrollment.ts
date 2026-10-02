@@ -2,72 +2,31 @@ import { doc, setDoc, updateDoc, collection, query, where, getDocs, getDoc } fro
 import { firebase } from './firebase'
 import type { UserEnrollment, RegistrationFormData, Course } from './types'
 
-export async function saveUserEnrollment(
-  userId: string,
-  userEmail: string,
-  formData: Partial<RegistrationFormData> & { selectedCourseId?: string },
-  paymentReference: string,
-  paymentAmount: number,
-  paymentMethod: string,
-  courseIdOverride?: string
-): Promise<string> {
-  try {
-    const courseId = courseIdOverride || formData.selectedCourseId
-    if (!courseId) {
-      throw new Error('Course ID is required');
-    }
+/**
+ * Enroll the signed-in student through the server (/api/enrollments).
+ * Browsers cannot write enrollments directly (firestore.rules): the server checks the course
+ * price and, for paid courses, verifies the Paystack payment before saving.
+ * Pass `reference` for a paid course; omit it for a free course.
+ */
+export async function requestEnrollment(options: {
+  courseId?: string
+  reference?: string
+  formData?: Partial<RegistrationFormData>
+}): Promise<{ enrollmentId: string; courseTitle: string; alreadyEnrolled: boolean }> {
+  const user = firebase.auth.currentUser
+  if (!user) throw new Error('Please log in to complete your enrollment.')
 
-    const enrollmentId = `enrollment_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-
-    // Get course details from Firestore
-    const courseDoc = await getDoc(doc(firebase.db, 'courses', courseId));
-    if (!courseDoc.exists()) {
-      throw new Error(`Selected course not found (id: ${courseId})`);
-    }
-    const selectedCourse = { id: courseDoc.id, ...courseDoc.data() } as Course;
-    
-    const enrollmentData: UserEnrollment = {
-      id: enrollmentId,
-      userId,
-      userEmail,
-      courseId,
-      courseTitle: selectedCourse.title,
-      enrollmentDate: new Date(),
-      paymentReference,
-      paymentAmount,
-      paymentMethod,
-      status: 'active',
-      personalInfo: {
-        firstName: formData.firstName ?? '',
-        lastName: formData.lastName ?? '',
-        email: formData.email ?? userEmail,
-        phone: formData.phone ?? '',
-      },
-      education: {
-        highestEducation: formData.highestEducation ?? '',
-        fieldOfStudy: formData.fieldOfStudy ?? '',
-        currentOccupation: formData.currentOccupation ?? '',
-        yearsOfExperience: formData.yearsOfExperience ?? '',
-      },
-      courseDetails: {
-        learningGoals: formData.learningGoals ?? '',
-        preferredSchedule: formData.preferredSchedule ?? 'weekdays',
-      },
-    }
-
-    // Save to Firestore
-    await setDoc(doc(firebase.db, 'enrollments', enrollmentId), {
-      ...enrollmentData,
-      enrollmentDate: enrollmentData.enrollmentDate.toISOString(), // Convert Date to string for Firestore
-    })
-
-    console.log('Enrollment saved successfully:', enrollmentId)
-    return enrollmentId
-  } catch (error) {
-    console.error('Error saving enrollment:', error)
-    if (error instanceof Error) throw error
-    throw new Error('Failed to save enrollment data')
+  const idToken = await user.getIdToken()
+  const response = await fetch('/api/enrollments', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken}` },
+    body: JSON.stringify(options),
+  })
+  const data = await response.json().catch(() => ({}))
+  if (!response.ok) {
+    throw new Error(data.error || 'Enrollment could not be saved.')
   }
+  return data
 }
 
 export async function getUserEnrollments(userId: string): Promise<UserEnrollment[]> {

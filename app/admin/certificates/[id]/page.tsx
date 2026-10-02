@@ -7,6 +7,7 @@ import { doc, getDoc } from 'firebase/firestore'
 import { Loader2, ArrowLeft, Download, Eye } from 'lucide-react'
 
 import { AdminLayout } from '@/components/admin/AdminLayout'
+import { isAdminUser } from '@/lib/admin-access'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -74,17 +75,7 @@ export default function AdminCertificateDetailPage() {
       setError(null)
 
       try {
-        const [userSnapshot, adminSnapshot] = await Promise.all([
-          getDoc(doc(firebase.db, 'users', user.uid)),
-          getDoc(doc(firebase.db, 'adminUsers', user.uid)),
-        ])
-
-        const role = userSnapshot.exists() ? userSnapshot.data()?.role : null
-        const isAdminUser =
-          role === 'admin' ||
-          (adminSnapshot.exists() && adminSnapshot.data()?.role === 'admin')
-
-        if (!isAdminUser) {
+        if (!(await isAdminUser(user))) {
           setError('Admin access required')
           setIsAdmin(false)
           return

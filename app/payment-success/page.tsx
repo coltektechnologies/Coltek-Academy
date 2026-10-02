@@ -4,8 +4,7 @@ import { LoadingState } from '@/components/academy/states'
 import { Suspense, useEffect, useState } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { useAuth } from '@/hooks/use-auth'
-import { saveUserEnrollment } from '@/lib/enrollment'
-import { getCourseById } from '@/lib/courses'
+import { requestEnrollment } from '@/lib/enrollment'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
 import { AlertTriangle } from 'lucide-react'
@@ -50,72 +49,31 @@ function PaymentSuccessPageContent() {
         return
       }
 
-      let verifyData: { status?: string; data?: { status?: string; metadata?: { courseId?: string; courseTitle?: string; userId?: string; userEmail?: string } } } = {}
-
-      // For real payments, verify with Paystack first (and get metadata as fallback)
-      if (!isMockPayment) {
-        try {
-          const verifyResponse = await fetch(`/api/paystack/verify?reference=${paymentRef}`)
-          verifyData = await verifyResponse.json()
-
-          if (!verifyResponse.ok || !verifyData.status || verifyData.data?.status !== 'success') {
-            setError('Payment verification failed')
-            setIsProcessing(false)
-            return
-          }
-        } catch (verifyError) {
-          console.error('Payment verification error:', verifyError)
-          setError('Payment verification failed')
-          setIsProcessing(false)
-          return
-        }
-      }
-
       try {
-        // Get course info: prefer localStorage, fallback to Paystack verify metadata (survives redirect)
-        const storedCourseId = localStorage.getItem('selectedCourseId')
-        const storedCourseTitle = localStorage.getItem('selectedCourseTitle')
-        const storedFormData = localStorage.getItem('registrationFormData')
-        const formData = storedFormData ? JSON.parse(storedFormData) : {}
-
-        const rawMeta = verifyData.data?.metadata
-        const metadata = typeof rawMeta === 'string' ? (() => { try { return JSON.parse(rawMeta) } catch { return null } })() : rawMeta
-        // Prefer the course recorded on the verified Paystack transaction over browser storage
-        const courseId = metadata?.courseId || storedCourseId
-        const courseTitle = metadata?.courseTitle || storedCourseTitle
-
-        if (!courseId) {
-          throw new Error('Course ID not found. It may have been cleared after redirect. Please contact support with your payment reference.')
-        }
-
-        // Merge courseId into formData in case it was lost (e.g. localStorage cleared partially)
-        const formDataWithCourse = { ...formData, selectedCourseId: courseId }
-
-        // Get course details from Firestore
-        const selectedCourse = await getCourseById(courseId)
-        if (!selectedCourse) {
-          throw new Error(`Course not found (id: ${courseId})`)
-        }
-        setCourseTitleShown(selectedCourse.title || courseTitle || '')
-
-        if (!paymentRef) {
-          throw new Error('Payment reference not found')
-        }
-
         if (!user) {
           throw new Error('User not authenticated. Please log in to complete your enrollment.')
         }
 
-        // Save enrollment to Firebase (pass courseId override for reliability)
-        await saveUserEnrollment(
-          user.uid,
-          user.email || '',
-          formDataWithCourse,
-          paymentRef,
-          selectedCourse.price ?? 0,
-          'paystack',
-          courseId
-        )
+        // Answers from the enrollment form (kept in this browser before going to Paystack)
+        const storedCourseId = localStorage.getItem('selectedCourseId') || undefined
+        const storedFormData = localStorage.getItem('registrationFormData')
+        const formData = storedFormData ? JSON.parse(storedFormData) : {}
+
+        // The server verifies the payment with Paystack and saves the enrollment;
+        // the course comes from the verified transaction, not from this browser
+        const result = await requestEnrollment({
+          reference: paymentRef || undefined,
+          courseId: storedCourseId,
+          formData,
+        })
+        setCourseTitleShown(result.courseTitle || localStorage.getItem('selectedCourseTitle') || '')
+
+        if (result.alreadyEnrolled) {
+          // Page reloaded after a completed enrollment: the confirmation email went out the first time
+          setEmailStatus('sent')
+          setIsProcessing(false)
+          return
+        }
 
         // Send confirmation email with WhatsApp group invite
         try {
@@ -125,7 +83,7 @@ function PaymentSuccessPageContent() {
             headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken}` },
             body: JSON.stringify({
               firstName: formData.firstName || 'Student',
-              courseTitle: selectedCourse.title,
+              courseTitle: result.courseTitle,
             }),
           })
           const emailResult = await emailResponse.json().catch(() => ({}))
@@ -145,13 +103,13 @@ function PaymentSuccessPageContent() {
       } catch (err) {
         console.error('Error saving enrollment:', err)
         const errMessage = err instanceof Error ? err.message : String(err)
-        setError('Payment was successful but enrollment could not be saved. ' + errMessage + ' Please contact support with reference: ' + paymentRef)
+        setError(errMessage + ' If you were charged, please contact support with reference: ' + paymentRef)
         setIsProcessing(false)
       }
     }
 
     handlePaymentSuccess()
-  }, [user, searchParams])
+  }, [authLoading, user, searchParams])
 
 
   const reference = searchParams.get('reference') || searchParams.get('trxref')

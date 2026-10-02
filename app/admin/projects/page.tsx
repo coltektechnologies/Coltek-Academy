@@ -3,6 +3,7 @@
 import { FormEvent, useCallback, useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { addDoc, collection, deleteDoc, doc, getDoc, getDocs, serverTimestamp, updateDoc } from "firebase/firestore"
+import { isAdminUser } from '@/lib/admin-access'
 import { Edit, ExternalLink, FolderKanban, Loader2, Plus, Trash2, Upload } from "lucide-react"
 
 import { firebase } from "@/lib/firebase"
@@ -116,8 +117,7 @@ export default function AdminProjectsPage() {
       }
 
       try {
-        const adminDoc = await getDoc(doc(firebase.db, "adminUsers", user.uid))
-        setIsAdmin(adminDoc.exists() && adminDoc.data()?.role === "admin")
+        setIsAdmin(await isAdminUser(user))
       } catch (error) {
         console.error("Failed to verify admin access:", error)
         setIsAdmin(false)
