@@ -4,10 +4,10 @@ export function CTASection() {
   return (
     <CTABand
       gradient
-      title="Ready to Start Your Learning Journey?"
-      description="Join learners who are already advancing their careers with Coltek Academy. Start today and transform your future."
-      primaryAction={{ label: "Browse Courses", href: "/courses" }}
-      secondaryAction={{ label: "Register Now", href: "/register" }}
+      title="Ready to start learning?"
+      description="Pick the course that fits your goals, create your free account and enroll online."
+      primaryAction={{ label: "Browse courses", href: "/courses" }}
+      secondaryAction={{ label: "Create an account", href: "/signup" }}
     />
   )
 }

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react"
 import { TestimonialCard } from "@/components/academy/testimonial-card"
 import { Skeleton } from "@/components/ui/skeleton"
+import { SectionHeader } from "@/components/academy/section-header"
 
 interface Testimonial {
   id: string
@@ -54,17 +55,22 @@ export function TestimonialsSection() {
     return null
   }
 
-  return (
-    <section className="py-20 bg-muted/30">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-12">
-          <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">What Our Students Say</h2>
-          <p className="text-muted-foreground max-w-2xl mx-auto">
-            Real feedback from learners building practical skills with Coltek Academy.
-          </p>
-        </div>
+  // Avoid a lone orphan card: 2 or 4 testimonials sit in a 2-column grid
+  const count = isLoading ? 3 : testimonials.length
+  const gridClasses = count === 2 || count === 4 ? "mx-auto max-w-5xl md:grid-cols-2" : "md:grid-cols-2 lg:grid-cols-3"
 
-        <div className="grid md:grid-cols-3 gap-6">
+  return (
+    <section aria-labelledby="testimonials-heading" className="bg-muted py-16 md:py-20 lg:py-24">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <SectionHeader
+          id="testimonials-heading"
+          align="center"
+          eyebrow="Student experience"
+          title="What our students say"
+          description="Real feedback from learners building practical skills with Coltek Academy."
+        />
+
+        <div className={`grid gap-6 ${gridClasses}`}>
           {isLoading
             ? Array.from({ length: 3 }).map((_, index) => (
                 <div key={index} aria-hidden="true" className="rounded-xl border border-border bg-card p-6">

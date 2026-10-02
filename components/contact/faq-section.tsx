@@ -1,37 +1,5 @@
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
-
-const faqs = [
-  {
-    question: "How do I enroll in a course?",
-    answer:
-      "To enroll in a course, browse our course catalog, select the course you're interested in, and click the 'Enroll Now' button. You'll be guided through the registration process where you can provide your information and select a payment method.",
-  },
-  {
-    question: "What payment methods do you accept?",
-    answer:
-      "Course payments are processed securely through Paystack. You can pay with a debit or credit card during enrollment.",
-  },
-  {
-    question: "Can I get a refund if I'm not satisfied?",
-    answer:
-      "Refunds are handled according to our Terms & Conditions. Please review them before enrolling, and contact our support team if you have a question about a payment.",
-  },
-  {
-    question: "Do I get a certificate upon completion?",
-    answer:
-      "Yes, upon successful completion of any course, you'll receive a verified certificate that you can share on LinkedIn or include in your resume.",
-  },
-  {
-    question: "How long do I have access to course materials?",
-    answer:
-      "Once enrolled, you have lifetime access to the course materials. You can learn at your own pace and revisit the content whenever you need a refresher.",
-  },
-  {
-    question: "Are the courses self-paced?",
-    answer:
-      "Most of our courses are self-paced, allowing you to learn on your own schedule. Some bootcamp-style courses have cohort start dates and weekly deadlines to keep you on track.",
-  },
-]
+import { contactFaqs as faqs } from "@/lib/faqs"
 
 export function FAQSection() {
   return (

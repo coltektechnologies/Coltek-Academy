@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useEffect, useState } from "react"
 import { StatCard } from "@/components/academy/stat-card"
 
 interface Stats {
@@ -10,33 +10,31 @@ interface Stats {
   graduates: number
 }
 
-// All figures are computed live from Firestore by /api/stats
-export function StatsSection() {
+/** Live figures computed from Firestore by /api/stats. Shows "—" until loaded; never guesses. */
+export function LiveStats({ className }: { className?: string }) {
   const [stats, setStats] = useState<Stats | null>(null)
 
   useEffect(() => {
-    fetch("/api/stats")
+    const controller = new AbortController()
+    fetch("/api/stats", { signal: controller.signal })
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => setStats(data))
-      .catch(() => setStats(null))
+      .catch(() => {})
+    return () => controller.abort()
   }, [])
 
   const items = [
-    { value: stats?.studentsEnrolled, label: "Students Enrolled" },
+    { value: stats?.studentsEnrolled, label: "Students enrolled" },
     { value: stats?.graduates, label: "Graduates" },
-    { value: stats?.coursesAvailable, label: "Courses Available" },
-    { value: stats?.certificatesIssued, label: "Certificates Issued" },
+    { value: stats?.coursesAvailable, label: "Courses" },
+    { value: stats?.certificatesIssued, label: "Certificates issued" },
   ]
 
   return (
-    <section className="py-16 bg-primary">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <dl className="grid grid-cols-2 md:grid-cols-4 gap-8">
-          {items.map((item) => (
-            <StatCard key={item.label} variant="onPrimary" value={item.value} label={item.label} />
-          ))}
-        </dl>
-      </div>
-    </section>
+    <dl className={className} aria-busy={stats === null}>
+      {items.map((item) => (
+        <StatCard key={item.label} variant="onPrimary" value={item.value} label={item.label} />
+      ))}
+    </dl>
   )
 }

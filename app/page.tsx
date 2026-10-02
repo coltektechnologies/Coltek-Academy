@@ -1,75 +1,47 @@
-"use client";
+import type { Metadata } from "next"
+import { Navbar } from "@/components/navbar"
+import { Footer } from "@/components/footer"
+import { HeroSection } from "@/components/home/hero-section"
+import { ValueStrip } from "@/components/home/value-strip"
+import { ProgrammesSection } from "@/components/home/programmes-section"
+import { WhySection } from "@/components/home/why-section"
+import { LearningJourney } from "@/components/home/learning-journey"
+import { TestimonialsSection } from "@/components/home/testimonials-section"
+import { HowToJoin } from "@/components/home/how-to-join"
+import { HomeFaqSection } from "@/components/home/faq-section"
+import { CTASection } from "@/components/home/cta-section"
 
-import dynamic from 'next/dynamic';
-import { Suspense } from 'react';
-import { Loader2 } from 'lucide-react';
+const description =
+  "Coltek Academy is the training arm of Coltek Technologies in Accra, Ghana. Learn web development, design, data and more through hands-on, project-based courses."
 
-const LoadingFallback = () => (
-  <div className="flex items-center justify-center min-h-[300px]">
-    <Loader2 className="h-8 w-8 animate-spin text-primary" />
-  </div>
-);
+export const metadata: Metadata = {
+  title: "Coltek Academy — Practical tech courses in Accra, Ghana",
+  description,
+  openGraph: {
+    title: "Coltek Academy — Practical tech courses",
+    description,
+    type: "website",
+  },
+}
 
-// Lazy load components
-const Navbar = dynamic(
-  () => import('@/components/navbar').then(mod => mod.Navbar),
-  { ssr: false, loading: () => <div className="h-16 bg-background" /> }
-);
-
-const Footer = dynamic(
-  () => import('@/components/footer').then(mod => mod.Footer),
-  { ssr: false, loading: () => null }
-);
-
-const HeroSection = dynamic(
-  () => import('@/components/home/hero-section').then(mod => mod.HeroSection),
-  { ssr: false, loading: () => <LoadingFallback /> }
-);
-
-const StatsSection = dynamic(
-  () => import('@/components/home/stats-section').then(mod => mod.StatsSection),
-  { ssr: false, loading: () => <LoadingFallback /> }
-);
-
-const FeaturedCourses = dynamic(
-  () => import('@/components/home/featured-courses').then(mod => mod.FeaturedCourses),
-  { ssr: false, loading: () => <LoadingFallback /> }
-);
-
-const BenefitsSection = dynamic(
-  () => import('@/components/home/benefits-section').then(mod => mod.BenefitsSection),
-  { ssr: false, loading: () => <LoadingFallback /> }
-);
-
-const TestimonialsSection = dynamic(
-  () => import('@/components/home/testimonials-section').then(mod => mod.TestimonialsSection),
-  { ssr: false, loading: () => <LoadingFallback /> }
-);
-
-const CTASection = dynamic(
-  () => import('@/components/home/cta-section').then(mod => mod.CTASection),
-  { ssr: false, loading: () => <LoadingFallback /> }
-);
-
+// Server-rendered page; only sections that load live data (courses, stats, testimonials) run on the client.
+// A projects/portfolio section is intentionally omitted until real student projects exist in the data.
 export default function HomePage() {
   return (
-    <div className="min-h-screen flex flex-col">
-      <Suspense fallback={<div className="h-16 bg-background" />}>
-        <Navbar />
-      </Suspense>
-      <main className="flex-1">
-        <Suspense fallback={<LoadingFallback />}>
-          <HeroSection />
-          <StatsSection />
-          <FeaturedCourses />
-          <BenefitsSection />
-          <TestimonialsSection />
-          <CTASection />
-        </Suspense>
+    <div className="flex min-h-screen flex-col">
+      <Navbar />
+      <main id="main" className="flex-1">
+        <HeroSection />
+        <ValueStrip />
+        <ProgrammesSection />
+        <WhySection />
+        <LearningJourney />
+        <TestimonialsSection />
+        <HowToJoin />
+        <HomeFaqSection />
+        <CTASection />
       </main>
-      <Suspense fallback={null}>
-        <Footer />
-      </Suspense>
+      <Footer />
     </div>
   )
 }

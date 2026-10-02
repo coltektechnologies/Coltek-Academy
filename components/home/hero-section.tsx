@@ -1,59 +1,73 @@
+import Image from "next/image"
 import Link from "next/link"
+import { ArrowRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { ArrowRight, Play, CheckCircle } from "lucide-react"
+
+// Course categories that exist in the catalogue; each links to the filtered course list
+const learningAreas = [
+  { label: "Web Development", category: "Web" },
+  { label: "UI/UX Design", category: "UI/UX" },
+  { label: "Mobile Apps", category: "Mobile App" },
+  { label: "Data Science", category: "Data Science" },
+  { label: "Graphic Design", category: "Graphic Design" },
+]
 
 export function HeroSection() {
   return (
-    <section className="relative overflow-hidden bg-gradient-to-br from-primary/5 via-background to-accent/5">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 lg:py-32">
-        <div className="grid lg:grid-cols-2 gap-12 items-center">
-          {/* Left Content */}
-          <div className="space-y-8">
-            <div className="inline-flex items-center gap-2 px-4 py-2 bg-accent/10 rounded-full">
-              <span className="text-sm font-medium text-accent">New courses available</span>
-              <ArrowRight className="h-4 w-4 text-accent" />
-            </div>
+    <section aria-labelledby="hero-heading" className="bg-background">
+      <div className="mx-auto grid max-w-7xl items-center gap-10 px-4 pb-16 pt-10 sm:px-6 md:pt-14 lg:grid-cols-12 lg:gap-12 lg:px-8 lg:pb-24 lg:pt-20">
+        <div className="lg:col-span-6">
+          <p className="text-sm font-semibold text-accent">Coltek Academy · Accra, Ghana</p>
+          <h1
+            id="hero-heading"
+            className="mt-3 text-4xl font-bold leading-tight tracking-tight text-foreground text-balance sm:text-5xl lg:text-6xl"
+          >
+            Build practical tech skills for a real career in technology
+          </h1>
+          <p className="mt-6 max-w-xl text-lg leading-relaxed text-muted-foreground text-pretty">
+            Coltek Academy is the training arm of Coltek Technologies. Learn web development, design, data and
+            more through hands-on courses built around real-world projects.
+          </p>
 
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-foreground leading-tight text-balance">
-              Transform Your Future with <span className="text-primary">Expert-Led Courses</span>
-            </h1>
-
-            <p className="text-lg text-muted-foreground leading-relaxed max-w-xl">
-              Discover courses taught by industry experts. Start learning today and advance your career
-              with in-demand skills that employers are looking for.
-            </p>
-
-            <div className="flex flex-col sm:flex-row gap-4">
-              <Button size="lg" asChild className="text-base">
-                <Link href="/courses">
-                  Explore Courses
-                  <ArrowRight className="ml-2 h-5 w-5" />
-                </Link>
-              </Button>
-              <Button size="lg" variant="outline" className="text-base bg-transparent">
-                <Play className="mr-2 h-5 w-5" />
-                Watch Demo
-              </Button>
-            </div>
-
-            <div className="flex flex-col sm:flex-row gap-6 pt-4">
-              {["Lifetime access", "Certificate included"].map((feature) => (
-                <div key={feature} className="flex items-center gap-2">
-                  <CheckCircle className="h-5 w-5 text-primary" />
-                  <span className="text-sm text-muted-foreground">{feature}</span>
-                </div>
-              ))}
-            </div>
+          <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:gap-4">
+            <Button asChild size="lg">
+              <Link href="/courses">
+                Explore courses
+                <ArrowRight aria-hidden="true" />
+              </Link>
+            </Button>
+            <Button asChild size="lg" variant="outline">
+              <Link href="#how-to-join">How enrollment works</Link>
+            </Button>
           </div>
 
-          {/* Right Image/Illustration */}
-          <div className="relative hidden lg:block">
-            <div className="relative z-10">
-              <img src="/online-learning-students.png" alt="Students learning online" className="rounded-2xl shadow-2xl" />
-            </div>
-            {/* Decorative elements */}
-            <div className="absolute -top-4 -right-4 w-72 h-72 bg-primary/10 rounded-full blur-3xl" />
-            <div className="absolute -bottom-4 -left-4 w-72 h-72 bg-accent/10 rounded-full blur-3xl" />
+          <div className="mt-10 border-t border-border pt-6">
+            <p className="text-sm font-medium text-foreground">Learning areas</p>
+            <ul className="mt-3 flex flex-wrap gap-2">
+              {learningAreas.map((area) => (
+                <li key={area.category}>
+                  <Link
+                    href={`/courses?category=${encodeURIComponent(area.category)}`}
+                    className="inline-flex h-9 items-center rounded-full border border-border bg-card px-4 text-sm text-foreground transition-colors duration-150 hover:border-primary/40 hover:bg-secondary outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                  >
+                    {area.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+
+        <div className="lg:col-span-6">
+          <div className="relative aspect-4/3 overflow-hidden rounded-2xl bg-muted sm:aspect-video lg:aspect-square">
+            <Image
+              src="/diverse-students-learning-together-in-modern-class.jpg"
+              alt="Students learning together with laptops and tablets in a classroom"
+              fill
+              priority
+              sizes="(min-width: 1024px) 600px, 100vw"
+              className="object-cover"
+            />
           </div>
         </div>
       </div>
