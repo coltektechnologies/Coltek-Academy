@@ -38,7 +38,7 @@ export function Navbar() {
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2">
-            <Image src="/Coltek Academy.png" alt="Coltek Academy logo" width={100} height={60} />
+            <Image src="/coltek-academy-logo.svg" alt="Coltek Academy" width={117} height={40} priority className="h-10 w-auto" />
           </Link>
 
           {/* Desktop Navigation */}

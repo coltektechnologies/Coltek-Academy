@@ -22,6 +22,7 @@ Coltek Academy is the training arm of **Coltek Technologies**, based in **Accra,
 | Styling | **Tailwind CSS v4** via `@tailwindcss/postcss`. No `tailwind.config` — tokens live in `@theme inline` in [app/globals.css](app/globals.css). `tw-animate-css`. [styles/globals.css](styles/globals.css) is an unused stock copy — do not edit it. |
 | Components | **shadcn/ui** ("new-york", lucide icons) in [components/ui/](components/ui/). Feature components in `components/{home,about,contact,courses,course-detail,register,auth,admin}`. |
 | Fonts | Inter (sans) + Geist Mono via `next/font/google` in [app/layout.tsx](app/layout.tsx) |
+| Brand | Palette derived from the logo: navy `#193E72` (primary), teal `#207890` (accent), bright teal `#32BBB1` (decorative). Logo: `public/coltek-academy-logo.svg` (color) and `public/coltek-academy-logo-white.svg` (on navy). Light theme only. |
 | Layouts | Only the root layout. Each page imports `Navbar`/`Footer` itself. No route groups. |
 | Rendering | Most public pages are `"use client"` and load sections with `dynamic(..., { ssr: false })`. Global `RouteLoaderProvider` shows an 800 ms overlay on every navigation. |
 | Auth | **Firebase Authentication** (email/password, Google, GitHub popups) via `AuthProvider` in [hooks/use-auth.tsx](hooks/use-auth.tsx). `next-auth` is installed but **unused**. No middleware; route guards are client-side redirects. |
@@ -137,7 +138,7 @@ All new UI must handle: semantic HTML and landmarks, keyboard navigation, visibl
 
 ## 11. Performance
 
-Avoid unnecessary client components, `dynamic(..., { ssr: false })`, artificial loading delays (do not add new ones; the 800 ms route overlay is slated for removal), oversized images (the logo PNG is 8880×3238), duplicate API requests, and decorative animation. Prefer server components / server rendering for public marketing pages. Use `next/image` with explicit sizes.
+Avoid unnecessary client components, `dynamic(..., { ssr: false })`, artificial loading delays (do not add new ones; the 800 ms route overlay is slated for removal), oversized images (use the SVG logo, never the 8880×3238 PNG), duplicate API requests, and decorative animation. Prefer server components / server rendering for public marketing pages. Use `next/image` with explicit sizes.
 
 ---
 

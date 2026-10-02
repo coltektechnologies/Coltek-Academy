@@ -10,12 +10,12 @@ export function Footer() {
           {/* Brand */}
           <div className="space-y-4">
             <Link href="/" className="flex items-center gap-2">
-              <Image 
-                src="/Coltek Academy.png" 
-                alt="Coltek Academy Logo" 
-                width={32} 
-                height={32} 
-                className="h-8 w-auto object-contain"
+              <Image
+                src="/coltek-academy-logo-white.svg"
+                alt="Coltek Academy"
+                width={117}
+                height={40}
+                className="h-10 w-auto"
               />
             </Link>
             <p className="text-primary-foreground/80 text-sm leading-relaxed">

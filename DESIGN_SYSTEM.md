@@ -35,138 +35,98 @@ Coltek Academy should feel like a **serious technology academy**, not a template
 
 | Asset | File | Notes |
 |---|---|---|
-| Logo (wordmark + icon row) | `public/Coltek Academy.png` | 8880×3238 PNG, 488 KB. **Must be exported** to an SVG or ≤ 600 px-wide PNG/WebP before redesign use. Keep clear space ≥ the height of the "A" in ACADEMY. Do not recolor, stretch or place on busy imagery. |
-| Favicon | `public/fav-16x16.png`, `public/fav-32x32.png` | Apple touch icon currently reuses 32×32 — a 180×180 export is needed. |
-| Theme color | `themeColor: "#0A2463"` in [app/layout.tsx](app/layout.tsx) | Browser chrome color. |
+| **Logo (color)** | `public/coltek-academy-logo.svg` | Vector trace of the original artwork (9 KB, viewBox 2000×683, aspect ≈ 2.93:1). Per-glyph teal→navy gradients, "ACADEMY" solid navy. Use on light backgrounds. |
+| **Logo (white)** | `public/coltek-academy-logo-white.svg` | Single-color white version for navy/dark backgrounds (footer, primary bands). |
+| Logo (original raster) | `public/Coltek Academy.png` | 8880×3238 source PNG, kept as the master artwork. **Do not use in UI.** |
+| Favicon | `public/fav-16x16.png`, `public/fav-32x32.png` | A 180×180 Apple touch icon is still needed (**Confirm** artwork). |
+| Theme color | `themeColor: "#193E72"` in [app/layout.tsx](app/layout.tsx) | Logo navy. |
 | Typeface | **Inter** (sans), Geist Mono (mono) via `next/font/google` | Inter for everything; Geist Mono only for codes (certificate IDs, payment references). |
 
-**Logo colors (sampled from the PNG):**
+Logo usage: render with `next/image`, `alt="Coltek Academy"`, fixed height and `w-auto` — navbar `h-10` (40 px), auth cards `h-12` (48 px), footer `h-10` (white version). Minimum height 24 px. Keep clear space ≥ the height of the "A" in ACADEMY. Do not recolor (other than the provided white version), stretch, add effects, or place on busy imagery.
 
-| Name | Hex | Where |
-|---|---|---|
-| Logo teal | `#32BBB1` | Gradient start |
-| Logo mid teal | `#207890` | Gradient middle |
-| Logo navy | `#193E72` | Gradient end and "ACADEMY" wordmark |
+**Logo colors (sampled from the artwork) — these are the website's brand colors:**
 
-The website's existing `--primary` (`#003B75`) is visually the same navy as the logo (contrast between them ≈ 1.05). **The site palette has no teal today** — teal exists only in the logo. See §3.3.
+| Name | Hex | OKLCH | Role on the website |
+|---|---|---|---|
+| Logo navy | `#193E72` | `oklch(0.367 0.099 257.5)` | **Primary** |
+| Logo teal (deep) | `#207890` | `oklch(0.533 0.087 220.6)` | **Accent** (text-safe) and focus ring |
+| Logo teal (bright) | `#32BBB1` | `oklch(0.719 0.114 187.6)` | **Brand teal** — decorative only |
 
 ---
 
 ## 3. Color system
 
-### 3.1 Current source colors (Existing — documented, not changed)
+The palette is **derived from the logo** (owner decision): navy is the primary, teal is the accent. Tokens live in `:root` / `@theme inline` in [app/globals.css](app/globals.css). **Light theme only** — the unreachable `.dark` theme was removed; `dark:` utility classes remaining in components are inert.
 
-Light theme, from `:root` in [app/globals.css](app/globals.css). Hex values are sRGB conversions for reference.
+### 3.1 Tokens (Existing)
 
-| Token | Value | ≈ Hex | Role today |
-|---|---|---|---|
-| `--background` | `oklch(0.99 0.005 240)` | `#F9FCFF` | Page background (very light blue-white) |
-| `--foreground` | `oklch(0.15 0.03 250)` | `#030C17` | Body text |
-| `--card` / `--popover` | `oklch(1 0 0)` | `#FFFFFF` | Cards, menus |
-| `--primary` | `oklch(0.35 0.12 250)` | `#003B75` | **Brand navy** — buttons, links, footer, stats band |
-| `--primary-foreground` | `oklch(0.98 0 0)` | `#F8F8F8` | Text on primary |
-| `--secondary` | `oklch(0.93 0.02 240)` | `#DCEAF4` | Pale blue fills |
-| `--secondary-foreground` | `oklch(0.25 0.06 250)` | `#06233D` | Text on secondary |
-| `--muted` | `oklch(0.96 0.01 240)` | `#ECF3F8` | Subtle fills, skeletons |
-| `--muted-foreground` | `oklch(0.45 0.03 250)` | `#495766` | Secondary text |
-| `--accent` | `oklch(0.55 0.15 240)` | `#0079BF` | Bright blue highlight, gradients, ring |
-| `--accent-foreground` | `oklch(0.98 0 0)` | `#F8F8F8` | Text on accent |
-| `--destructive` | `oklch(0.577 0.245 27.325)` | `#E7000B` | Errors |
-| `--border` | `oklch(0.9 0.02 240)` | `#D3E0EA` | Borders |
-| `--input` | `oklch(0.92 0.015 240)` | `#DCE6EE` | Input borders |
-| `--ring` | `oklch(0.55 0.15 240)` | `#0079BF` | Focus ring |
-| `--chart-1…5` | blues/cyans | — | Admin charts |
-| `--radius` | `0.625rem` | 10 px | Radius base |
+| Semantic token | Utility | Value | ≈ Hex | Use |
+|---|---|---|---|---|
+| Background | `bg-background` | `oklch(0.99 0.005 220)` | `#F8FDFE` | Page canvas |
+| Foreground | `text-foreground` | `oklch(0.18 0.04 255)` | `#051223` | Body text and headings |
+| Surface | `bg-card` | `oklch(1 0 0)` | `#FFFFFF` | Cards, panels, form containers |
+| Elevated surface | `bg-popover` + `shadow-md` | `oklch(1 0 0)` | `#FFFFFF` | Menus, popovers, sticky purchase card |
+| Section alternate | `bg-muted` | `oklch(0.96 0.01 230)` | `#EBF3F7` | Alternating page sections |
+| Primary | `bg-primary` / `text-primary` | `oklch(0.367 0.099 257.5)` | `#193E72` | Primary actions, links, brand bands, footer |
+| Primary foreground | `text-primary-foreground` | `oklch(0.99 0 0)` | `#FCFCFC` | Text/icons on primary |
+| Primary hover | `hover:bg-primary-hover` | `oklch(0.317 0.099 257.5)` | `#0B3063` | Hover/active for primary fills |
+| Secondary | `bg-secondary` | `oklch(0.95 0.03 190)` | `#D9F5F3` | Pale teal fills, secondary buttons, soft highlights |
+| Secondary foreground | `text-secondary-foreground` | `oklch(0.32 0.07 230)` | `#00394F` | Text on secondary |
+| Accent | `bg-accent` / `text-accent` | `oklch(0.533 0.087 220.6)` | `#207890` | Eyebrows, links-on-light, active indicators, small highlights, teal buttons |
+| Accent foreground | `text-accent-foreground` | `oklch(0.99 0 0)` | `#FCFCFC` | Text on accent |
+| Brand teal | `bg-brand-teal` / `text-brand-teal` | `oklch(0.719 0.114 187.6)` | `#32BBB1` | **Decorative only**: icon accents and highlights on navy, rules, illustration |
+| Muted | `bg-muted` | `oklch(0.96 0.01 230)` | `#EBF3F7` | Subtle fills, skeletons |
+| Muted foreground | `text-muted-foreground` | `oklch(0.46 0.03 250)` | `#4C5A69` | Secondary text, captions |
+| Border | `border-border` | `oklch(0.9 0.015 230)` | `#D5E0E6` | Dividers, card borders |
+| Input | `border-input` | `oklch(0.86 0.02 230)` | `#C4D4DC` | Form control borders |
+| Ring | `ring-ring` | `oklch(0.533 0.087 220.6)` | `#207890` | Focus rings |
+| Success | `text-success` / `bg-success` | `oklch(0.52 0.13 155)` | `#007E46` | Success text/icons/fills |
+| Success subtle | `bg-success-subtle` | `oklch(0.96 0.03 155)` | `#E3F8E9` | Success panels/badges |
+| Warning | `text-warning` / `bg-warning` | `oklch(0.55 0.13 70)` | `#A16100` | Warnings, "Coming soon" |
+| Warning subtle | `bg-warning-subtle` | `oklch(0.96 0.04 85)` | `#FEF0D4` | Warning panels/badges |
+| Error | `text-destructive` / `bg-destructive` | `oklch(0.577 0.245 27.325)` | `#E7000B` | Errors, destructive actions |
+| Error subtle | `bg-destructive-subtle` | `oklch(0.96 0.02 27)` | `#FFEDEB` | Error panels |
+| Info | `text-info` / `bg-info` | `oklch(0.5 0.11 235)` | `#006C98` | Informational notices |
+| Info subtle | `bg-info-subtle` | `oklch(0.96 0.02 230)` | — | Info panels |
+| Charts 1–5 | `chart-1…5` | navy, deep teal, bright teal, mid navy, pale teal | | Admin charts |
 
-A `.dark` theme is defined but **unreachable** (no theme provider is mounted). Light theme only until the owner decides otherwise (**Confirm**).
+Each status color has a `-foreground` (white) for solid fills.
 
-**Raw colors currently used outside tokens** (to be migrated): `bg-gray-50`, `text-gray-900`, `bg-white` (courses page, admin), `green/yellow/red-100/800` (level badges), `amber-*` (upcoming, warnings), `green-*` (success panels), `fill-yellow-400` (testimonial stars), `blue-50/200/700/800` (dev notices), `#25D366` (WhatsApp — allowed), Google/GitHub brand colors (allowed).
+**Previous palette (before the logo-based palette, for reference):** primary `#003B75`, accent bright blue `#0079BF` (white text on it was 4.40:1 — failed AA), secondary pale blue `#DCEAF4`, background `#F9FCFF`.
 
-**Measured contrast of existing pairs:**
+### 3.2 Measured contrast
 
 | Pair | Ratio | Verdict |
 |---|---|---|
-| foreground on background | 19.1 | ✅ |
-| muted-foreground on background | 7.2 | ✅ |
-| muted-foreground on muted | 6.6 | ✅ |
-| primary on background | 10.9 | ✅ |
-| primary-foreground on primary | 10.6 | ✅ |
-| primary-foreground/80 on primary | 7.3 | ✅ |
-| primary-foreground/70 on primary | 6.0 | ✅ |
-| primary-foreground/60 on primary | 4.8 | ✅ (minimum — do not go lower) |
-| accent on background (as text) | 4.53 | ⚠️ passes AA barely — ok for links/labels ≥ 14 px medium |
-| **accent-foreground on accent** | **4.40** | ❌ fails AA for normal text — accent fills may carry **only large/bold text (≥ 18.7 px bold) or icons** |
-| destructive on background | 4.63 | ✅ |
-| border on background | 1.31 | Decorative only — never the sole indicator of a control |
+| foreground on background | 18.3 | ✅ |
+| muted-foreground on background | 6.9 | ✅ |
+| muted-foreground on muted | 6.3 | ✅ |
+| primary on background | 10.4 | ✅ |
+| primary-foreground on primary | 10.4 | ✅ |
+| primary-foreground on primary-hover | 12.7 | ✅ |
+| accent on background (text) | 4.93 | ✅ |
+| accent-foreground on accent | 4.93 | ✅ (teal buttons are allowed) |
+| secondary-foreground on secondary | 10.8 | ✅ |
+| primary on secondary | 9.3 | ✅ |
+| **accent on secondary** | **4.41** | ❌ — on pale-teal fills use `text-primary` or `text-secondary-foreground`, not `text-accent` |
+| **brand-teal on primary** | 4.50 | ⚠️ minimum — large text, icons or highlights only |
+| **brand-teal on background** | **2.31** | ❌ — never text on light backgrounds |
+| success / warning / info / destructive on background | 5.0 / 4.9 / 5.7 / 4.7 | ✅ |
+| primary-foreground/80 on primary | ≈ 7 | ✅ (footer links) |
+| primary-foreground/60 on primary | ≈ 4.7 | ✅ minimum — do not go lower |
+| input border on background | 1.48 | Inputs also rely on fill/shape and focus ring; do not use borders as the only indicator of state |
 
-### 3.2 Semantic tokens (target set)
+### 3.3 Color usage rules
 
-Existing values are kept. New tokens fill the gaps the audit found (no status colors, no hover token, no surface naming).
-
-| Semantic token | Tailwind utility | Value | Status | Use |
-|---|---|---|---|---|
-| Background | `bg-background` | `--background` | Existing | Page canvas |
-| Foreground | `text-foreground` | `--foreground` | Existing | Body + headings |
-| Surface | `bg-card` | `--card` (#FFF) | Existing (alias name) | Cards, panels, form containers |
-| Elevated surface | `bg-popover` + `shadow-md` | `--popover` (#FFF) | Existing (alias name) | Menus, popovers, sticky purchase card |
-| Section alternate | `bg-muted` | `--muted` | Existing | Alternating page sections (replaces ad-hoc `bg-secondary/30`, `bg-muted/30`) |
-| Primary | `bg-primary` / `text-primary` | `--primary` #003B75 | Existing | Primary actions, links, brand bands |
-| Primary foreground | `text-primary-foreground` | `--primary-foreground` | Existing | Text/icons on primary |
-| **Primary hover** | `hover:bg-primary-hover` | `oklch(0.30 0.11 250)` ≈ `#002D62` | **Proposed** | Darker hover for primary fills (today `bg-primary/90` lightens toward the background) |
-| Secondary | `bg-secondary` | `--secondary` | Existing | Secondary buttons, soft fills |
-| Secondary foreground | `text-secondary-foreground` | `--secondary-foreground` | Existing | |
-| Accent | `bg-accent` / `text-accent` | `--accent` #0079BF | Existing | Small highlights, eyebrows, active indicators, focus ring. **Not** for filled buttons with small text (4.40:1). |
-| Muted | `bg-muted` | `--muted` | Existing | Subtle fills, skeletons |
-| Muted foreground | `text-muted-foreground` | `--muted-foreground` | Existing | Secondary text, captions |
-| Border | `border-border` | `--border` | Existing | Dividers, card borders |
-| Input | `border-input` | `--input` | Existing | Form control borders |
-| Ring | `ring-ring` | `--ring` | Existing | Focus rings |
-| **Success** | `text-success`, `bg-success` | `oklch(0.52 0.13 155)` ≈ `#007E46` | **Proposed** | Success text/icons; 5.0:1 on background, white on it 5.2:1 |
-| **Success subtle** | `bg-success-subtle` | `oklch(0.96 0.03 155)` ≈ `#E3F8E9` | **Proposed** | Success panels/badges (with `text-success`) |
-| **Warning** | `text-warning`, `bg-warning` | `oklch(0.55 0.13 70)` ≈ `#A16100` | **Proposed** | Warnings, "Coming soon"; 4.8:1 on background, white on it 5.0:1 |
-| **Warning subtle** | `bg-warning-subtle` | `oklch(0.96 0.04 85)` ≈ `#FEF0D4` | **Proposed** | Warning panels/badges |
-| **Error** | `text-destructive`, `bg-destructive` | `--destructive` #E7000B | Existing (named "destructive") | Errors, destructive actions |
-| **Error subtle** | `bg-destructive-subtle` | `oklch(0.96 0.02 27)` ≈ `#FFEDEB` | **Proposed** | Error panels |
-| **Info** | `text-info`, `bg-info` | `oklch(0.50 0.13 240)` ≈ `#006AA5` | **Proposed** | Informational notices; 5.7:1 on background |
-| **Info subtle** | `bg-info-subtle` | `oklch(0.96 0.02 240)` ≈ `#E6F4FE` | **Proposed** | Info panels |
-
-Each proposed status color also needs a `-foreground` (white `oklch(0.99 0 0)`) for solid fills.
-
-### 3.3 Brand teal (Confirm)
-
-| Token | Value | Contrast | Allowed use |
-|---|---|---|---|
-| `--brand-teal` | `#32BBB1` | 2.3:1 on background, 4.7:1 on primary | Decorative only: icon accents on navy, illustration, thin rules, logo-matching highlights on dark bands. **Never body text on light backgrounds.** |
-| `--brand-teal-strong` | `#207890` | 4.9:1 on background | Text-safe teal if the owner wants teal in UI (eyebrows, small highlights). |
-
-Adopting teal in the UI is a brand decision. Until confirmed, the palette stays navy/blue as today.
-
-### 3.4 Implementation sketch (Proposed — not yet applied)
-
-```css
-:root {
-  --primary-hover: oklch(0.30 0.11 250);
-  --success: oklch(0.52 0.13 155);  --success-foreground: oklch(0.99 0 0);  --success-subtle: oklch(0.96 0.03 155);
-  --warning: oklch(0.55 0.13 70);   --warning-foreground: oklch(0.99 0 0);  --warning-subtle: oklch(0.96 0.04 85);
-  --info:    oklch(0.50 0.13 240);  --info-foreground:    oklch(0.99 0 0);  --info-subtle:    oklch(0.96 0.02 240);
-  --destructive-subtle: oklch(0.96 0.02 27);
-}
-@theme inline {
-  --color-primary-hover: var(--primary-hover);
-  --color-success: var(--success); --color-success-foreground: var(--success-foreground); --color-success-subtle: var(--success-subtle);
-  --color-warning: var(--warning); --color-warning-foreground: var(--warning-foreground); --color-warning-subtle: var(--warning-subtle);
-  --color-info: var(--info);       --color-info-foreground: var(--info-foreground);       --color-info-subtle: var(--info-subtle);
-  --color-destructive-subtle: var(--destructive-subtle);
-}
-```
-
-### 3.5 Color usage rules
-
-- One filled primary action per view region. Navy is the brand; blue accent is seasoning.
-- Text never uses opacity below `/60` on primary or `/70`-equivalent on light backgrounds — use `text-muted-foreground` instead of `text-foreground/60`.
+- **Navy leads, teal supports.** Navy for primary buttons, headings accents, footer and brand bands; teal for highlights, eyebrows, active indicators, focus, and occasional secondary actions.
+- One filled primary action per view region.
+- The **logo gradient** (bright teal `#32BBB1` → deep teal `#207890` → navy `#193E72`, left→right) is a brand device: allowed **once per page at most** (e.g. a thin hero accent rule, the CTA band, or an icon tile) — never on body text and never as a background behind small text.
+- Text never uses opacity below `/60` on primary; on light backgrounds use `text-muted-foreground` instead of opacity.
 - Status is never color-only: pair with an icon or text ("Coming soon", "Completed").
 - Third-party brand colors (Google, GitHub, WhatsApp `#25D366`, Paystack) stay in their own buttons only.
-- Gradients: at most **one** subtle gradient per page (e.g. the home hero background `from-primary/5`). No primary→accent gradient bands by default.
+- No raw palette classes (`gray-*`, `blue-*`, `green-*`, `amber-*`, `white`) in new UI — use the tokens above.
+
+**Raw colors still in the code** (to migrate in the shared-components stage): `bg-gray-50`, `text-gray-900`, `bg-white` (courses page, admin), `green/yellow/red-100/800` (level badges), `amber-*` (upcoming, warnings), `green-*` (success panels), `fill-yellow-400` (stars), `blue-50/200/700/800` (dev-only notices).
 
 ---
 
@@ -284,9 +244,9 @@ Radius `rounded-md` for all. Icons 16 px (`size-4`), 20 px in `lg`.
 
 | Variant | Rest | Hover | Active | Focus | Disabled |
 |---|---|---|---|---|---|
-| Primary (`default`) | `bg-primary text-primary-foreground` | `bg-primary-hover` (Proposed; today `bg-primary/90`) | `bg-primary-hover` | `focus-visible:ring-[3px] ring-ring/50 border-ring` (Existing) | `opacity-50 pointer-events-none` + `disabled` / `aria-disabled` |
+| Primary (`default`) | `bg-primary text-primary-foreground` | `bg-primary-hover` (token exists; button still uses `bg-primary/90`) | `bg-primary-hover` | `focus-visible:ring-[3px] ring-ring/50 border-ring` (Existing) | `opacity-50 pointer-events-none` + `disabled` / `aria-disabled` |
 | Secondary | `bg-secondary text-secondary-foreground` | `bg-secondary/80` | same | same | same |
-| Outline | `border border-input bg-background text-foreground shadow-xs` | `bg-muted` (**Proposed**; today `hover:bg-accent` turns bright blue) | same | same | same |
+| Outline | `border border-input bg-background text-foreground shadow-xs` | `bg-muted` (**Proposed**; today `hover:bg-accent` turns the button solid teal) | same | same | same |
 | Ghost | transparent, `text-foreground` | `bg-muted` | same | same | same |
 | Link | `text-primary underline-offset-4` | `underline` | — | same | same |
 | Destructive | `bg-destructive text-white` | `bg-destructive/90` | same | `ring-destructive/40` | same |
@@ -326,7 +286,7 @@ Single shared component ([components/course-card.tsx](components/course-card.tsx
 6. **Meta row** — duration and level with icons (`Clock`, `BarChart` style), body small muted. Level is plain text or a neutral badge — **no green/yellow/red difficulty coding**.
 7. **Footer** (`border-t`, `px-6 py-4`) — price `text-lg font-bold` as `GH₵150` (or "Free" when 0 and available; "Coming soon" when upcoming) + one CTA: `View course` (outline `sm`). The CTA duplicates the title link, so it is `aria-hidden` / `tabIndex={-1}` or the title link is the only link.
 
-Do **not** show: ratings, review counts, seeded student counts, instructor names, more than one badge, or more than one CTA. Enrolled-student counts may be shown only if they come from real enrollments and the owner wants them (**Confirm**).
+Do **not** show: ratings, review counts, seeded student counts, instructor names, more than one badge, or more than one CTA. **Enrolled-student counts are shown** (owner-approved) — only the real count from `enrollments` (`Users` icon + number, body small muted).
 
 Layout: `h-full flex flex-col` so footers align across a grid. Grid: 1 col mobile, 2 cols `sm`, 3 cols `lg` (catalogue), 3–4 cols featured on home.
 
@@ -386,7 +346,7 @@ Built from shadcn `Label`, `Input`, `Select`, `Textarea`, `Checkbox`, `RadioGrou
 **Desktop** (from `lg` — **Proposed**; today switches at `md`, which crowds 768 px):
 
 - `sticky top-0 z-50 h-16 border-b border-border bg-background/95 backdrop-blur` (the only permitted blur).
-- Logo left, height 32–40 px, links to `/`, `alt="Coltek Academy"`.
+- Logo left (`coltek-academy-logo.svg`, `h-10`), links to `/`, `alt="Coltek Academy"`.
 - Links: `text-sm font-medium text-muted-foreground hover:text-foreground`. **Active:** `text-foreground` + `aria-current="page"` + 2 px `bg-primary` underline indicator.
 - Right: ghost "Log in" + primary "Get started" when signed out. Signed in: a user menu (avatar/initials → Dashboard, Certificates, Log out). Never print the raw email in the bar.
 - Focus: visible ring on every link and button.
@@ -403,7 +363,7 @@ Built from shadcn `Label`, `Input`, `Select`, `Textarea`, `Checkbox`, `RadioGrou
 
 - Background `bg-primary`, text `text-primary-foreground`. Body links `text-primary-foreground/80 hover:text-primary-foreground` (7.3:1); never below `/70` for text.
 - Column headings `text-base font-semibold`.
-- Columns (lg: 4, sm: 2, mobile: 1): **Brand** (logo on light/navy-safe version, one-line description, social icons) · **Programmes** (categories) · **Academy** (About, Contact, FAQ, Login) · **Contact** (email, phone, hours, location — from the contact page facts).
+- Columns (lg: 4, sm: 2, mobile: 1): **Brand** (`coltek-academy-logo-white.svg`, one-line description, social icons) · **Programmes** (categories) · **Academy** (About, Contact, FAQ, Login) · **Contact** (email, phone, hours, location — from the contact page facts).
 - Social icons `size-5` inside a 40 px hit area, `aria-label` with the platform name, `target="_blank" rel="noopener noreferrer"`. lucide has no X logo; use an accessible label "X (Twitter)" until a brand icon is added.
 - **Newsletter: none** until a real newsletter integration exists. The contact column replaces it.
 - Bottom bar: `border-t border-primary-foreground/20`, copyright + Terms + Privacy, `text-sm text-primary-foreground/70`.
@@ -425,7 +385,7 @@ Built from shadcn `Label`, `Input`, `Select`, `Textarea`, `Checkbox`, `RadioGrou
 
 | Type | Spec | Use |
 |---|---|---|
-| **Primary CTA band** | `bg-primary`, compact section padding, centered H2 (`text-primary-foreground`), lead `/80`, one on-dark primary button + optional on-dark outline. Solid navy — no primary→accent gradient. | Once per page, at the end of marketing pages |
+| **Primary CTA band** | `bg-primary` — or the logo gradient as the page's single gradient device (§3.3) — compact section padding, centered H2 (`text-primary-foreground`), lead `/80`, one on-dark primary button + optional on-dark outline. | Once per page, at the end of marketing pages |
 | **Inline CTA panel** | `bg-muted rounded-xl p-8`, H3 + one sentence + one button | Mid-page prompts (e.g. "Not sure which course? Contact us") |
 | **Contextual CTA** | Course detail: sticky purchase card on desktop (`lg:sticky lg:top-24`, elevated surface, `shadow-lg`); on mobile a fixed bottom bar with price + "Enroll" (safe-area padding). | Transactional pages |
 
@@ -515,7 +475,7 @@ Design mobile intentionally: reorder content by priority, shorten leads, keep on
 
 ## 24. Accessibility requirements
 
-- **Contrast:** WCAG 2.1 AA — 4.5:1 text, 3:1 large text (≥ 24 px or ≥ 18.7 px bold) and UI components/focus indicators. Use the measured table in §3.1; `accent` fills carry large text/icons only.
+- **Contrast:** WCAG 2.1 AA — 4.5:1 text, 3:1 large text (≥ 24 px or ≥ 18.7 px bold) and UI components/focus indicators. Use the measured table in §3.2; bright brand teal is never text on light backgrounds.
 - **Focus:** every interactive element shows `:focus-visible` (shadcn ring). Never `outline-none` without a replacement.
 - **Keyboard:** all functionality reachable and operable; logical tab order; Esc closes overlays; no keyboard traps except intentional modal focus traps.
 - **Skip link:** "Skip to main content" as the first focusable element (**Proposed**), targeting `<main id="main">`.
@@ -533,7 +493,7 @@ Design mobile intentionally: reorder content by priority, shorten leads, keep on
 Avoid (with examples from the current site to retire):
 
 - Random colors — raw `gray/green/yellow/amber/blue` classes instead of tokens.
-- Excessive gradients — primary→accent CTA band, gradient overlays on every hero.
+- Excessive gradients — more than one gradient device per page, gradient overlays on every hero, gradients behind small text.
 - Glass effects — beyond the navbar's subtle blur.
 - Excessive rounded cards — mixing `rounded-lg/xl/2xl` for the same kind of card.
 - Excessive shadows — `shadow-2xl` hero images, shadows on static content.
@@ -578,18 +538,16 @@ Known conflicts in the current code (to resolve in the foundation/shared-compone
 |---|---|---|
 | Button default `h-9`, `lg` `h-10` | `components/ui/button.tsx` | `h-10` / `h-12` (§9) |
 | Outline hover `bg-accent` (bright blue) | `components/ui/button.tsx` | `hover:bg-muted` (§9) |
-| Primary hover `bg-primary/90` | `components/ui/button.tsx` | `bg-primary-hover` token (§3.2) |
+| Primary hover `bg-primary/90` | `components/ui/button.tsx` | `bg-primary-hover` token (§3.1) |
 | `bg-transparent` overrides on outline buttons (~12) | many call sites | Remove after the variant fix |
 | Input/select `h-9` | `components/ui/input.tsx`, select | `h-10` (§14) |
-| No success/warning/info tokens | `app/globals.css` | Add (§3.4) |
 | Level badges green/yellow/red | `course-card.tsx`, `course-hero.tsx` | Neutral outline (§20) |
 | Raw grays on `/courses`, admin | `app/courses/page.tsx`, admin | Tokens (§3.5) |
-| Primary→accent gradient CTA band | `components/home/cta-section.tsx` | Solid primary band (§18) |
+| Home CTA band uses `from-primary to-accent` (now navy→teal) while the home hero also has a gradient | `components/home/cta-section.tsx`, `hero-section.tsx` | Keep one gradient device per page (§3.3) |
 | Hand-built cards with mixed radii | home/about/contact sections | `Card` + `rounded-xl` (§10) |
 | Breadcrumb hand-rolled | `course-hero.tsx` | shadcn `Breadcrumb` (§12) |
 | Nav switches at `md`, no active state, raw email | `components/navbar.tsx` | §15 |
 | Ping loader + 800 ms overlay | `components/ui/loader.tsx`, `route-loader.tsx` | Remove/skeletons (§22) |
 | Legal pages use `container` + unstyled `prose` | `app/privacy`, `app/terms` | Narrow container + typography scale (§6, §4) |
-| Logo PNG 8880×3238 | `public/Coltek Academy.png` | Optimized export (§2) |
 
 Do not redesign individual pages while establishing the system; pages are redesigned in their own stages using these rules.

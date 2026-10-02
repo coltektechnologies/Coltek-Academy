@@ -2,8 +2,9 @@
 
 import { useState } from "react"
 import Link from "next/link"
+import Image from "next/image"
 import { sendPasswordResetEmail } from "firebase/auth"
-import { BookOpen, Loader2, CheckCircle } from "lucide-react"
+import { Loader2, CheckCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -54,8 +55,7 @@ export function ForgotPasswordForm() {
       <div className="bg-card border border-border rounded-xl p-8 shadow-sm">
         <div className="text-center mb-8">
           <Link href="/" className="inline-flex items-center gap-2 mb-6">
-            <BookOpen className="h-8 w-8 text-primary" />
-            <span className="text-xl font-bold text-foreground">Coltek Academy</span>
+            <Image src="/coltek-academy-logo.svg" alt="Coltek Academy" width={141} height={48} className="h-12 w-auto" />
           </Link>
           <h1 className="text-2xl font-bold text-foreground mb-2">Reset your password</h1>
           <p className="text-muted-foreground text-sm">

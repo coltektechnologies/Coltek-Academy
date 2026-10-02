@@ -3,76 +3,58 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/*
+ * Coltek Academy brand palette — derived from the logo (public/coltek-academy-logo.svg).
+ * Logo navy #193E72 is the primary; logo teal #207890 (text-safe) is the accent;
+ * bright logo teal #32BBB1 is decorative only. See DESIGN_SYSTEM.md §3.
+ * Light theme only (no dark theme is shipped).
+ */
 :root {
-  /* Blue-focused education theme */
-  --background: oklch(0.99 0.005 240);
-  --foreground: oklch(0.15 0.03 250);
+  --background: oklch(0.99 0.005 220);
+  --foreground: oklch(0.18 0.04 255);
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.15 0.03 250);
+  --card-foreground: oklch(0.18 0.04 255);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.15 0.03 250);
-  --primary: oklch(0.35 0.12 250);
-  --primary-foreground: oklch(0.98 0 0);
-  --secondary: oklch(0.93 0.02 240);
-  --secondary-foreground: oklch(0.25 0.06 250);
-  --muted: oklch(0.96 0.01 240);
-  --muted-foreground: oklch(0.45 0.03 250);
-  --accent: oklch(0.55 0.15 240);
-  --accent-foreground: oklch(0.98 0 0);
+  --popover-foreground: oklch(0.18 0.04 255);
+  --primary: oklch(0.367 0.099 257.5);
+  --primary-foreground: oklch(0.99 0 0);
+  --primary-hover: oklch(0.317 0.099 257.5);
+  --secondary: oklch(0.95 0.03 190);
+  --secondary-foreground: oklch(0.32 0.07 230);
+  --muted: oklch(0.96 0.01 230);
+  --muted-foreground: oklch(0.46 0.03 250);
+  --accent: oklch(0.533 0.087 220.6);
+  --accent-foreground: oklch(0.99 0 0);
+  --brand-teal: oklch(0.719 0.114 187.6);
   --destructive: oklch(0.577 0.245 27.325);
-  --destructive-foreground: oklch(0.98 0 0);
-  --border: oklch(0.9 0.02 240);
-  --input: oklch(0.92 0.015 240);
-  --ring: oklch(0.55 0.15 240);
-  --chart-1: oklch(0.55 0.15 240);
-  --chart-2: oklch(0.65 0.12 200);
-  --chart-3: oklch(0.45 0.1 260);
-  --chart-4: oklch(0.7 0.1 180);
-  --chart-5: oklch(0.6 0.08 220);
+  --destructive-foreground: oklch(0.99 0 0);
+  --destructive-subtle: oklch(0.96 0.02 27);
+  --success: oklch(0.52 0.13 155);
+  --success-foreground: oklch(0.99 0 0);
+  --success-subtle: oklch(0.96 0.03 155);
+  --warning: oklch(0.55 0.13 70);
+  --warning-foreground: oklch(0.99 0 0);
+  --warning-subtle: oklch(0.96 0.04 85);
+  --info: oklch(0.5 0.11 235);
+  --info-foreground: oklch(0.99 0 0);
+  --info-subtle: oklch(0.96 0.02 230);
+  --border: oklch(0.9 0.015 230);
+  --input: oklch(0.86 0.02 230);
+  --ring: oklch(0.533 0.087 220.6);
+  --chart-1: oklch(0.367 0.099 257.5);
+  --chart-2: oklch(0.533 0.087 220.6);
+  --chart-3: oklch(0.719 0.114 187.6);
+  --chart-4: oklch(0.55 0.08 250);
+  --chart-5: oklch(0.82 0.07 190);
   --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.35 0.12 250);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.93 0.02 240);
-  --sidebar-accent-foreground: oklch(0.25 0.06 250);
-  --sidebar-border: oklch(0.9 0.02 240);
-  --sidebar-ring: oklch(0.55 0.15 240);
-}
-
-.dark {
-  --background: oklch(0.15 0.02 250);
-  --foreground: oklch(0.95 0.01 240);
-  --card: oklch(0.18 0.02 250);
-  --card-foreground: oklch(0.95 0.01 240);
-  --popover: oklch(0.18 0.02 250);
-  --popover-foreground: oklch(0.95 0.01 240);
-  --primary: oklch(0.65 0.15 240);
-  --primary-foreground: oklch(0.15 0.02 250);
-  --secondary: oklch(0.25 0.03 250);
-  --secondary-foreground: oklch(0.95 0.01 240);
-  --muted: oklch(0.25 0.02 250);
-  --muted-foreground: oklch(0.65 0.02 240);
-  --accent: oklch(0.55 0.15 240);
-  --accent-foreground: oklch(0.98 0 0);
-  --destructive: oklch(0.5 0.2 25);
-  --destructive-foreground: oklch(0.98 0 0);
-  --border: oklch(0.28 0.02 250);
-  --input: oklch(0.25 0.02 250);
-  --ring: oklch(0.55 0.15 240);
-  --chart-1: oklch(0.65 0.15 240);
-  --chart-2: oklch(0.6 0.12 200);
-  --chart-3: oklch(0.55 0.1 260);
-  --chart-4: oklch(0.65 0.1 180);
-  --chart-5: oklch(0.6 0.08 220);
-  --sidebar: oklch(0.18 0.02 250);
-  --sidebar-foreground: oklch(0.95 0.01 240);
-  --sidebar-primary: oklch(0.65 0.15 240);
-  --sidebar-primary-foreground: oklch(0.15 0.02 250);
-  --sidebar-accent: oklch(0.25 0.03 250);
-  --sidebar-accent-foreground: oklch(0.95 0.01 240);
-  --sidebar-border: oklch(0.28 0.02 250);
-  --sidebar-ring: oklch(0.55 0.15 240);
+  --sidebar: oklch(0.985 0.004 230);
+  --sidebar-foreground: oklch(0.18 0.04 255);
+  --sidebar-primary: oklch(0.367 0.099 257.5);
+  --sidebar-primary-foreground: oklch(0.99 0 0);
+  --sidebar-accent: oklch(0.95 0.03 190);
+  --sidebar-accent-foreground: oklch(0.32 0.07 230);
+  --sidebar-border: oklch(0.9 0.015 230);
+  --sidebar-ring: oklch(0.533 0.087 220.6);
 }
 
 @theme inline {
@@ -86,6 +68,8 @@
   --color-popover-foreground: var(--popover-foreground);
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
+  --color-primary-hover: var(--primary-hover);
+  --color-brand-teal: var(--brand-teal);
   --color-secondary: var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);
   --color-muted: var(--muted);
@@ -94,6 +78,16 @@
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
+  --color-destructive-subtle: var(--destructive-subtle);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-success-subtle: var(--success-subtle);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-warning-subtle: var(--warning-subtle);
+  --color-info: var(--info);
+  --color-info-foreground: var(--info-foreground);
+  --color-info-subtle: var(--info-subtle);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
