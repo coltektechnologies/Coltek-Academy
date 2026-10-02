@@ -63,6 +63,8 @@ export function Navbar() {
 
   return (
     <header className="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/85">
+      {/* Logo-gradient brand rule */}
+      <div aria-hidden="true" className="h-1 bg-brand-gradient" />
       <div className="container-page flex h-16 items-center justify-between gap-6">
         <Link href="/" className={cn("shrink-0 rounded-md", focusRing)} aria-label="Coltek Academy, home">
           <Image src="/coltek-academy-logo.svg" alt="" width={117} height={40} priority className="h-9 w-auto sm:h-10" />
@@ -81,7 +83,7 @@ export function Navbar() {
                     className={cn(
                       "relative inline-flex h-10 items-center rounded-md px-3 text-sm font-medium transition-colors duration-150",
                       focusRing,
-                      active ? "text-foreground" : "text-muted-foreground hover:text-foreground",
+                      active ? "text-primary" : "text-muted-foreground hover:text-primary",
                     )}
                   >
                     {item.label}
@@ -160,8 +162,12 @@ export function Navbar() {
               </Button>
             </SheetTrigger>
             <SheetContent side="right" className="flex w-full max-w-sm flex-col gap-0 p-0">
+              <div aria-hidden="true" className="h-1 shrink-0 bg-brand-gradient" />
               <SheetHeader className="border-b border-border px-5 py-4">
-                <SheetTitle className="text-left">Menu</SheetTitle>
+                <SheetTitle className="text-left">
+                  <Image src="/coltek-academy-logo.svg" alt="" width={117} height={40} className="h-9 w-auto" />
+                  <span className="sr-only">Menu</span>
+                </SheetTitle>
                 <SheetDescription className="sr-only">Site navigation and account links</SheetDescription>
               </SheetHeader>
 
@@ -178,7 +184,7 @@ export function Navbar() {
                           className={cn(
                             "flex min-h-12 items-center rounded-lg px-3 text-base font-medium transition-colors",
                             focusRing,
-                            active ? "bg-secondary text-secondary-foreground" : "text-foreground hover:bg-muted",
+                            active ? "bg-secondary font-semibold text-primary" : "text-foreground hover:bg-secondary/60",
                           )}
                         >
                           {item.label}
@@ -199,9 +205,9 @@ export function Navbar() {
                             href={link.href}
                             onClick={() => setMenuOpen(false)}
                             aria-current={pathname === link.href ? "page" : undefined}
-                            className={cn("flex min-h-12 items-center gap-3 rounded-lg px-3 text-base font-medium text-foreground hover:bg-muted", focusRing)}
+                            className={cn("flex min-h-12 items-center gap-3 rounded-lg px-3 text-base font-medium text-foreground hover:bg-secondary/60", focusRing)}
                           >
-                            <link.icon className="size-5 text-muted-foreground" aria-hidden="true" />
+                            <link.icon className="size-5 text-accent" aria-hidden="true" />
                             {link.label}
                           </Link>
                         </li>
@@ -210,9 +216,9 @@ export function Navbar() {
                         <button
                           type="button"
                           onClick={handleLogout}
-                          className={cn("flex min-h-12 w-full items-center gap-3 rounded-lg px-3 text-left text-base font-medium text-foreground hover:bg-muted", focusRing)}
+                          className={cn("flex min-h-12 w-full items-center gap-3 rounded-lg px-3 text-left text-base font-medium text-foreground hover:bg-secondary/60", focusRing)}
                         >
-                          <LogOut className="size-5 text-muted-foreground" aria-hidden="true" />
+                          <LogOut className="size-5 text-accent" aria-hidden="true" />
                           Log out
                         </button>
                       </li>

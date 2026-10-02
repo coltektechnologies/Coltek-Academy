@@ -302,7 +302,7 @@ export default function UsersPage() {
   if (error) {
     return (
       <AdminLayout>
-        <div className="p-6 text-red-600">{error}</div>
+        <div className="p-6 text-destructive">{error}</div>
       </AdminLayout>
     );
   }

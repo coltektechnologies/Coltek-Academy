@@ -140,7 +140,7 @@ export default function SettingsPage() {
                       {...form.register('siteName')}
                     />
                     {form.formState.errors.siteName && (
-                      <p className="text-sm text-red-500">
+                      <p className="text-sm text-destructive">
                         {form.formState.errors.siteName.message}
                       </p>
                     )}
@@ -154,7 +154,7 @@ export default function SettingsPage() {
                       {...form.register('adminEmail')}
                     />
                     {form.formState.errors.adminEmail && (
-                      <p className="text-sm text-red-500">
+                      <p className="text-sm text-destructive">
                         {form.formState.errors.adminEmail.message}
                       </p>
                     )}
@@ -218,7 +218,7 @@ export default function SettingsPage() {
                       {...form.register('maxFileSize', { valueAsNumber: true })}
                     />
                     {form.formState.errors.maxFileSize && (
-                      <p className="text-sm text-red-500">
+                      <p className="text-sm text-destructive">
                         {form.formState.errors.maxFileSize.message}
                       </p>
                     )}

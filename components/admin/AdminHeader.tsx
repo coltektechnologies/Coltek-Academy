@@ -49,19 +49,19 @@ export function AdminHeader({
   };
 
   return (
-    <header className="bg-white shadow-sm">
+    <header className="bg-card border-b border-border">
       <div className="flex flex-col px-4 py-4 sm:px-6 lg:px-8">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-semibold text-gray-900">{title}</h1>
+            <h1 className="text-2xl font-semibold text-primary">{title}</h1>
             {description && (
-              <p className="mt-1 text-sm text-gray-500">{description}</p>
+              <p className="mt-1 text-sm text-muted-foreground">{description}</p>
             )}
           </div>
           <div className="flex items-center space-x-4">
             <div className="relative flex-1 md:w-64">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Search className="h-4 w-4 text-gray-400" />
+                <Search className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
               </div>
               <Input
                 type="search"
@@ -78,7 +78,7 @@ export function AdminHeader({
                 <button
                   type="button"
                   onClick={handleClearSearch}
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-muted-foreground hover:text-foreground"
                   aria-label="Clear search"
                 >
                   <X className="h-4 w-4" />
@@ -88,7 +88,6 @@ export function AdminHeader({
             <Button variant="ghost" size="icon" className="relative">
               <span className="sr-only">View notifications</span>
               <Bell className="h-5 w-5" />
-              <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-red-500"></span>
             </Button>
             <UserMenu />
           </div>

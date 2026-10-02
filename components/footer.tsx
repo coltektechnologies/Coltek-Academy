@@ -21,10 +21,20 @@ const linkClass =
   "rounded-sm text-sm text-primary-foreground/80 transition-colors duration-150 hover:text-primary-foreground hover:underline underline-offset-4 outline-none focus-visible:ring-[3px] focus-visible:ring-primary-foreground/60"
 const headingClass = "text-sm font-semibold uppercase tracking-wide text-primary-foreground"
 
+function FooterHeading({ children }: { children: React.ReactNode }) {
+  return (
+    <h2 className={headingClass}>
+      {children}
+      {/* Logo-teal rule under each heading */}
+      <span aria-hidden="true" className="mt-2 block h-0.5 w-8 rounded-full bg-brand-teal" />
+    </h2>
+  )
+}
+
 function FooterColumn({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <nav aria-label={title}>
-      <h2 className={headingClass}>{title}</h2>
+      <FooterHeading>{title}</FooterHeading>
       <ul className="mt-4 space-y-3">{children}</ul>
     </nav>
   )
@@ -34,6 +44,7 @@ function FooterColumn({ title, children }: { title: string; children: React.Reac
 export function Footer() {
   return (
     <footer className="bg-primary text-primary-foreground">
+      <div aria-hidden="true" className="h-1 bg-brand-gradient" />
       <div className="container-page py-14 md:py-16">
         <div className="grid grid-cols-1 gap-10 sm:grid-cols-2 lg:grid-cols-12 lg:gap-8">
           {/* Academy information */}
@@ -48,7 +59,7 @@ export function Footer() {
             <p className="mt-4 max-w-sm text-sm leading-relaxed text-primary-foreground/80">{SITE_TAGLINE}</p>
             <a href={CONTACT.website} target="_blank" rel="noopener noreferrer" className={`mt-3 inline-flex items-center gap-1.5 ${linkClass}`}>
               Coltek Technologies
-              <ExternalLink className="size-3.5" aria-hidden="true" />
+              <ExternalLink className="size-3.5 text-brand-teal" aria-hidden="true" />
               <span className="sr-only">(opens in a new tab)</span>
             </a>
             <ul className="mt-6 flex gap-1" aria-label="Social media">
@@ -60,7 +71,7 @@ export function Footer() {
                       href={social.href}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex size-11 items-center justify-center rounded-md text-primary-foreground/80 transition-colors hover:bg-primary-foreground/10 hover:text-primary-foreground outline-none focus-visible:ring-[3px] focus-visible:ring-primary-foreground/60"
+                      className="flex size-11 items-center justify-center rounded-md text-primary-foreground/80 transition-colors hover:bg-brand-teal hover:text-primary outline-none focus-visible:ring-[3px] focus-visible:ring-primary-foreground/60"
                     >
                       <Icon className="size-5" aria-hidden="true" />
                       <span className="sr-only">
@@ -115,26 +126,26 @@ export function Footer() {
           </div>
 
           <div className="lg:col-span-3">
-            <h2 className={headingClass}>Contact</h2>
+            <FooterHeading>Contact</FooterHeading>
             <address className="mt-4 space-y-3 text-sm not-italic text-primary-foreground/80">
               <p className="flex items-start gap-2">
-                <Mail className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+                <Mail className="mt-0.5 size-4 shrink-0 text-brand-teal" aria-hidden="true" />
                 <a href={`mailto:${CONTACT.email}`} className={`wrap-anywhere ${linkClass}`}>
                   {CONTACT.email}
                 </a>
               </p>
               <p className="flex items-start gap-2">
-                <Phone className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+                <Phone className="mt-0.5 size-4 shrink-0 text-brand-teal" aria-hidden="true" />
                 <a href={CONTACT.phoneHref} className={linkClass}>
                   {CONTACT.phoneDisplay}
                 </a>
               </p>
               <p className="flex items-start gap-2">
-                <Clock className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+                <Clock className="mt-0.5 size-4 shrink-0 text-brand-teal" aria-hidden="true" />
                 <span>{CONTACT.hours}</span>
               </p>
               <p className="flex items-start gap-2">
-                <MapPin className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+                <MapPin className="mt-0.5 size-4 shrink-0 text-brand-teal" aria-hidden="true" />
                 <span>{CONTACT.location}</span>
               </p>
             </address>

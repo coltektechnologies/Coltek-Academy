@@ -575,13 +575,13 @@ export default function AdminPage() {
       <AdminLayout>
         <div className="flex items-center justify-center min-h-screen">
           <div className="text-center p-6 max-w-md">
-            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-red-100 mb-4">
-              <svg className="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-destructive-subtle mb-4">
+              <svg className="h-6 w-6 text-destructive" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" clipRule="evenodd" />
               </svg>
             </div>
-            <h3 className="text-lg font-medium text-gray-900 mb-2">Access Denied</h3>
-            <p className="text-gray-600 mb-4">{error}</p>
+            <h3 className="text-lg font-medium text-foreground mb-2">Access Denied</h3>
+            <p className="text-muted-foreground mb-4">{error}</p>
             <Button onClick={() => router.push('/')}>
               Back to Home
             </Button>
@@ -606,31 +606,28 @@ export default function AdminPage() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total Users</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
+              <Users className="h-4 w-4 text-accent" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{stats.totalUsers}</div>
-              <p className="text-xs text-muted-foreground">+{Math.floor(Math.random() * 30) + 5}% from last month</p>
             </CardContent>
           </Card>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total Courses</CardTitle>
-              <BookOpen className="h-4 w-4 text-muted-foreground" />
+              <BookOpen className="h-4 w-4 text-accent" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{courses.length}</div>
-              <p className="text-xs text-muted-foreground">+{Math.floor(Math.random() * 5)} from last month</p>
             </CardContent>
           </Card>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Certificates Issued</CardTitle>
-              <Award className="h-4 w-4 text-muted-foreground" />
+              <Award className="h-4 w-4 text-accent" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{stats.certificatesIssued}</div>
-              <p className="text-xs text-muted-foreground">+{Math.floor(Math.random() * 10) + 1} from last month</p>
             </CardContent>
           </Card>
         </div>
@@ -692,15 +689,15 @@ export default function AdminPage() {
               </div>
               
               {error && (
-                <div className="bg-red-50 p-4 rounded-md">
+                <div className="bg-destructive-subtle p-4 rounded-md">
                   <div className="flex">
                     <div className="flex-shrink-0">
-                      <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                      <svg className="h-5 w-5 text-destructive" viewBox="0 0 20 20" fill="currentColor">
                         <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
                       </svg>
                     </div>
                     <div className="ml-3">
-                      <p className="text-sm text-red-700">{error}</p>
+                      <p className="text-sm text-destructive">{error}</p>
                     </div>
                   </div>
                 </div>
@@ -712,7 +709,7 @@ export default function AdminPage() {
                     <ActivityItem key={activity.id} activity={activity} />
                   ))
                 ) : !isLoading ? (
-                  <div className="text-center py-8 text-gray-500">
+                  <div className="text-center py-8 text-muted-foreground">
                     <p>No activities found</p>
                   </div>
                 ) : null}
@@ -744,7 +741,7 @@ export default function AdminPage() {
                       <p className="text-xs text-muted-foreground">{user.email}</p>
                     </div>
                   </div>
-                  <span className="inline-flex items-center rounded-full bg-green-50 px-2 py-1 text-xs font-medium text-green-700 ring-1 ring-inset ring-green-600/20">
+                  <span className="inline-flex items-center rounded-full bg-secondary px-2 py-1 text-xs font-medium text-secondary-foreground ring-1 ring-inset ring-accent/20">
                     {user.role || 'Student'}
                   </span>
                 </div>

@@ -122,13 +122,16 @@ Each status color has a `-foreground` (white) for solid fills.
 
 - **Navy leads, teal supports.** Navy for primary buttons, headings accents, footer and brand bands; teal for highlights, eyebrows, active indicators, focus, and occasional secondary actions.
 - One filled primary action per view region.
-- The **logo gradient** (bright teal `#32BBB1` → deep teal `#207890` → navy `#193E72`, left→right) is a brand device: allowed **once per page at most** (e.g. a thin hero accent rule, the CTA band, or an icon tile) — never on body text and never as a background behind small text.
+- The **logo gradient** (bright teal `#32BBB1` → deep teal `#207890` → navy `#193E72`, left→right) is a brand device, available as the `bg-brand-gradient` utility ([app/globals.css](app/globals.css)). The application shell uses it as a fixed **4 px brand rule** (`h-1`) at the top of the header, the mobile menu, the footer and the admin sidebar — these rules are part of the shell and do not count against pages. Inside page content it is allowed **once per page at most** (e.g. a thin hero accent rule, the CTA band, or an icon tile) — never on body text and never as a background behind small text.
+- **Teal must be visible, not just navy.** The logo is mostly teal; navy-only screens read as off-brand. Use `text-accent` for supporting icons and eyebrows on light surfaces, `bg-secondary` (pale teal) for icon tiles, hover fills and active rows, and `brand-teal` for icons, rules and hover fills on navy.
 - Text never uses opacity below `/60` on primary; on light backgrounds use `text-muted-foreground` instead of opacity.
 - Status is never color-only: pair with an icon or text ("Coming soon", "Completed").
 - Third-party brand colors (Google, GitHub, WhatsApp `#25D366`, Paystack) stay in their own buttons only.
 - No raw palette classes (`gray-*`, `blue-*`, `green-*`, `amber-*`, `white`) in new UI — use the tokens above.
 
-**Raw colors still in the code** (to migrate in the shared-components stage): `bg-gray-50`, `text-gray-900`, `bg-white` (courses page, admin), `green/yellow/red-100/800` (level badges), `amber-*` (upcoming, warnings), `green-*` (success panels), `fill-yellow-400` (stars), `blue-50/200/700/800` (dev-only notices).
+**Raw colors:** migrated. The only remaining raw colors are third-party brand buttons (Google, GitHub, WhatsApp) and shadcn overlay scrims (`bg-black/50`) in `components/ui/`.
+
+**Admin shell:** navy `bg-primary` sidebar with the white logo and brand rule; nav items `text-primary-foreground/80`, active `bg-primary-foreground/10 text-primary-foreground` with a `text-brand-teal` icon; content area `bg-muted`; page header `bg-card border-b` with a `text-primary` title.
 
 ---
 
@@ -361,7 +364,8 @@ Built from shadcn `Label`, `Input`, `Select`, `Textarea`, `Checkbox`, `RadioGrou
 
 - `sticky top-0 z-50 h-16 border-b border-border bg-background/95 backdrop-blur` (the only permitted blur).
 - Logo left (`coltek-academy-logo.svg`, `h-10`), links to `/`, `alt="Coltek Academy"`.
-- Links: `text-sm font-medium text-muted-foreground hover:text-foreground`. **Active:** `text-foreground` + `aria-current="page"` + 2 px `bg-primary` underline indicator.
+- 4 px `bg-brand-gradient` rule across the top of the header (decorative, `aria-hidden`).
+- Links: `text-sm font-medium text-muted-foreground hover:text-primary`. **Active:** `text-primary` + `aria-current="page"` + 2 px `bg-accent` underline indicator.
 - Right: ghost "Log in" + primary "Get started" when signed out. Signed in: a user menu (avatar/initials → Dashboard, Certificates, Log out). Never print the raw email in the bar.
 - Focus: visible ring on every link and button.
 
@@ -369,14 +373,17 @@ Built from shadcn `Label`, `Input`, `Select`, `Textarea`, `Checkbox`, `RadioGrou
 
 - Menu button `size-11` (44 px), `aria-label="Open menu"`, `aria-expanded`, `aria-controls`.
 - shadcn `Sheet` from the right: focus trapped, closes on Esc, overlay click and route change.
-- Links as 48 px rows, active state as desktop; primary CTA full width at the bottom.
+- Sheet starts with the 4 px brand rule; its title is the colour logo (with an sr-only "Menu").
+- Links as 48 px rows; active row `bg-secondary text-primary font-semibold`, hover `bg-secondary/60`; account icons `text-accent`; primary CTA full width at the bottom.
 
 ---
 
 ## 16. Footer
 
 - Background `bg-primary`, text `text-primary-foreground`. Body links `text-primary-foreground/80 hover:text-primary-foreground` (7.3:1); never below `/70` for text.
-- Column headings `text-base font-semibold`.
+- 4 px `bg-brand-gradient` rule along the top edge.
+- Column headings `text-sm font-semibold uppercase tracking-wide` in white, each with a short `h-0.5 w-8 bg-brand-teal` rule beneath. Never set heading or link **text** in `brand-teal` on navy (4.50:1 is the bare minimum) — use it for icons, rules and hover fills.
+- Contact icons `text-brand-teal`; social icons hover to `bg-brand-teal text-primary`.
 - Columns (lg: 4, sm: 2, mobile: 1): **Brand** (`coltek-academy-logo-white.svg`, one-line description, social icons) · **Programmes** (categories) · **Academy** (About, Contact, FAQ, Login) · **Contact** (email, phone, hours, location — from the contact page facts).
 - Social icons `size-5` inside a 40 px hit area, `aria-label` with the platform name, `target="_blank" rel="noopener noreferrer"`. lucide has no X logo; use an accessible label "X (Twitter)" until a brand icon is added.
 - **Newsletter: none** until a real newsletter integration exists. The contact column replaces it.

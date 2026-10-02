@@ -535,7 +535,7 @@ function AdminCoursesPageContent() {
                       </TableCell>
                       <TableCell>
                         {course.isFree ? (
-                          <span className="font-medium text-green-600">Free</span>
+                          <span className="font-medium text-success">Free</span>
                         ) : (
                           <>
                             GH₵{course.price?.toFixed(2)}

@@ -106,7 +106,7 @@ export default function CertificatesPage() {
 
   if (error) {
     return (
-      <div className="p-4 text-red-500">
+      <div className="p-4 text-destructive">
         <p>{error}</p>
       </div>
     );
@@ -165,7 +165,7 @@ export default function CertificatesPage() {
                   <div>
                     <p className="text-muted-foreground">Status</p>
                     <div className="flex items-center">
-                      <span className="h-2 w-2 rounded-full bg-green-500 mr-2"></span>
+                      <span className="h-2 w-2 rounded-full bg-success mr-2"></span>
                       <span className="capitalize">{cert.status || 'issued'}</span>
                     </div>
                   </div>

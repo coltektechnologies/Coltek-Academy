@@ -448,7 +448,7 @@ export default function AdminTestimonialsPage() {
                               key={index}
                               className={`h-4 w-4 ${
                                 index < testimonial.rating
-                                  ? "fill-yellow-400 text-yellow-400"
+                                  ? "fill-warning text-warning"
                                   : "text-muted-foreground/30"
                               }`}
                             />

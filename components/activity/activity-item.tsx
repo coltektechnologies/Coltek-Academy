@@ -5,10 +5,10 @@ import { Button } from '../ui/button';
 import Link from 'next/link';
 
 const activityIcons = {
-  CERTIFICATE_ISSUED: <Award className="h-4 w-4 text-green-500" />,
-  USER_REGISTERED: <UserPlus className="h-4 w-4 text-blue-500" />,
-  COURSE_CREATED: <BookOpen className="h-4 w-4 text-purple-500" />,
-  USER_ENROLLED: <UserCheck className="h-4 w-4 text-amber-500" />,
+  CERTIFICATE_ISSUED: <Award className="h-4 w-4 text-success" />,
+  USER_REGISTERED: <UserPlus className="h-4 w-4 text-info" />,
+  COURSE_CREATED: <BookOpen className="h-4 w-4 text-accent" />,
+  USER_ENROLLED: <UserCheck className="h-4 w-4 text-warning" />,
 };
 
 const activityMessages = {
@@ -49,7 +49,7 @@ export function ActivityItem({ activity }: ActivityItemProps) {
     <div className="flex items-start justify-between p-3 hover:bg-muted/50 rounded-lg transition-colors">
       <div className="flex items-start space-x-3">
         <div className="mt-0.5">
-          {activityIcons[activity.type] || <Award className="h-4 w-4 text-gray-500" />}
+          {activityIcons[activity.type] || <Award className="h-4 w-4 text-muted-foreground" />}
         </div>
         <div className="space-y-1">
           <p className="text-sm font-medium">

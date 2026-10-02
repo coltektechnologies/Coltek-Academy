@@ -21,12 +21,13 @@ export function Sidebar() {
 
   return (
     <div className="hidden md:flex md:flex-shrink-0">
-      <div className="flex flex-col w-64 border-r border-gray-200 bg-white">
-        <div className="flex items-center h-16 px-4 border-b border-gray-200">
+      <div className="flex flex-col w-64 bg-primary text-primary-foreground">
+        <div aria-hidden="true" className="h-1 bg-brand-gradient" />
+        <div className="flex items-center h-16 px-4 border-b border-primary-foreground/15">
           <Image 
-            src="/Coltek Academy.png" 
+            src="/coltek-academy-logo-white.svg" 
             alt="Coltek Academy" 
-            width={120}
+            width={117}
             height={40}
             className="h-10 w-auto" 
           />
@@ -38,19 +39,20 @@ export function Sidebar() {
               href={item.href}
               className={`flex items-center px-4 py-2.5 text-sm font-medium rounded-lg transition-colors ${
                 isActive(item.href) 
-                  ? 'bg-primary/10 text-primary' 
-                  : 'text-gray-600 hover:bg-gray-100'
+                  ? 'bg-primary-foreground/10 text-primary-foreground' 
+                  : 'text-primary-foreground/80 hover:bg-primary-foreground/10 hover:text-primary-foreground'
               }`}
+              aria-current={isActive(item.href) ? 'page' : undefined}
             >
-              <item.icon className="mr-3 h-5 w-5" />
+              <item.icon className={`mr-3 h-5 w-5 ${isActive(item.href) ? 'text-brand-teal' : ''}`} aria-hidden="true" />
               {item.name}
             </Link>
           ))}
         </nav>
-        <div className="p-4 border-t border-gray-200">
+        <div className="p-4 border-t border-primary-foreground/15">
           <Button 
             variant="ghost" 
-            className="w-full justify-start text-gray-700 hover:bg-gray-100"
+            className="w-full justify-start text-primary-foreground/80 hover:bg-primary-foreground/10 hover:text-primary-foreground"
           >
             <LogOut className="mr-3 h-5 w-5" />
             Logout
