@@ -4,7 +4,7 @@ import { useEffect, useState } from "react"
 import Image from "next/image"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { Clock, Users, Globe, Calendar, Award, CheckCircle } from "lucide-react"
+import { Clock, Users, Globe, Calendar, Award, CheckCircle, Laptop } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -20,6 +20,7 @@ import {
 import { useAuth } from "@/hooks/use-auth"
 import { checkUserEnrollment } from "@/lib/enrollment"
 import type { Course } from "@/lib/types"
+import { formatCourseDuration, getCourseMode } from "@/lib/course-display"
 
 interface CourseHeroProps {
   course: Course
@@ -34,6 +35,8 @@ const TEAM_BY_IMAGE = {
 
 export function CourseHero({ course, isUpcoming = false }: CourseHeroProps) {
   const { user } = useAuth()
+  const duration = formatCourseDuration(course.duration)
+  const mode = getCourseMode(course)
   const router = useRouter()
   const [isEnrolled, setIsEnrolled] = useState<boolean | null>(null)
   const [showEnrolledDialog, setShowEnrolledDialog] = useState(false)
@@ -123,6 +126,12 @@ export function CourseHero({ course, isUpcoming = false }: CourseHeroProps) {
                 <Globe className="h-4 w-4" />
                 <span>{course.language}</span>
               </div>
+              {mode && (
+                <div className="flex items-center gap-2">
+                  <Laptop className="h-4 w-4" aria-hidden="true" />
+                  <span>{mode}</span>
+                </div>
+              )}
               <div className="flex items-center gap-2">
                 <Award className="h-4 w-4" />
                 <span>Certificate included</span>
@@ -195,10 +204,18 @@ export function CourseHero({ course, isUpcoming = false }: CourseHeroProps) {
                 <div className="space-y-3 pt-4 border-t border-border">
                   <h4 className="font-semibold text-foreground">This course includes:</h4>
                   <ul className="space-y-2 text-sm text-muted-foreground">
-                    <li className="flex items-center gap-2">
-                      <Clock className="h-4 w-4" />
-                      {course.duration} of content
-                    </li>
+                    {duration && (
+                      <li className="flex items-center gap-2">
+                        <Clock className="h-4 w-4" aria-hidden="true" />
+                        {duration} course
+                      </li>
+                    )}
+                    {mode && (
+                      <li className="flex items-center gap-2">
+                        <Laptop className="h-4 w-4" aria-hidden="true" />
+                        {mode === "Online" ? "Taught online" : "Taught in person"}
+                      </li>
+                    )}
                     <li className="flex items-center gap-2">
                       <Award className="h-4 w-4" />
                       Certificate of completion

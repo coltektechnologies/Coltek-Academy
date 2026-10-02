@@ -61,7 +61,8 @@ export async function GET() {
       rating?: number;
       totalRatings?: number;
       enrolledStudents?: number;
-      duration?: number;
+      duration?: number | string;
+      mode?: string;
       description?: string;
       shortDescription?: string;
       slug?: string;
@@ -84,6 +85,7 @@ export async function GET() {
         totalRatings: data.totalRatings,
         enrolledStudents: data.enrolledStudents,
         duration: data.duration,
+        mode: data.mode,
         description: data.description,
         shortDescription: data.shortDescription,
         slug: data.slug,
@@ -117,6 +119,7 @@ export async function GET() {
           totalRatings: typeof course.totalRatings === 'number' ? course.totalRatings : 0,
           enrolledStudents: enrolledCounts.get(course.id) || 0,
           duration: course.duration || 0,
+          mode: course.mode || null,
           slug: course.slug || course.id,
           isPublished: course.isPublished !== false,
           lastUpdated: course.updatedAt?.toDate?.()?.toISOString() || new Date().toISOString(),

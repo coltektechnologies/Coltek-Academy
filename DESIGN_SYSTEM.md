@@ -285,7 +285,7 @@ Single shared component ([components/course-card.tsx](components/course-card.tsx
 3. **Category** — eyebrow text (`text-sm font-medium text-accent`), not a badge.
 4. **Title** — H4, `line-clamp-2`, is the card's link (stretched link so the whole card is clickable, one focus stop).
 5. **Short description** — body small, `text-muted-foreground`, `line-clamp-2`.
-6. **Meta row** — duration and level with icons (`Clock`, `BarChart` style), body small muted. Level is plain text or a neutral badge — **no green/yellow/red difficulty coding**.
+6. **Meta row** — level, duration and learning mode with icons, body small muted. Level is plain text or a neutral badge — **no green/yellow/red difficulty coding**. Duration and mode are **set by admins** in the course form (Course Details tab): duration as amount + unit (hours/days/weeks/months), stored as text like `"10 weeks"`; mode as `Online` or `In person`. Legacy bare-number durations are hidden until an admin re-saves them with a unit.
 7. **Footer** (`border-t`, `px-6 py-4`) — price `text-lg font-bold` as `GH₵150` (or "Free" when 0 and available; "Coming soon" when upcoming) + one CTA: `View course` (outline `sm`). The CTA duplicates the title link, so it is `aria-hidden` / `tabIndex={-1}` or the title link is the only link.
 
 Do **not** show: ratings, review counts, seeded student counts, instructor names, more than one badge, or more than one CTA. **Enrolled-student counts are shown** (owner-approved) — only the real count from `enrollments` (`Users` icon + number, body small muted).

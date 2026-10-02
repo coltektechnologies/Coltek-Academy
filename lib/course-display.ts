@@ -44,3 +44,37 @@ export function getCourseMode(course: Record<string, unknown>): string | null {
   }
   return null
 }
+
+/** Learning modes an admin can choose for a course. */
+export const COURSE_MODES = ['Online', 'In person'] as const
+export type CourseMode = (typeof COURSE_MODES)[number]
+
+/** Units an admin can choose for a course duration. Stored as text, e.g. "10 weeks". */
+export const DURATION_UNITS = ['hours', 'days', 'weeks', 'months'] as const
+export type DurationUnit = (typeof DURATION_UNITS)[number]
+
+/**
+ * Split a stored duration into amount + unit for editing.
+ * Legacy numeric values (no unit saved) return the number with an empty unit so the admin must choose one.
+ */
+export function parseCourseDuration(duration: unknown): { amount: string; unit: DurationUnit | '' } {
+  if (typeof duration === 'number') {
+    return { amount: duration > 0 ? String(duration) : '', unit: '' }
+  }
+  if (typeof duration === 'string') {
+    const match = duration.trim().match(/^(\d+(?:\.\d+)?)\s*([a-z]+)$/i)
+    if (match) {
+      const word = match[2].toLowerCase()
+      const unit = DURATION_UNITS.find((u) => u === word || u.slice(0, -1) === word) ?? ''
+      return { amount: match[1], unit }
+    }
+  }
+  return { amount: '', unit: '' }
+}
+
+/** Build the stored duration text, using the singular unit for 1 ("1 week", "10 weeks"). */
+export function buildCourseDuration(amount: string, unit: DurationUnit | ''): string {
+  const value = Number(amount)
+  if (!unit || !Number.isFinite(value) || value <= 0) return ''
+  return `${amount.trim()} ${value === 1 ? unit.slice(0, -1) : unit}`
+}

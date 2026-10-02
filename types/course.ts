@@ -64,7 +64,10 @@ export interface Course extends DocumentData {
   tags: string[];
   level: 'Beginner' | 'Intermediate' | 'Advanced';
   language: string;
-  duration: number;
+  /** Admin-entered text such as "10 weeks". Older records may hold a bare number (unit unknown). */
+  duration: string | number;
+  /** How the course is delivered, chosen by the admin. */
+  mode?: 'Online' | 'In person';
   
   // Pricing & Enrollment
   price: number;

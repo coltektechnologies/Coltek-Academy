@@ -20,7 +20,8 @@ export const useCourseForm = (initialCourse?: Partial<CourseFormData>) => {
     tags: [],
     level: "Beginner",
     language: "English",
-    duration: 0,
+    duration: "",
+    mode: undefined,
     
     // Pricing & Enrollment
     price: 0,
@@ -207,7 +208,8 @@ export const useCourseForm = (initialCourse?: Partial<CourseFormData>) => {
       tags: [],
       level: "Beginner",
       language: "English",
-      duration: 0,
+      duration: "",
+      mode: undefined,
       price: 0,
       originalPrice: 0,
       isFree: false,

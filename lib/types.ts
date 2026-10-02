@@ -19,6 +19,8 @@ export interface Course {
   category: string
   level: "Beginner" | "Intermediate" | "Advanced"
   duration: string
+  /** "Online" or "In person", set by an admin */
+  mode?: string
   price: number
   instructor: Instructor
   curriculum: CurriculumModule[]

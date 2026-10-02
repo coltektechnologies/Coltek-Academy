@@ -42,7 +42,7 @@ interface Course extends DocumentData {
   tags: string[];
   level: 'Beginner' | 'Intermediate' | 'Advanced';
   language: string;
-  duration: number; // in minutes
+  duration: string | number; // admin-entered text, e.g. "10 weeks" (legacy records may be numbers)
   
   // Pricing & Enrollment
   price: number;
@@ -462,6 +462,7 @@ export default function AdminCoursesPage() {
             </DialogDescription>
           </DialogHeader>
           <CourseForm 
+            key={editingCourse?.id ?? 'new'}
             initialData={editingCourse || undefined}
             onSubmit={handleSubmitCourse}
             isSubmitting={isSubmitting}

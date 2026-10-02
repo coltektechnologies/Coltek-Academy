@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { useEffect, useState } from 'react';
 import { getAllCourses } from "@/lib/courses"
+import { formatCourseDuration, getCourseMode } from "@/lib/course-display"
 import type { RegistrationFormData, Course } from "@/lib/types"
 
 interface StepCourseSelectionProps {
@@ -81,8 +82,18 @@ export function StepCourseSelection({
           <h4 className="font-semibold text-foreground">{selectedCourse.title}</h4>
           <p className="text-sm text-muted-foreground mt-1">{selectedCourse.description}</p>
           <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
-            <span>{selectedCourse.duration}</span>
-            <span>•</span>
+            {formatCourseDuration(selectedCourse.duration) && (
+              <>
+                <span>{formatCourseDuration(selectedCourse.duration)}</span>
+                <span aria-hidden="true">•</span>
+              </>
+            )}
+            {getCourseMode(selectedCourse) && (
+              <>
+                <span>{getCourseMode(selectedCourse)}</span>
+                <span aria-hidden="true">•</span>
+              </>
+            )}
             <span>{selectedCourse.level}</span>
             <span>•</span>
             <span className="font-semibold text-foreground">GH₵{selectedCourse.price}</span>

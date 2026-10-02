@@ -6,6 +6,7 @@ import { CheckCircle, ArrowRight, MessageCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { getCourseById } from "@/lib/courses"
 import { useAuth } from "@/hooks/use-auth"
+import { formatCourseDuration, getCourseMode } from "@/lib/course-display"
 import type { Course, RegistrationFormData } from "@/lib/types"
 
 const WHATSAPP_GROUP_LINK = "https://chat.whatsapp.com/CVTzw4zdtqVHjDV3IwC1zy"
@@ -71,7 +72,13 @@ export function RegistrationSuccess({ formData }: RegistrationSuccessProps) {
           <h4 className="font-semibold text-foreground mb-2">Course Enrolled:</h4>
           <p className="text-foreground">{selectedCourse.title}</p>
           <p className="text-sm text-muted-foreground mt-1">
-            Duration: {selectedCourse.duration} • Level: {selectedCourse.level}
+            {[
+              formatCourseDuration(selectedCourse.duration) && `Duration: ${formatCourseDuration(selectedCourse.duration)}`,
+              getCourseMode(selectedCourse) && `Mode: ${getCourseMode(selectedCourse)}`,
+              `Level: ${selectedCourse.level}`,
+            ]
+              .filter(Boolean)
+              .join(" • ")}
           </p>
         </div>
       )}

@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useCourseForm } from '@/hooks/useCourseForm';
 import { Course, CourseFormData } from '@/types/course';
 import { Button } from '@/components/ui/button';
@@ -9,6 +9,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  COURSE_MODES,
+  DURATION_UNITS,
+  buildCourseDuration,
+  parseCourseDuration,
+  type CourseMode,
+  type DurationUnit,
+} from '@/lib/course-display';
 
 interface CourseFormProps {
   initialData?: Partial<Course>;
@@ -39,8 +47,28 @@ export const CourseForm: React.FC<CourseFormProps> = ({
 
   const error = propError || formError;
 
+  // Duration is edited as amount + unit and stored as text, e.g. "10 weeks"
+  const [durationAmount, setDurationAmount] = useState(() => parseCourseDuration(initialData?.duration).amount);
+  const [durationUnit, setDurationUnit] = useState<DurationUnit | ''>(() => parseCourseDuration(initialData?.duration).unit);
+  const legacyDuration = typeof initialData?.duration === 'number' && initialData.duration > 0;
+
+  const updateDuration = (amount: string, unit: DurationUnit | '') => {
+    setDurationAmount(amount);
+    setDurationUnit(unit);
+    setFormData(prev => ({ ...prev, duration: buildCourseDuration(amount, unit) }));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!formData.mode) {
+      setFormError('Please choose a learning mode (Online or In person) on the Course Details tab.');
+      return;
+    }
+    if (!buildCourseDuration(durationAmount, durationUnit)) {
+      setFormError('Please enter a duration and choose its unit (e.g. 10 weeks) on the Course Details tab.');
+      return;
+    }
+    setFormError(null);
     try {
       const submitData = await prepareSubmitData();
       await onSubmit(submitData);
@@ -264,7 +292,7 @@ export const CourseForm: React.FC<CourseFormProps> = ({
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="level">Level *</Label>
                   <Select
@@ -285,16 +313,60 @@ export const CourseForm: React.FC<CourseFormProps> = ({
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="duration">Duration (minutes) *</Label>
-                  <Input
-                    id="duration"
-                    name="duration"
-                    type="number"
-                    min="0"
-                    value={formData.duration}
-                    onChange={handleChange}
-                    required
-                  />
+                  <Label htmlFor="duration">Duration *</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      id="duration"
+                      type="number"
+                      inputMode="numeric"
+                      min="1"
+                      step="1"
+                      value={durationAmount}
+                      onChange={(e) => updateDuration(e.target.value, durationUnit)}
+                      aria-describedby="duration-help"
+                      className="w-24"
+                      required
+                    />
+                    <Select
+                      value={durationUnit}
+                      onValueChange={(value: DurationUnit) => updateDuration(durationAmount, value)}
+                    >
+                      <SelectTrigger aria-label="Duration unit" className="flex-1">
+                        <SelectValue placeholder="Unit" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {DURATION_UNITS.map((unit) => (
+                          <SelectItem key={unit} value={unit}>
+                            {unit.charAt(0).toUpperCase() + unit.slice(1)}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <p id="duration-help" className="text-xs text-muted-foreground">
+                    {legacyDuration && !durationUnit
+                      ? `Saved earlier as "${initialData?.duration}" without a unit — choose the unit.`
+                      : 'Shown to students, e.g. "10 weeks".'}
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="mode">Learning mode *</Label>
+                  <Select
+                    value={formData.mode ?? ''}
+                    onValueChange={(value: CourseMode) => setFormData(prev => ({ ...prev, mode: value }))}
+                  >
+                    <SelectTrigger id="mode">
+                      <SelectValue placeholder="Select mode" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {COURSE_MODES.map((mode) => (
+                        <SelectItem key={mode} value={mode}>
+                          {mode}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 <div className="space-y-2">
